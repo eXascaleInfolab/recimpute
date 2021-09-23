@@ -44,8 +44,18 @@ TODO
 ___
 
 ## Extension
-- To use new datasets:
-    - TODO
+- To use new data sets:
+    - Each data set must be stored in its own zip archive.
+    - This archive must contain:
+        - One .txt or .csv file containing the time series. Each column is a time series. No headers. Delimiters is a single space. If the first column contains only date time objects, it will be used as index.
+    - If the first column cannot be used as index, the archive can either contain:
+        - a .index file containing a single column with the data set's index.
+        - a .info file containing a header ("start periods freq") and the related information (e.g."'1900-01-01 00:00:00' 24 H").
+    - The archive name is the name of the data set (e.g. "ArrowHead.zip").
+    - Each file inside the archive must contain the data sets' name (e.g. ArrowHead.info).
+    - The data sets' archive must be placed in the ./Datasets/RealWorld/ directory.
+    - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this behaviour, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of data sets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
+    - It is recommended to z-normalize the time series before-hand.
 
 
 ___

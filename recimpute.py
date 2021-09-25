@@ -11,13 +11,18 @@ recimpute.py
 import sys
 
 from Datasets.Dataset import Dataset
+from Clustering.ClusterModel import ClusterModel
 
 if __name__ == '__main__':
     print(str(sys.argv))
 
-    datasets = Dataset.instantiate_all_realworld()
+    datasets = Dataset.instantiate_from_dir()
     
     for ds in datasets:
-        print(ds.name)
-        #ds = ds.load_realworld()
-        #print(ds.head(2).to_markdown())
+        pass
+        #print(ds.name)
+        #timeseries = ds.load_timeseries()
+        #print(timeseries.head(2).to_markdown())
+
+    cm = ClusterModel()
+    datasets = cm.run(datasets)

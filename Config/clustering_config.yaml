@@ -1,0 +1,49 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# clustering_config.yaml
+# @author: @chacungu
+
+# Clustering related configuration file
+# ------------------------------------
+
+NCC_MIN_THRESHOLD: 0.95
+
+# GS_MAX_TESTS: used to define max number of clusters to evaluate during gridsearch based on the data set's complexity
+# if complexity of data set < *key*: then max #clusters to try = *value*
+GS_MAX_TESTS: 
+  - 50000: 17
+  - 100000: 14
+  - 150000: 11
+  - 200000: 9
+  - .inf: 6
+
+# GS_NB_RUNS: number of gridsearch runs to perform for each cluster to evaluate for a given data set and considering its complexity
+GS_NB_RUNS: 
+  - small: 2 # 12 TODO TMP
+  - medium: 6
+  - large: 6
+
+# GS_MAX_RETRIES: maximum number of tries before skipping the evaluation of a cluster during gridsearch
+# retries occur if a generated cluster does not has at least 2 time series
+GS_MAX_RETRIES: 1 # 5 TODO TMP
+
+# GS_OPTIONAL_RANGES_HINTS: used to define the range of clusters to evaluate during gridsearch for specified data sets
+GS_OPTIONAL_RANGES_HINTS:    
+  temp: 
+    - min: 2
+    - max: 6
+    - step: 1
+  meteo: 
+    - min: 2
+    - max: 8
+    - step: 1
+
+# CLUSTERING_NB_RUNS: number of runs to perform during the final clustering phase depending on the data sets complexity
+CLUSTERING_NB_RUNS:
+  - small: 2 # 50 TODO TMP
+  - medium: 25
+  - large: 15
+
+# Minimum number of time series a cluster can contain
+MIN_NB_TS_PER_CLUSTER: 5

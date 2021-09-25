@@ -1,0 +1,133 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# datasets_config.yaml
+# @author: @chacungu
+
+# Data sets related configuration file
+# ------------------------------------
+
+USE_ALL: False
+# if USE_ALL is False, loads only data sets which are listed below:
+USE_LIST: 
+  - BirdChicken.zip                                                                                    # 1x40x512
+  - Chinatown.zip                                                                                      # 1x363x24
+  - parking.zip                                                                                        # 1x12x1312
+
+  #- ACSF1.zip                                                                                          # 1x200x1460
+  #- Adiac.zip                                                                                          # 1x781x176
+  #- airq.zip                                                                                           # 1x10x1000
+  #- ArrowHead.zip                                                                                      # 1x211x251
+  #- bafu.zip                                                                                           # 8x10x6250
+  #- Beef.zip                                                                                           # 1x60x470
+  #- BeetleFly.zip                                                                                      # 1x40x512
+  #- BirdChicken.zip                                                                                    # 1x40x512
+  #- BME.zip                                                                                            # 1x180x128
+  #- Car.zip                                                                                            # 1x120x577
+  #- CBF.zip                                                                                            # 1x930x128
+  #- Chinatown.zip                                                                                      # 1x363x24
+  #- chlorine.zip                                                                                       # 1x50x1000
+  #- ChlorineConcentration.zip                                                                          # 1x4307x166
+  #- CinCECGTorso.zip                                                                                   # 1x1420x1639
+  #- climate.zip                                                                                        # 16x125x156
+  #- Coffee.zip                                                                                         # 1x56x286
+  #- Computers.zip                                                                                      # 1x500x720
+  #- CricketX.zip                                                                                       # 1x780x300
+  #- CricketY.zip                                                                                       # 1x780x300
+  #- CricketZ.zip                                                                                       # 1x780x300
+  #- DiatomSizeReduction.zip                                                                            # 1x322x345
+  #- DistalPhalanxOutlineAgeGroup.zip                                                                   # 1x539x80
+  #- DistalPhalanxOutlineCorrect.zip                                                                    # 1x876x80
+  #- DistalPhalanxTW.zip                                                                                # 1x539x80
+  #- drift.zip                                                                                          # 1x100x1000
+  #- Earthquakes.zip                                                                                    # 1x461x512
+  #- ECG200.zip                                                                                         # 1x200x96
+  #- ECG5000.zip                                                                                        # 1x5000x140
+  #- ECGFiveDays.zip                                                                                    # 1x884x136
+  #- electricity.zip                                                                                    # 1x20x5000
+  #- EOGHorizontalSignal.zip                                                                            # 1x724x1250
+  #- EthanolLevel.zip                                                                                   # 1x1004x1751
+  #- FaceAll.zip                                                                                        # 1x2250x131
+  #- FaceFour.zip                                                                                       # 1x112x350
+  #- FacesUCR.zip                                                                                       # 1x2250x131
+  #- FiftyWords.zip                                                                                     # 1x905x270
+  #- Fish.zip                                                                                           # 1x350x463
+  #- FordA.zip                                                                                          # 1x4921x500
+  #- FordB.zip                                                                                          # 1x4446x500
+  #- FreezerRegularTrain.zip                                                                            # 1x3000x301
+  #- FreezerSmallTrain.zip                                                                              # 1x2878x301
+  #- Fungi.zip                                                                                          # 1x204x201
+  #- GunPoint.zip                                                                                       # 1x200x150
+  #- GunPointAgeSpan.zip                                                                                # 1x451x150
+  #- GunPointMaleVersusFemale.zip                                                                       # 1x451x150
+  #- GunPointOldVersusYoung.zip                                                                         # 1x451x150
+  #- Ham.zip                                                                                            # 1x214x431
+  #- HandOutlines.zip                                                                                   # 1x1370x2709
+  #- Haptics.zip                                                                                        # 1x463x1092
+  #- Herring.zip                                                                                        # 1x128x512
+  #- HouseTwenty.zip                                                                                    # 1x159x2000
+  #- InlineSkate.zip                                                                                    # 1x650x1882
+  #- InsectEPGRegularTrain.zip                                                                          # 1x311x601
+  #- InsectEPGSmallTrain.zip                                                                            # 1x266x601
+  #- InsectWingbeatSound.zip                                                                            # 1x2200x256
+  #- ItalyPowerDemand.zip                                                                               # 1x1096x24
+  #- LargeKitchenAppliances.zip                                                                         # 1x750x720
+  #- Lightning2.zip                                                                                     # 1x121x637
+  #- Lightning7.zip                                                                                     # 1x143x319
+  #- Mallat.zip                                                                                         # 1x2400x1024
+  #- Meat.zip                                                                                           # 1x120x448
+  #- MedicalImages.zip                                                                                  # 1x1141x99
+  #- meteo.zip                                                                                          # 1x20x5000
+  #- MiddlePhalanxOutlineAgeGroup.zip                                                                   # 1x554x80
+  #- MiddlePhalanxOutlineCorrect.zip                                                                    # 1x891x80
+  #- MiddlePhalanxTW.zip                                                                                # 1x553x80
+  #- MixedShapesRegularTrain.zip                                                                        # 1x2925x1024
+  #- MixedShapesSmallTrain.zip                                                                          # 1x2525x1024
+  #- MoteStrain.zip                                                                                     # 1x1272x84
+  #- NonInvasiveFetalECGThorax1.zip                                                                     # 1x3765x750
+  #- NonInvasiveFetalECGThorax2.zip                                                                     # 1x3765x750
+  #- OliveOil.zip                                                                                       # 1x60x570
+  #- OSULeaf.zip                                                                                        # 1x442x427
+  #- parking.zip                                                                                        # 1x12x1312
+  #- PhalangesOutlinesCorrect.zip                                                                       # 1x2658x80
+  #- Phoneme.zip                                                                                        # 1x2110x1024
+  #- PigAirwayPressure.zip                                                                              # 1x312x2000
+  #- PigArtPressure.zip                                                                                 # 1x312x2000
+  #- PigCVP.zip                                                                                         # 1x312x2000
+  #- Plane.zip                                                                                          # 1x210x144
+  #- PowerCons.zip                                                                                      # 1x360x144
+  #- ProximalPhalanxOutlineAgeGroup.zip                                                                 # 1x605x80
+  #- ProximalPhalanxOutlineCorrect.zip                                                                  # 1x891x80
+  #- ProximalPhalanxTW.zip                                                                              # 1x605x80
+  #- RefrigerationDevices.zip                                                                           # 1x750x720
+  #- Rock.zip                                                                                           # 1x70x2844
+  #- ScreenType.zip                                                                                     # 1x750x720
+  #- SemgHandGenderCh2.zip                                                                              # 1x900x1500
+  #- SemgHandMovementCh2.zip                                                                            # 1x900x1500
+  #- SemgHandSubjectCh2.zip                                                                             # 1x900x1500
+  #- ShapeletSim.zip                                                                                    # 1x200x500
+  #- ShapesAll.zip                                                                                      # 1x1200x512
+  #- SmallKitchenAppliances.zip                                                                         # 1x750x720
+  #- SmoothSubspace.zip                                                                                 # 1x300x15
+  #- SonyAIBORobotSurface1.zip                                                                          # 1x621x70
+  #- SonyAIBORobotSurface2.zip                                                                          # 1x980x65
+  #- stock_exchange.zip                                                                                 # 1x8x536
+  #- Strawberry.zip                                                                                     # 1x983x235
+  #- SwedishLeaf.zip                                                                                    # 1x1125x128
+  #- Symbols.zip                                                                                        # 1x1020x398
+  #- SyntheticControl.zip                                                                               # 1x600x60
+  #- temp.zip                                                                                           # 1x50x5000
+  #- ToeSegmentation1.zip                                                                               # 1x268x277
+  #- ToeSegmentation2.zip                                                                               # 1x166x343
+  #- Trace.zip                                                                                          # 1x200x275
+  #- TwoLeadECG.zip                                                                                     # 1x1162x82
+  #- TwoPatterns.zip                                                                                    # 1x5000x128
+  #- UMD.zip                                                                                            # 1x180x150
+  #- UWaveGestureLibraryAll.zip                                                                         # 1x4478x945
+  #- UWaveGestureLibraryX.zip                                                                           # 1x4478x315
+  #- UWaveGestureLibraryY.zip                                                                           # 1x4478x315
+  #- Wine.zip                                                                                           # 1x111x234
+  #- WordSynonyms.zip                                                                                   # 1x905x270
+  #- Worms.zip                                                                                          # 1x258x900
+  #- WormsTwoClass.zip                                                                                  # 1x258x900
+  #- Yoga.zip                                                                                           # 1x3300x426

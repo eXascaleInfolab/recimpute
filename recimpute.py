@@ -13,10 +13,11 @@ import sys
 from Datasets.Dataset import Dataset
 from Clustering.ClusterModel import ClusterModel
 
+
 if __name__ == '__main__':
     print(str(sys.argv))
 
-    datasets = Dataset.instantiate_from_dir()
+    datasets = Dataset.instantiate_from_dir(cassignment_created=False)
     
     for ds in datasets:
         pass

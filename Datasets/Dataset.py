@@ -11,6 +11,7 @@ from os.path import normpath as normp
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 import re
+from tqdm import tqdm
 import yaml
 import zipfile
 
@@ -30,57 +31,17 @@ class Dataset:
     if not os.path.exists(CASSIGNMENTS_DIR):
         os.makedirs(CASSIGNMENTS_DIR)
 
-    def __init__(self, archive_name):
+
+    # constructor
+
+    def __init__(self, archive_name, cassignment_created=False):
         self.rw_ds_filename = archive_name
         self.name = archive_name[:-4]
-        self.cassignment_created = False
+        self.cassignment_created = cassignment_created
+        self.nb_timeseries, self.timeseries_length = self.load_timeseries(transpose=True).shape
 
-    def _get_cassignment_filename(self):
-        """
-        Returns the cassignment filename of this data set.
-        
-        Keyword arguments:
-        -
-        
-        Return:
-        cassignment filename
-        """
-        return normp(Dataset.CASSIGNMENTS_DIR + self.name + Dataset.CASSIGNMENTS_APPENDIX)
 
-    def save_cassignment(self, cassignment):
-        """
-        Loads the Pandas Dataframe containing the clusters' assignment of this data set. 
-        
-        Keyword arguments:
-        cassignment -- Pandas DataFrame containing clusters' assignment of the data set's time series. 
-                       Its index is the same as the real world data set of this object. The associated 
-                       values are the clusters' id to which are assigned the time series.
-        
-        Return:
-        -
-        """
-        self.cassignment_created = True
-        cassignment_filename = self._get_cassignment_filename()
-        cassignment.to_csv(cassignment_filename, index=False)
-
-    def load_cassignment(self):
-        """
-        Loads the Pandas Dataframe containing the clusters' assignment of this data set. 
-        
-        Keyword arguments:
-        -
-        
-        Return:
-        Pandas DataFrame containing clusters' assignment of the data set's time series. Its index is the same 
-        as the real world data set of this object. The associated values are the clusters' id to which are
-        assigned the time series.
-        """
-        if self.cassignment_created:
-            cassignment_filename = self._get_cassignment_filename()
-            clusters_assignment = pd.read_csv(cassignment_filename)
-            return clusters_assignment
-        else:
-            raise Exception('Clusters Assignment file (cassignment.csv) for %s data set does not exist.' % self.name)
+    # public methods
 
     def get_cluster_by_id(self, timeseries, cluster_id, cassignment=None):
         """
@@ -180,6 +141,64 @@ class Dataset:
 
         return dataset if not transpose else dataset.T
 
+    def save_cassignment(self, cassignment):
+        """
+        Loads the Pandas Dataframe containing the clusters' assignment of this data set. 
+        
+        Keyword arguments:
+        cassignment -- Pandas DataFrame containing clusters' assignment of the data set's time series. 
+                       Its index is the same as the real world data set of this object. The associated 
+                       values are the clusters' id to which are assigned the time series.
+        
+        Return: -
+        """
+        self.cassignment_created = True
+        cassignment_filename = self._get_cassignment_filename()
+        cassignment.to_csv(cassignment_filename, index=False)
+
+    def load_cassignment(self):
+        """
+        Loads the Pandas Dataframe containing the clusters' assignment of this data set. 
+        
+        Keyword arguments: -
+        
+        Return:
+        Pandas DataFrame containing clusters' assignment of the data set's time series. Its index is the same 
+        as the real world data set of this object. The associated values are the clusters' id to which are
+        assigned the time series.
+        """
+        if self.cassignment_created:
+            cassignment_filename = self._get_cassignment_filename()
+            clusters_assignment = pd.read_csv(cassignment_filename)
+            return clusters_assignment
+        else:
+            raise Exception('Clusters Assignment file (cassignment.csv) for %s data set does not exist.' % self.name)
+
+    def get_space_complexity(self):
+        """
+        Computes and returns the space complexity of the data set's time series.
+        
+        Keyword arguments: -
+        
+        Return:
+        Space complexity of the data set's time series
+        """
+        return self.nb_timeseries * self.timeseries_length
+
+
+    # private methods
+
+    def _get_cassignment_filename(self):
+        """
+        Returns the cassignment filename of this data set.
+        
+        Keyword arguments: -
+        
+        Return:
+        cassignment filename
+        """
+        return normp(Dataset.CASSIGNMENTS_DIR + self.name + Dataset.CASSIGNMENTS_APPENDIX)
+    
     def _is_datetime_col(self, col):
         """
         Checks if a Pandas Series is of type date time.
@@ -198,19 +217,21 @@ class Dataset:
                 return False
         return is_datetime(col)
 
+
+    # static methods
+
     @staticmethod
-    def instantiate_from_dir(transpose=False):
+    def instantiate_from_dir(cassignment_created=False):
         """
         Instantiates multiple data set objects from the Datasets/RealWorld folder.
         Uses the Datasets conf file to define which data set use.
         
-        Keyword arguments:
-        transpose -- transpose the data set if true (default False)
+        Keyword arguments: -
         
         Return:
         List of Dataset objects
         """
-        timeseries = [Dataset(ds_filename) 
+        timeseries = [Dataset(ds_filename, cassignment_created) 
                       for ds_filename in os.listdir(Dataset.RW_DS_PATH)
                       if Dataset.CONF['USE_ALL'] or ds_filename in Dataset.CONF['USE_LIST']]
         
@@ -219,3 +240,24 @@ class Dataset:
         assert Dataset.CONF['USE_ALL'] or len(timeseries) == len(Dataset.CONF['USE_LIST'])
 
         return timeseries
+
+    @staticmethod
+    def yield_each_datasets_cluster(datasets):
+        """
+        One-by-one, yields each cluster of all given datasets.
+        
+        Keyword arguments:
+        datasets -- list of Dataset objects containing the time series and their clusters assignment.
+        
+        Return: 
+        1. Dataset object which contains the yielded cluster
+        2. Pandas DataFrame containing all the time series of the data set (each row is a time series)
+        3. Pandas DataFrame containing the time series belonging to one of the clusters to yield (each row is a time series).
+        4. ID of the yielded cluster
+        """
+        for dataset in tqdm(datasets): # for each data set
+            timeseries = dataset.load_timeseries(transpose=True) # load data set's time series
+            clusters_assignment = dataset.load_cassignment() # load clusters assignment
+            for cluster_id in clusters_assignment['Cluster ID'].unique(): # for each cluster
+                cluster = dataset.get_cluster_by_id(timeseries, cluster_id, clusters_assignment)
+                yield dataset, timeseries, cluster, cluster_id

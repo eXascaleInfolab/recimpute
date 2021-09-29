@@ -23,21 +23,22 @@ class Dataset:
     """
 
     RW_DS_PATH = normp('./Datasets/RealWorld/')
-    CASSIGNMENTS_DIR = './Clustering/Results/cassignments/'
+    CASSIGNMENTS_DIR = normp('./Clustering/Results/cassignments/')
     CASSIGNMENTS_APPENDIX = '_cassignments.csv'
     CONF = Utils.read_conf_file('datasets')
 
     # create necessary directories if not there yet
-    if not os.path.exists(CASSIGNMENTS_DIR):
-        os.makedirs(CASSIGNMENTS_DIR)
+    Utils.create_dirs_if_not_exist([CASSIGNMENTS_DIR])
 
 
     # constructor
 
-    def __init__(self, archive_name, cassignment_created=False):
+    def __init__(self, archive_name, cassignment_created=False, labels_created=False):
         self.rw_ds_filename = archive_name
         self.name = archive_name[:-4]
         self.cassignment_created = cassignment_created
+        self.labels_created = labels_created
+        self.labeler = None
         self.nb_timeseries, self.timeseries_length = self.load_timeseries(transpose=True).shape
 
 
@@ -57,9 +58,11 @@ class Dataset:
         Return:
         Pandas DataFrame containing the time series belonging to the specified cluster's id (each row is a time series).
         """
+        if cassignment is None:
+            cassignment = self.load_cassignment()
         return timeseries.loc[cassignment['Time Series ID'][cassignment['Cluster ID'] == cluster_id]]
 
-    def get_all_clusters(self, timeseries, cassignment=None):
+    def yield_all_clusters(self, timeseries, cassignment=None):
         """
         Yields the time series of each cluster in a Pandas DataFrame.
         
@@ -81,7 +84,7 @@ class Dataset:
             cassignment = self.load_cassignment()
         for cluster_id in cassignment['Cluster ID'].unique(): # for each cluster ID present in this dataset
             # retrieve time series assigned to this cluster
-            cluster = dataset.get_cluster_by_id(timeseries, cassignment, cluster_id)
+            cluster = self.get_cluster_by_id(timeseries, cluster_id, cassignment)
             yield cluster, cluster_id, cassignment
 
     def load_timeseries(self, transpose=False):
@@ -185,6 +188,19 @@ class Dataset:
         """
         return self.nb_timeseries * self.timeseries_length
 
+    def set_labeler(self, labeler):
+        # TODO
+        self.labeler = labeler
+
+    def load_labels(self, properties):
+        # TODO
+        labels = self.labeler.load_labels(self.name, properties)
+
+    def save_labels(self, labels):
+        # TODO
+        self.labels_created = True
+        self.labeler.save_labels(self.name, labels)
+
 
     # private methods
 
@@ -197,7 +213,7 @@ class Dataset:
         Return:
         cassignment filename
         """
-        return normp(Dataset.CASSIGNMENTS_DIR + self.name + Dataset.CASSIGNMENTS_APPENDIX)
+        return normp(Dataset.CASSIGNMENTS_DIR + f'/{self.name}{Dataset.CASSIGNMENTS_APPENDIX}')
     
     def _is_datetime_col(self, col):
         """
@@ -221,7 +237,7 @@ class Dataset:
     # static methods
 
     @staticmethod
-    def instantiate_from_dir(cassignment_created=False):
+    def instantiate_from_dir(cassignment_created=False, labels_created=False):
         """
         Instantiates multiple data set objects from the Datasets/RealWorld folder.
         Uses the Datasets conf file to define which data set use.
@@ -231,7 +247,7 @@ class Dataset:
         Return:
         List of Dataset objects
         """
-        timeseries = [Dataset(ds_filename, cassignment_created) 
+        timeseries = [Dataset(ds_filename, cassignment_created, labels_created) 
                       for ds_filename in os.listdir(Dataset.RW_DS_PATH)
                       if Dataset.CONF['USE_ALL'] or ds_filename in Dataset.CONF['USE_LIST']]
         

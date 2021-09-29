@@ -11,13 +11,19 @@ recimpute.py
 import sys
 
 from Datasets.Dataset import Dataset
-from Clustering.ClusterModel import ClusterModel
+from Clustering.ShapeBasedClustering import ShapeBasedClustering
+from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 
 
 if __name__ == '__main__':
     print(str(sys.argv))
 
-    datasets = Dataset.instantiate_from_dir(cassignment_created=False)
+    datasets = Dataset.instantiate_from_dir(cassignment_created=True, labels_created=False)
+
+    # if labels_created is set to True we can do:
+    # for ds in datasets:
+    #   ds.set_labeler(ImputeBenchLabeler)
+    # and then one can access the labels with datasets[0].load_labels(properties)
     
     for ds in datasets:
         pass
@@ -25,5 +31,8 @@ if __name__ == '__main__':
         #timeseries = ds.load_timeseries()
         #print(timeseries.head(2).to_markdown())
 
-    cm = ClusterModel()
-    datasets = cm.run(datasets)
+    #cm = ShapeBasedClustering()
+    #datasets = cm.run(datasets)
+
+    ibl = ImputeBenchLabeler()
+    datasets = ibl.label(datasets)

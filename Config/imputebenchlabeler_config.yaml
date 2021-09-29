@@ -1,0 +1,38 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# imputebenchlabeler_config.yaml
+# @author: @chacungu
+
+# ImputeBenchLabeler related configuration file
+# ------------------------------------
+
+# LBL_PROPERTIES: All properties labels can have and their related possible values (e.g. labels can be of type mono or multi)
+POSSIBLE_LBL_PROPERTIES:
+  - type:
+    - mono
+    - multi
+  - reduced:
+    - True
+    - False
+
+# MULTI_LABELS_NB_REL: Top N algorithms to consider relevant in a multi-labels vector
+MULTI_LABELS_NB_REL: 3
+
+# Benchmark config: ------------------------------------------------------------------------
+
+# USE_BCHMK_ON_DATASET: If True uses all time series of a data set to label one sequence. Otherwise, ises only the time series from
+# the same cluster as the sequence to label.
+USE_BCHMK_ON_DATASET: False
+
+# BENCHMARK_SCENARIO: scenario to use when running the ImputeBench benchmark. As of now, only miss_perc can be used.
+BENCHMARK_SCENARIO: miss_perc
+
+# BENCHMARK_ERRORS: list of errors to measure when running the ImputeBench benchmark. Can be any of mae, mse, rmse.
+BENCHMARK_ERRORS:
+  - mae
+  - mse
+  - rmse
+
+# BENCHMARK_PATH: path to the Debug folder of the ImputeBench benchmark
+BENCHMARK_PATH: /home/guillaume/bench-vldb20/TestingFramework/bin/Debug

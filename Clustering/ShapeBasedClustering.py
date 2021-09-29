@@ -2,7 +2,7 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-ClusterModel.py
+ShapeBasedClustering.py
 @author: @chacungu
 """
 
@@ -21,9 +21,9 @@ import time
 from Datasets.Dataset import Dataset
 from Utils.Utils import Utils
 
-class ClusterModel:
+class ShapeBasedClustering:
     """
-    Clustering model used to optimally cluster time series stored in Dataset objects. Uses k-Shape.
+    Shape-based clustering model used to optimally cluster time series stored in Dataset objects. Uses k-Shape.
     """
 
     CLUSTERING_RESULTS_DIR = './Clustering/Results/'
@@ -33,8 +33,7 @@ class ClusterModel:
     CONF = Utils.read_conf_file('clustering')
 
     # create necessary directories if not there yet
-    if not os.path.exists(CLUSTERING_RESULTS_DIR):
-        os.makedirs(CLUSTERING_RESULTS_DIR)
+    Utils.create_dirs_if_not_exist([CLUSTERING_RESULTS_DIR])
 
 
     # constructor
@@ -73,7 +72,7 @@ class ClusterModel:
         datasets = self._run_final_clustering(datasets, nb_clusters_per_ds)
 
         # merge clusters with <5 time series to the most similar cluster from the same data set
-        self._merge_small_clusters(datasets, min_nb_ts=ClusterModel.CONF['MIN_NB_TS_PER_CLUSTER'])
+        self._merge_small_clusters(datasets, min_nb_ts=ShapeBasedClustering.CONF['MIN_NB_TS_PER_CLUSTER'])
 
         # change all clusters' ID (for all datasets) such that there are no dupplicates
         datasets = self._make_cid_unique(datasets)
@@ -155,7 +154,7 @@ class ClusterModel:
         2. current number of retries for this number of clusters to produce (updated)
         3. list of scores for each run (updated)
         """
-        if nb_retries < ClusterModel.CONF['GS_MAX_RETRIES']:
+        if nb_retries < ShapeBasedClustering.CONF['GS_MAX_RETRIES']:
             # dismiss this clustering try & *redo* this run
             print(f'TMP: %s\t #clusters %i, #run %i, #retry %i' % (dataset.name, nb_clusters, id_run, nb_retries))
             nb_retries += 1
@@ -257,7 +256,7 @@ class ClusterModel:
         """
         # load dataset
         timeseries = dataset.load_timeseries(transpose=True)
-        gs_nb_runs = self._get_nb_runs(dataset, ClusterModel.CONF['GS_NB_RUNS'])
+        gs_nb_runs = self._get_nb_runs(dataset, ShapeBasedClustering.CONF['GS_NB_RUNS'])
         ds_scores = {'min': [], 'max': [], 'avg': [], 'elapsed_times': [], 'gs_nb_runs': gs_nb_runs}
         ds_nb_clusters_gridsearch = None
 
@@ -271,7 +270,7 @@ class ClusterModel:
             
         if dataset_ncc_scores is not None:
             # use clustering iff time series are not yet correlated enough
-            if np.median(dataset_ncc_scores) < ClusterModel.CONF['NCC_MIN_THRESHOLD']:
+            if np.median(dataset_ncc_scores) < ShapeBasedClustering.CONF['NCC_MIN_THRESHOLD']:
 
                 ds_nb_clusters_gridsearch = self._get_ds_gridsearch_range(dataset)
                 print('TMP: ', dataset.name, '\n\trange:', ds_nb_clusters_gridsearch)
@@ -320,7 +319,7 @@ class ClusterModel:
         scores = {}
         datasets_not_processed = []
 
-        with open(ClusterModel.GS_STATUS_FILE, 'w') as f:
+        with open(ShapeBasedClustering.GS_STATUS_FILE, 'w') as f:
             f.write('Gridsearch of following data sets started at %s:\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             for ds in datasets:
                 f.write('- %s\n' % ds.name)
@@ -360,7 +359,7 @@ class ClusterModel:
             print('join complete')
             datasets = updated_datasets
         
-        with open(ClusterModel.GS_STATUS_FILE, 'a') as f:
+        with open(ShapeBasedClustering.GS_STATUS_FILE, 'a') as f:
             if exception is not None:
                 f.write('Got exception %s.\n\n' % exception)
             if len(datasets_not_processed) > 0:
@@ -386,7 +385,7 @@ class ClusterModel:
         """
         try:
             # load scores
-            with open(ClusterModel.GS_SCORES_FILE, 'r') as f:
+            with open(ShapeBasedClustering.GS_SCORES_FILE, 'r') as f:
                 scores = json.load(f)
                 
             # load ranges
@@ -421,7 +420,7 @@ class ClusterModel:
         if nb_clusters > 1:
             # cluster dataset    
             dataset, _ = self._clustering_reruns(dataset, nb_clusters, 
-                                                 self._get_nb_runs(dataset, ClusterModel.CONF['CLUSTERING_NB_RUNS']), 
+                                                 self._get_nb_runs(dataset, ShapeBasedClustering.CONF['CLUSTERING_NB_RUNS']), 
                                                  accept_small_clusters=True, save_best_tocsv=True)
         else:
             clusters_assignment = pd.DataFrame(data = [(tid, 0) # time series id, assigned cluster's id
@@ -443,7 +442,7 @@ class ClusterModel:
         Return:
         List of Dataset objects containing the time series.
         """
-        with open(ClusterModel.CLUSTERING_STATUS_FILE, 'w') as f:
+        with open(ShapeBasedClustering.CLUSTERING_STATUS_FILE, 'w') as f:
             f.write('Clustering of following data sets started at %s:\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             for dataset in datasets:
                 f.write('- %s\n' % dataset.name)
@@ -455,7 +454,7 @@ class ClusterModel:
             for dataset in p.map(func, datasets):
                 updated_datasets.append(dataset)
             
-        with open(ClusterModel.CLUSTERING_STATUS_FILE, 'a') as f:
+        with open(ShapeBasedClustering.CLUSTERING_STATUS_FILE, 'a') as f:
             f.write('Clustering ended at %s.\n\n\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
         return updated_datasets
@@ -548,15 +547,15 @@ class ClusterModel:
         Return: 
         Range of number of clusters to try during gridsearch
         """
-        if dataset.name in ClusterModel.CONF['GS_OPTIONAL_RANGES_HINTS']: 
+        if dataset.name in ShapeBasedClustering.CONF['GS_OPTIONAL_RANGES_HINTS']: 
             # if range of this data set is specified in the conf. file
-            _range = ClusterModel.CONF['GS_OPTIONAL_RANGES_HINTS'][dataset.name]
+            _range = ShapeBasedClustering.CONF['GS_OPTIONAL_RANGES_HINTS'][dataset.name]
             return list(np.arange(_range['min'], _range['max']+1, _range['step'], dtype=int))
 
         # else: compute the range dynamically
         complexity = dataset.get_space_complexity() # get complexity score of dataset
         # retrieve max number of tests (= max nb clusters to test) depending on the dataset's complexity
-        for max_complexity, nb_tests in ClusterModel.CONF['GS_MAX_TESTS'].items():
+        for max_complexity, nb_tests in ShapeBasedClustering.CONF['GS_MAX_TESTS'].items():
             if complexity < max_complexity:
                 max_tests = nb_tests
                 break
@@ -598,14 +597,14 @@ class ClusterModel:
         Return: 
         Filename of the gridsearch scores' file.
         """
-        if os.path.exists(ClusterModel.GS_SCORES_FILE): 
+        if os.path.exists(ShapeBasedClustering.GS_SCORES_FILE): 
             # if a gridsearch scores' file already exists
             i = 1
             while True:
                 # rename existing files: increment a counter in their name
-                new_filename = '.'.join(ClusterModel.GS_SCORES_FILE.split('.')[:-1]) + f' ({i}).' + ClusterModel.GS_SCORES_FILE.split('.')[-1]
+                new_filename = '.'.join(ShapeBasedClustering.GS_SCORES_FILE.split('.')[:-1]) + f' ({i}).' + ShapeBasedClustering.GS_SCORES_FILE.split('.')[-1]
                 if not os.path.exists(new_filename):
-                    os.rename(ClusterModel.GS_SCORES_FILE, new_filename)
+                    os.rename(ShapeBasedClustering.GS_SCORES_FILE, new_filename)
                     break
                 i += 1
-        return ClusterModel.GS_SCORES_FILE
+        return ShapeBasedClustering.GS_SCORES_FILE

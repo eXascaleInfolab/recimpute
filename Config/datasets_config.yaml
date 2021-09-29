@@ -10,8 +10,8 @@
 USE_ALL: False
 # if USE_ALL is False, loads only data sets which are listed below:
 USE_LIST: 
-  - BirdChicken.zip                                                                                    # 1x40x512
-  - Chinatown.zip                                                                                      # 1x363x24
+  #- BirdChicken.zip                                                                                    # 1x40x512
+  #- Chinatown.zip                                                                                      # 1x363x24
   - parking.zip                                                                                        # 1x12x1312
 
   #- ACSF1.zip                                                                                          # 1x200x1460

@@ -7,6 +7,7 @@ Utils.py
 """
 
 from collections import ChainMap
+import os
 from os.path import normpath as normp
 import yaml
 
@@ -43,3 +44,19 @@ class Utils:
                 return conf
         except FileNotFoundError:
             raise FileNotFoundError('Configuration file %s not found.' % filename)
+
+    @staticmethod
+    def create_dirs_if_not_exist(paths):
+        """
+        For each path in the given list, creates the directory at specified path if it does not exist yet.
+        
+        Keyword arguments:
+        paths -- list of paths to the directories to create
+        
+        Return: -
+        """
+        for path in paths:
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+    

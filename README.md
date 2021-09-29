@@ -1,4 +1,4 @@
-# RecImpute: Recommendation of Imputation Techniques for Missing Values in Time Series
+# RecImpute: A Recommender System for Imputation Techniques in Time Series Data
 
 RecImpute is a recommendation system of imputation techniques for missing values in time series. It uses data mining and deep learning techniques to learn knowledge about the time series' characteristics. The system can be trained on custom datasets or used as-is with no prior configuration required. RecImpute is able to predict which algorithm is the most-fitted to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="/">TODO</a>.
 

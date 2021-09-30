@@ -189,15 +189,38 @@ class Dataset:
         return self.nb_timeseries * self.timeseries_length
 
     def set_labeler(self, labeler):
-        # TODO
+        """
+        Sets the labeler class used to label this data set.
+        
+        Keyword arguments: 
+        labeler -- labeler class used to label this data set
+        
+        Return: -
+        """
         self.labeler = labeler
 
     def load_labels(self, properties):
-        # TODO
-        labels = self.labeler.load_labels(self.name, properties)
+        """
+        Loads the labels defined by the specified properties.
+        
+        Keyword arguments: 
+        properties -- dict specifying the labels' properties
+        
+        Return: 
+        1. Pandas DataFrame containing the data set's labels. Two columns: Time Series ID and Label.
+        2. List of all possible labels value
+        """
+        return self.labeler.load_labels(self, properties)
 
     def save_labels(self, labels):
-        # TODO
+        """
+        Saves the given labels to CSV.
+        
+        Keyword arguments: 
+        labels -- Pandas DataFrame containing the labels to save. 
+        
+        Return: -
+        """
         self.labels_created = True
         self.labeler.save_labels(self.name, labels)
 

@@ -15,24 +15,34 @@ from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 
 
-if __name__ == '__main__':
-    print(str(sys.argv))
-
-    datasets = Dataset.instantiate_from_dir(cassignment_created=True, labels_created=False)
-
-    # if labels_created is set to True we can do:
-    # for ds in datasets:
-    #   ds.set_labeler(ImputeBenchLabeler)
-    # and then one can access the labels with datasets[0].load_labels(properties)
+def run_all():
+    datasets = Dataset.instantiate_from_dir(cassignment_created=False, labels_created=False)
     
-    for ds in datasets:
-        pass
-        #print(ds.name)
-        #timeseries = ds.load_timeseries()
-        #print(timeseries.head(2).to_markdown())
-
-    #cm = ShapeBasedClustering()
-    #datasets = cm.run(datasets)
+    cm = ShapeBasedClustering()
+    datasets = cm.run(datasets)
 
     ibl = ImputeBenchLabeler()
     datasets = ibl.label(datasets)
+
+    # TODO
+
+def tests():
+    datasets = Dataset.instantiate_from_dir(cassignment_created=True, labels_created=True)
+
+    for ds in datasets:
+        ds.set_labeler(ImputeBenchLabeler)
+    
+    properties = ImputeBenchLabeler.get_labels_possible_properties()
+    properties['type'] = 'multilabels'
+    properties['multi_labels_nb_rel'] = 3
+    properties['reduction_threshold'] = .05
+
+    labels, labels_list = datasets[0].load_labels(properties)
+    print(labels_list)
+    print(labels.to_markdown())
+
+
+if __name__ == '__main__':
+    print(str(sys.argv))
+
+    tests()

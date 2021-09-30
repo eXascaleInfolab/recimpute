@@ -6,6 +6,8 @@ ImputeBenchLabeler.py
 @author: @chacungu
 """
 
+import ast
+import numpy as np
 import os
 from os.path import normpath as normp
 import pandas as pd
@@ -19,7 +21,7 @@ from Utils.Utils import Utils
 
 class ImputeBenchLabeler(AbstractLabeler):
     """
-    TODO
+    Labeler class which uses the ImputeBench benchmark. Provides methods to label time series and handle those labels.
     """
 
     LABELS_DIR = normp('./Labeling/ImputationTechniques/labels/')
@@ -39,17 +41,33 @@ class ImputeBenchLabeler(AbstractLabeler):
     # public methods
 
     def label(self, datasets):
-        # TODO
+        """
+        Labels each cluster from the given list of data sets using the ImputeBench benchmark.
+        
+        Keyword arguments:
+        datasets -- List of Dataset objects containing time series to label
+        
+        Return:
+        List of updated Dataset objects
+        """
         updated_datasets = []
+
+        # for each data set
         for dataset in datasets:
             tmp_labels = []
+            
+            # load time series
             timeseries = dataset.load_timeseries(transpose=True)
+
+            # for each cluster
             for cluster, cluster_id, _ in dataset.yield_all_clusters(timeseries):
                 print('Running benchmark for cluster %i' % cluster_id)
+                # label the cluster's time series
                 benchmark_results = self._label_cluster(timeseries, cluster, cluster_id)
                 tmp_labels.append((cluster_id, benchmark_results))
             tmp_labels_df = pd.DataFrame(tmp_labels, columns=['Cluster ID', 'Benchmark Results'])
             
+            # save labels
             dataset.set_labeler(self.__class__)
             dataset.save_labels(tmp_labels_df)
             updated_datasets.append(dataset)
@@ -59,14 +77,24 @@ class ImputeBenchLabeler(AbstractLabeler):
     # private methods
 
     def _label_cluster(self, all_timeseries, cluster, cluster_id):
-        # TODO
+        """
+        Labels the given cluster using the ImputeBench benchmark.
+        
+        Keyword arguments:
+        all_timeseries -- DataFrame containing all the time series of the cluster's data set (each row is a time series)
+        cluster -- DataFrame containing only the time series of a cluster (each row is a time series)
+        cluster_id -- cluster ID
+        
+        Return:
+        Dict containing the ImputeBench benchmark results
+        """   
         # select the sequences to give to the benchmark (either the whole cluster or the whole data set)
         sequences_to_use = cluster if not ImputeBenchLabeler.CONF['USE_BCHMK_ON_DATASET'] \
                            else pd.concat([cluster.iloc[0].to_frame(), all_timeseries])
 
         # call benchmark on the cluster's time series
         benchmark_results, _ = self._run_benchmark(sequences_to_use.T, 
-                                                   algorithms='all',
+                                                   algorithms=ImputeBenchLabeler.CONF['ALGORITHMS_LIST'],
                                                    scenario=ImputeBenchLabeler.CONF['BENCHMARK_SCENARIO'], 
                                                    errors=ImputeBenchLabeler.CONF['BENCHMARK_ERRORS'],
                                                    id=cluster_id,
@@ -161,140 +189,88 @@ class ImputeBenchLabeler(AbstractLabeler):
         return all_error_results_df, dataset_name
 
 
-    # static methods
+    # public static methods
 
-    def load_labels(dataset_name, properties):
-        # TODO
-        labels_filename = ImputeBenchLabeler._get_labels_filename(dataset_name)
-        clusters_labels = pd.read_csv(labels_filename)
-        labels, all_benchmark_results = tsc_utils.get_clusters_labels(clusters_features)
-            
-        # create correct labels from benchmark_results if the loaded labels are not in the right format        
-        labels, algorithms_list = _label_from_benchmark_results(labels, all_benchmark_results, multilabels, 
-                                                                multilabels_top_n=multilabels_top_n)
-
-        clusters_features['Label'] = labels
-        clusters_features['BenchmarkResults'] = all_benchmark_results
+    def get_labels_possible_properties():
+        """
+        Returns a dict containing the possible properties labels generated with this labeler can have.
+        
+        Keyword arguments: -
+        
+        Return: 
+        Dict containing the possible properties labels generated with this labeler can have.
+        """
+        return ImputeBenchLabeler.CONF['POSSIBLE_LBL_PROPERTIES']
 
     def save_labels(dataset_name, labels):
-        # TODO
+        """
+        Saves the given labels to CSV.
+        
+        Keyword arguments: 
+        dataset_name -- name of the data set to which the labels belong
+        labels -- Pandas DataFrame containing the labels to save. Two columns: Cluster ID, Benchmark Results.
+        
+        Return: -
+        """
         labels_filename = ImputeBenchLabeler._get_labels_filename(dataset_name)
         labels.to_csv(labels_filename, index=False)
 
-    def _get_labels_filename(dataset_name):
-        # TODO
-        return normp(ImputeBenchLabeler.LABELS_DIR + f'/{dataset_name}{ImputeBenchLabeler.LABELS_APPENDIX}')
-
-    
-    # ------------------------------------------------- old
-
-    
-    def _reduce_labels_set(self, clusters_features, labels, all_benchmark_results, multilabels, multilabels_top_n, underused_algos_perc):
-        # identify algorithms with < X% attribution
-        score_matrix = create_algos_score_matrix(clusters_labels=clusters_features)
-        ranking_matrix = create_algos_ranking_matrix(score_matrix=score_matrix)
-        nb_clusters = ranking_matrix.iloc[0].sum()
-        used_perc = ranking_matrix.iloc[:, 0:multilabels_top_n if multilabels else 1].sum(axis=1) / nb_clusters
-        used_perc = used_perc.loc[used_perc < underused_algos_perc]
-        underused_algos = list(used_perc.index)
-        if 'cdrec' in underused_algos:
-            underused_algos.extend(['cdrec_k2', 'cdrec_k3'])
+    def load_labels(dataset, properties):
+        """
+        Loads the labels of the given data set's name and defined by the specified properties.
         
-        # for each cluster that has one of the underused algos as label:
-        # replace it by the 2nd best in the BenchmarkResults list
-        labels, algorithms_list = _label_from_benchmark_results(labels, all_benchmark_results, multilabels,
-                                                                multilabels_top_n=multilabels_top_n,
-                                                                algos_to_exclude=underused_algos)
-        clusters_features['Label'] = labels
-        return clusters_features
-
-    def _label_from_benchmark_results(labels, all_benchmark_results, multilabels, multilabels_top_n=3, algos_to_exclude=[]):
-        new_labels = []
-        for _, benchmark_results_dict in zip(labels, all_benchmark_results):
-            benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
-            benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
-            label, algorithms_list = (_get_best_algo(benchmark_results, algos_to_exclude=algos_to_exclude), None) \
-                                    if not multilabels else \
-                                    _create_multilabels_vector(benchmark_results, top_n=multilabels_top_n, algos_to_exclude=algos_to_exclude)
-            new_labels.append(label)
-        return new_labels, algorithms_list
-
-    def _get_best_algo(benchmark_results, score_to_measure='rmse', algos_to_exclude=[]):
-        # analyze results of benchmark
-        best_algo, _ = benchmark.get_highest_benchmark_score(benchmark_results, 
-                                                            score_to_measure=score_to_measure,
-                                                            algos_to_exclude=algos_to_exclude)
-
-        if 'cdrec_' in best_algo:
-            best_algo = 'cdrec'
-        return best_algo
-
-    def _create_multilabels_vector(benchmark_results, top_n=3, score_to_measure='rmse', algos_to_exclude=[]):
-        algorithms_labels = _create_reduced_multilabels_set(algos_to_exclude) \
-                            if len(algos_to_exclude) > 0 else \
-                            tsc_utils.ALGORITHMS_LABEL
-        vec = np.zeros(len(set(algorithms_labels.values())))
+        Keyword arguments: 
+        dataset -- Dataset object to which the labels belong
+        properties -- dict specifying the labels' properties
         
-        benchmark_results = benchmark_results.groupby('algorithm').mean()
-        # drop the intersection btw algos_to_exclude & algos listed in benchmark_results
-        algos_to_exclude = list(set(algos_to_exclude) & set(benchmark_results.index))
-        benchmark_results_reduced = benchmark_results.drop(benchmark_results.loc[algos_to_exclude].index)
-        # keep top-n rows
-        top_n_benchmark_results = benchmark_results_reduced.nsmallest(top_n, score_to_measure, keep='all')
+        Return: 
+        1. Pandas DataFrame containing the data set's labels. Two columns: Time Series ID and Label.
+        2. List of all possible labels value
+        """
+        # load clusters labels
+        labels_filename = ImputeBenchLabeler._get_labels_filename(dataset.name)
+        clusters_labels = pd.read_csv(labels_filename, index_col='Cluster ID')
         
-        for label in top_n_benchmark_results.index:
-            label_idx = algorithms_labels[label]
-            vec[label_idx] = 1
-            
-        #                mae      rmse       mse
-        #algorithm                              
-        #cdrec_k2   0.645027  0.863127  0.749762
-        #cdrec_k3   0.693679  0.883453  0.791455
-        #dynammo    0.610612  0.791175  0.632809
-        #grouse     0.694662  0.888747  0.796800
-        #rosl       0.742681  0.943341  0.893658
-        #softimp    0.642368  0.822577  0.688262
-        #stmvl      0.640512  0.830063  0.692810
-        #svdimp     0.672022  0.859401  0.749986
-        #svt        0.638844  0.816731  0.668205
-        #tenmf      1.653684  2.070520  5.683466
-        #trmf       0.649153  0.831884  0.703598
+        # create labels from benchmark_results
+        clusters_labels_df, algorithms_list = ImputeBenchLabeler._get_labels_from_bench_res(clusters_labels, properties)
+        clusters_labels_dict = clusters_labels_df.set_index('Cluster ID').to_dict()['Label']
+        # propagate clusters' label to their time series
+        timeseries_labels = []
+        for _, row in dataset.load_cassignment().iterrows():
+            tid = row['Time Series ID']
+            cid = row['Cluster ID']
+            label = clusters_labels_dict[cid]
+            timeseries_labels.append((tid, label))
+
+        timeseries_labels_df = pd.DataFrame(timeseries_labels, columns=['Time Series ID', 'Label'])
+        return timeseries_labels_df, algorithms_list
+
+    def create_algos_score_matrix(all_benchmark_results, score_to_measure):
+        """
+        Creates scores DataFrame from the ImputeBench benchmark results.
         
-        return vec, algorithms_labels
-
-    def _create_reduced_multilabels_set(algos_to_exclude):
-        new_algorithms_label = tsc_utils.ALGORITHMS_LABEL.copy()
-        algorithms_label_keys = list(new_algorithms_label.keys())
-
-        handled_cdrec = False
-        for label_to_excl in algos_to_exclude:
-            idx = algorithms_label_keys.index(label_to_excl)
-            val = new_algorithms_label[label_to_excl]
-            if ('cdrec' in label_to_excl and not handled_cdrec) or 'cdrec' not in label_to_excl:
-                if 'cdrec' in label_to_excl:
-                    handled_cdrec = True
-                for i in range(idx+1, len(algorithms_label_keys)):
-                    new_algorithms_label[algorithms_label_keys[i]] -= 1
-        for label_to_excl in algos_to_exclude:
-            del new_algorithms_label[label_to_excl]
-        return new_algorithms_label
-
-    def create_algos_score_matrix(clusters_labels=None, score_to_measure='rmse'):
+        Keyword arguments: 
+        all_benchmark_results -- Pandas DataFrame with Cluster ID as index and the corresponding ImputeBench 
+                                 benchmark results as the only column
+        score_to_measure -- error to minimize when selecting relevant algorithms
+        
+        Return:
+        Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
+        Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
+        """
         # create scores data frame
         score_matrix = pd.DataFrame()
-        if clusters_labels is None:
-            clusters_labels = pd.read_csv(tsc_utils.CLUSTERS_LABELS_FILENAME)
-        for i, benchmark_results_dict in enumerate(clusters_labels['BenchmarkResults']):
+        for i, benchmark_results_dict in enumerate(all_benchmark_results['Benchmark Results']):
+            # convert bench_res to DataFrame
             benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
             benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
             benchmark_results = benchmark_results.groupby('algorithm').mean()[score_to_measure]
 
-            #if i < 10: # tmp
-            #    benchmark_results = benchmark_results.drop(['cdrec_k2', 'cdrec_k3', 'dynammo', 'grouse', 'rosl', 'softimp']) # tmp
-
-            missing_algos = [key for key in tsc_utils.ALGORITHMS_LABEL.keys() if key not in benchmark_results.index]
+            # identify possible missing algos
+            missing_algos = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in benchmark_results.index]
             benchmark_results = benchmark_results.reindex(benchmark_results.index.union(missing_algos))
 
+            # merge all versions of cdrec (keep the best one)
             benchmark_results.loc['cdrec'] = min(benchmark_results.loc['cdrec_k2'], benchmark_results.loc['cdrec_k3'])
             benchmark_results = benchmark_results.drop(['cdrec_k2', 'cdrec_k3'])
 
@@ -302,15 +278,23 @@ class ImputeBenchLabeler(AbstractLabeler):
             
         return score_matrix
 
-    def create_algos_ranking_matrix(score_to_measure='rmse', score_matrix=None):
-        # create scores data frame
-        if score_matrix is None:
-            score_matrix = create_algos_score_matrix(score_to_measure)
-            
+    def create_algos_ranking_matrix(score_matrix, score_to_measure):
+        """
+        Creates scores DataFrame from the score_matrix created from the ImputeBench benchmark results.
+        
+        Keyword arguments: 
+        score_matrix -- Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
+                        Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
+        score_to_measure -- error to minimize when selecting relevant algorithms
+        
+        Return:
+        Ranking DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
+        Columns: Position at which an algorithm is recommended. Values: Number of clusters labeled with corresponding 
+        algorithm at Nth ranking.
+        """       
         # create ranking matrix
-        ranking_matrix = pd.DataFrame(index=tsc_utils.ALGORITHMS_LABEL.keys(), 
-                                    columns=range(1, len(tsc_utils.ALGORITHMS_LABEL.keys()) + 1 - 2)).fillna(0)
-        ranking_matrix = ranking_matrix.drop(['cdrec_k2', 'cdrec_k3'])
+        ranking_matrix = pd.DataFrame(index=ImputeBenchLabeler.CONF['ALGORITHMS_LIST'], 
+                                      columns=range(1, len(ImputeBenchLabeler.CONF['ALGORITHMS_LIST']) + 1)).fillna(0)
         for col in score_matrix:
             ranking = score_matrix[col].sort_values()
             for i in range(len(ranking)):
@@ -320,3 +304,159 @@ class ImputeBenchLabeler(AbstractLabeler):
 
         return ranking_matrix
 
+
+    # private static methods
+
+    def _get_labels_filename(dataset_name):
+        """
+        Returns the filename of the labels for the given data set's name.
+        
+        Keyword arguments: 
+        dataset_name -- name of the data set to which the labels belong
+        
+        Return: 
+        Filename of the labels for the given data set's name.
+        """
+        return normp(ImputeBenchLabeler.LABELS_DIR + f'/{dataset_name}{ImputeBenchLabeler.LABELS_APPENDIX}')
+
+    def _get_labels_from_bench_res(all_benchmark_results, properties):
+        """
+        Uses the ImputeBench benchmark results to generate clusters' labels.
+        
+        Keyword arguments: 
+        all_benchmark_results -- Pandas DataFrame with Cluster ID as index and the corresponding ImputeBench 
+                                 benchmark results as the only column
+        properties -- dict specifying the labels' properties
+        
+        Return:
+        1. Pandas DataFrame containing the clusters' labels. Two columns: Cluster ID, Label.
+        2. list of all possible labels values
+        """
+        # identify algorithms to exclude from labels list if some reduction threshold has been specified
+        algos_to_exclude = ImputeBenchLabeler._get_algos_to_exclude(all_benchmark_results, properties) \
+                            if properties['reduction_threshold'] > 0.0 else []
+
+        # get each cluster's label from their benchmark results
+        clusters_labels = []
+        for cid, bench_res in all_benchmark_results.iterrows():
+            # convert bench_res to DataFrame
+            benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(bench_res.values[0]))
+            benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
+            
+            # create label from benchmark results
+            if properties['type'] == 'regression':
+                # TODO
+                raise Exception('Rgression not implemented yet')
+            elif properties['type'] == 'multilabels':
+                top_n = properties['multi_labels_nb_rel']
+                label = ImputeBenchLabeler._get_multilabels_vector(benchmark_results, 
+                                                                   top_n, ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'],
+                                                                   algos_to_exclude)
+            else: # monolabels
+                label = ImputeBenchLabeler._get_best_algo(benchmark_results, 
+                                                          ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'], algos_to_exclude)
+                                      
+            clusters_labels.append((cid, label))
+
+        algorithms_list = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in algos_to_exclude]
+        clusters_labels_df = pd.DataFrame(clusters_labels, columns=['Cluster ID', 'Label'])
+        return clusters_labels_df, algorithms_list
+
+    def _get_algos_to_exclude(all_benchmark_results, properties):
+        """
+        Returns the list of algorithms for which the original clusters' attribution is lower than the 'reduction_threshold'
+        threshold specified in the properties. This is the list of algorithms to exclude from the set of labels.
+        
+        Keyword arguments: 
+        all_benchmark_results -- Pandas DataFrame with Cluster ID as index and the corresponding ImputeBench 
+                                 benchmark results as the only column
+        properties -- dict specifying the labels' properties
+        
+        Return:
+        List of algorithms to exclude from the set of labels
+        """
+        # create ranking matrix
+        score_matrix = ImputeBenchLabeler.create_algos_score_matrix(all_benchmark_results, 
+                                                                    ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'])
+        ranking_matrix = ImputeBenchLabeler.create_algos_ranking_matrix(score_matrix, 
+                                                                        ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'])
+        
+        nb_clusters = ranking_matrix.iloc[0].sum()
+        
+        # identify algorithms with < X% clusters' attribution
+        used_perc = ranking_matrix.iloc[:, 0 : properties['multi_labels_nb_rel'] if properties['type'] == 'multilabels' else 1]\
+                                  .sum(axis=1) / nb_clusters
+        print(used_perc)
+        used_perc = used_perc.loc[used_perc < properties['reduction_threshold']]
+        algos_to_exclude = list(used_perc.index)
+        return algos_to_exclude
+
+    def _get_multilabels_vector(benchmark_results, top_n, score_to_measure, algos_to_exclude): 
+        """
+        Creates and returns a multi-labels vector from the ImputeBench benchmark.
+        
+        Keyword arguments: 
+        benchmark_results -- Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
+                             Multi index: "algorithms" & "scenario".
+        top_n -- top N algorithms to consider relevant in a multi-labels vector
+        score_to_measure -- error to minimize when selecting relevant algorithms
+        algos_to_exclude -- list of algorithms to exclude
+        
+        Return:
+        Multi-labels vector where relevant algorithm's bit is set to 1
+        """
+        algorithms_list = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in algos_to_exclude]
+        vec = np.zeros(len(algorithms_list))
+        
+        benchmark_results = benchmark_results.groupby('algorithm').mean()
+        # drop the intersection btw algos_to_exclude & algos listed in benchmark_results
+        algos_to_exclude = list(set(algos_to_exclude) & set(benchmark_results.index))
+        benchmark_results_reduced = benchmark_results.drop(benchmark_results.loc[algos_to_exclude].index)
+        # keep top-n rows
+        top_n_benchmark_results = benchmark_results_reduced.nsmallest(top_n, score_to_measure, keep='all')
+        
+        for label in top_n_benchmark_results.index:
+            label_idx = algorithms_list.index(label)
+            vec[label_idx] = 1
+        
+        return vec
+
+    def _get_best_algo(benchmark_results, score_to_measure, algos_to_exclude):
+        """
+        Returns the best algorithm's name from the ImputeBench benchmark.
+        
+        Keyword arguments: 
+        benchmark_results -- Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
+                             Multi index: "algorithms" & "scenario".
+        score_to_measure -- error to minimize when selecting relevant algorithms
+        algos_to_exclude -- list of algorithms to exclude
+        
+        Return:
+        Best algorithm's name from the ImputeBench benchmark.
+        """
+        # analyze results of benchmark
+        best_algo, _ = ImputeBenchLabeler._get_highest_bench_score(benchmark_results, score_to_measure, algos_to_exclude)
+
+        if 'cdrec_' in best_algo:
+            best_algo = 'cdrec'
+        return best_algo
+
+    def _get_highest_bench_score(scores, score_to_measure, algos_to_exclude):
+        """
+        Returns the best algorithm name and its error (score) from the benchmark results.
+        
+        Keyword arguments:
+        scores -- Pandas DataFrame containing the benchmark's scores
+        score_to_measure -- name of the score to measure
+        algos_to_exclude -- list of algorithms names that shouldn't be returned (default [])
+        
+        Return:
+        1. name of the algorithm that gave the lowest error on the benchmark
+        2. lowest error
+        """
+        mean_scores = scores.groupby('algorithm').mean()
+        
+        algos_to_exclude = list(set(algos_to_exclude) & set(mean_scores.index))
+        mean_scores = mean_scores.drop(mean_scores.loc[algos_to_exclude].index)
+        
+        return mean_scores[score_to_measure].idxmin(), mean_scores[score_to_measure].min()

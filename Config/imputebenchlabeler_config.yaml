@@ -10,14 +10,31 @@
 # LBL_PROPERTIES: All properties labels can have and their related possible values (e.g. labels can be of type mono or multi)
 POSSIBLE_LBL_PROPERTIES:
   - type:
-    - mono
-    - multi
-  - reduced:
-    - True
-    - False
+    - monolabels
+    - regression
+    - multilabels
+  # multi_labels_nb_rel: Top N algorithms to consider relevant in a multi-labels vector
+  - multi_labels_nb_rel: 3 
+  # reduction_threshold: For a label, if the percentage of clusters with this label is lower than this threshold,
+  # the label is removed and the clusters are re-labeled with "valid" labels
+  - reduction_threshold: .00
 
-# MULTI_LABELS_NB_REL: Top N algorithms to consider relevant in a multi-labels vector
-MULTI_LABELS_NB_REL: 3
+ALGORITHMS_LIST:
+  - cdrec
+  - dynammo
+  - grouse
+  - rosl
+  - softimp
+  - svdimp
+  - svt
+  - stmvl
+  - spirit
+  - tenmf
+  - tkcm
+  - trmf
+  - ssa
+  - m-rnn
+  - brits
 
 # Benchmark config: ------------------------------------------------------------------------
 
@@ -33,6 +50,9 @@ BENCHMARK_ERRORS:
   - mae
   - mse
   - rmse
+
+# BENCHMARK_ERROR_TO_MINIMIZE: error to minimize when labeling the time series (algo with lowest error is used as label)
+BENCHMARK_ERROR_TO_MINIMIZE: 'rmse'
 
 # BENCHMARK_PATH: path to the Debug folder of the ImputeBench benchmark
 BENCHMARK_PATH: /home/guillaume/bench-vldb20/TestingFramework/bin/Debug

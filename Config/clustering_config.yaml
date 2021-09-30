@@ -21,13 +21,13 @@ GS_MAX_TESTS:
 
 # GS_NB_RUNS: number of gridsearch runs to perform for each cluster to evaluate for a given data set and considering its complexity
 GS_NB_RUNS: 
-  - small: 2 # 12 TODO TMP
+  - small: 12
   - medium: 6
   - large: 6
 
 # GS_MAX_RETRIES: maximum number of tries before skipping the evaluation of a cluster during gridsearch
 # retries occur if a generated cluster does not has at least 2 time series
-GS_MAX_RETRIES: 1 # 5 TODO TMP
+GS_MAX_RETRIES: 5
 
 # GS_OPTIONAL_RANGES_HINTS: used to define the range of clusters to evaluate during gridsearch for specified data sets
 GS_OPTIONAL_RANGES_HINTS:    
@@ -42,7 +42,7 @@ GS_OPTIONAL_RANGES_HINTS:
 
 # CLUSTERING_NB_RUNS: number of runs to perform during the final clustering phase depending on the data sets complexity
 CLUSTERING_NB_RUNS:
-  - small: 2 # 50 TODO TMP
+  - small: 50
   - medium: 25
   - large: 15
 

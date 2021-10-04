@@ -59,4 +59,15 @@ class Utils:
             if not os.path.exists(path):
                 os.makedirs(path)
 
-    
+    @staticmethod
+    def strictly_upper_triang_val(m):
+        """
+        Returns only the strictly upper triangular values from the given matrix.
+        
+        Keyword arguments:
+        m -- 2d list (matrix) from which return the strictly upper triangular values
+        
+        Return: 
+        List of strictly upper triangular values from the given matrix
+        """
+        return [m[i,j] for i in range(len(m)) for j in range(len(m[i])) if i < j]

@@ -32,9 +32,9 @@ ALGORITHMS_LIST:
   - tenmf
   - tkcm
   - trmf
-  - ssa
-  - m-rnn
-  - brits
+  #- ssa
+  #- m-rnn
+  #- brits
 
 # Benchmark config: ------------------------------------------------------------------------
 

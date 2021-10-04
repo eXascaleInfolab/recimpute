@@ -33,12 +33,9 @@ class Dataset:
 
     # constructor
 
-    def __init__(self, archive_name, cassignment_created=False, labels_created=False):
+    def __init__(self, archive_name):
         self.rw_ds_filename = archive_name
         self.name = archive_name[:-4]
-        self.cassignment_created = cassignment_created
-        self.labels_created = labels_created
-        self.labeler = None
         self.nb_timeseries, self.timeseries_length = self.load_timeseries(transpose=True).shape
 
 
@@ -155,7 +152,6 @@ class Dataset:
         
         Return: -
         """
-        self.cassignment_created = True
         cassignment_filename = self._get_cassignment_filename()
         cassignment.to_csv(cassignment_filename, index=False)
 
@@ -170,12 +166,9 @@ class Dataset:
         as the real world data set of this object. The associated values are the clusters' id to which are
         assigned the time series.
         """
-        if self.cassignment_created:
-            cassignment_filename = self._get_cassignment_filename()
-            clusters_assignment = pd.read_csv(cassignment_filename)
-            return clusters_assignment
-        else:
-            raise Exception('Clusters Assignment file (cassignment.csv) for %s data set does not exist.' % self.name)
+        cassignment_filename = self._get_cassignment_filename()
+        clusters_assignment = pd.read_csv(cassignment_filename)
+        return clusters_assignment
 
     def get_space_complexity(self):
         """
@@ -188,41 +181,55 @@ class Dataset:
         """
         return self.nb_timeseries * self.timeseries_length
 
-    def set_labeler(self, labeler):
+    def load_labels(self, labeler, properties):
         """
-        Sets the labeler class used to label this data set.
+        Loads the labels created using the given labeler and defined by the specified properties.
         
         Keyword arguments: 
-        labeler -- labeler class used to label this data set
-        
-        Return: -
-        """
-        self.labeler = labeler
-
-    def load_labels(self, properties):
-        """
-        Loads the labels defined by the specified properties.
-        
-        Keyword arguments: 
+        labeler -- labeler instance used to create the labels to load
         properties -- dict specifying the labels' properties
         
         Return: 
         1. Pandas DataFrame containing the data set's labels. Two columns: Time Series ID and Label.
         2. List of all possible labels value
         """
-        return self.labeler.load_labels(self, properties)
+        return labeler.load_labels(self, properties)
 
-    def save_labels(self, labels):
+    def save_labels(self, labeler, labels):
         """
         Saves the given labels to CSV.
         
         Keyword arguments: 
+        labeler -- labeler instance used to create the labels to save
         labels -- Pandas DataFrame containing the labels to save. 
         
         Return: -
         """
-        self.labels_created = True
-        self.labeler.save_labels(self.name, labels)
+        labeler.save_labels(self.name, labels)
+
+    def load_features(self, features_extracter):
+        """
+        Loads the features created using the given extracter.
+        
+        Keyword arguments: 
+        features_extracter -- features extracter instance used to create the features to load
+        
+        Return: 
+        Pandas DataFrame containing the data set's features
+        """
+        return features_extracter.load_features(self)
+
+    def save_features(self, features_extracter, features):
+        """
+        Saves the given features to CSV.
+        
+        Keyword arguments: 
+        features_extracter -- features extracter instance used to create the features to save
+        features -- Pandas DataFrame containing the features to save. 
+        
+        Return: -
+        """
+        features_extracter.save_features(self.name, features)
 
 
     # private methods
@@ -260,7 +267,7 @@ class Dataset:
     # static methods
 
     @staticmethod
-    def instantiate_from_dir(cassignment_created=False, labels_created=False):
+    def instantiate_from_dir():
         """
         Instantiates multiple data set objects from the Datasets/RealWorld folder.
         Uses the Datasets conf file to define which data set use.
@@ -270,7 +277,7 @@ class Dataset:
         Return:
         List of Dataset objects
         """
-        timeseries = [Dataset(ds_filename, cassignment_created, labels_created) 
+        timeseries = [Dataset(ds_filename) 
                       for ds_filename in os.listdir(Dataset.RW_DS_PATH)
                       if Dataset.CONF['USE_ALL'] or ds_filename in Dataset.CONF['USE_LIST']]
         

@@ -21,11 +21,14 @@ from Utils.Utils import Utils
 
 class ImputeBenchLabeler(AbstractLabeler):
     """
-    Labeler class which uses the ImputeBench benchmark. Provides methods to label time series and handle those labels.
+    Singleton labeler class which uses the ImputeBench benchmark. Provides methods to label time series and handle those labels.
+
+    ImputeBench is presented in "Mind the Gap: An Experimental Evaluation of Imputation of Missing Values Techniques in Time Series"
+    by Khayati et al. in 2020.
     """
 
     LABELS_DIR = normp('./Labeling/ImputationTechniques/labels/')
-    LABELS_APPENDIX = '_labels.csv'
+    LABELS_FILENAMES_ID = '_ibl'
     CONF = Utils.read_conf_file('imputebenchlabeler')
 
     # create necessary directories if not there yet
@@ -34,7 +37,12 @@ class ImputeBenchLabeler(AbstractLabeler):
 
     # constructor
 
-    def __init__(self):
+    def __new__(cls, *args, **kwargs):
+        if 'caller' in kwargs and kwargs['caller'] == 'get_instance':
+            return super(ImputeBenchLabeler, cls).__new__(cls)
+        raise Exception('Singleton class cannot be instantiated. Please use the static method "get_instance".')
+
+    def __init__(self, *args, **kwargs):
         super().__init__()
 
 
@@ -68,10 +76,122 @@ class ImputeBenchLabeler(AbstractLabeler):
             tmp_labels_df = pd.DataFrame(tmp_labels, columns=['Cluster ID', 'Benchmark Results'])
             
             # save labels
-            dataset.set_labeler(self.__class__)
-            dataset.save_labels(tmp_labels_df)
+            dataset.save_labels(self, tmp_labels_df)
             updated_datasets.append(dataset)
         return updated_datasets
+
+    def get_labels_possible_properties(self):
+        """
+        Returns a dict containing the possible properties labels generated with this labeler can have.
+        
+        Keyword arguments: -
+        
+        Return: 
+        Dict containing the possible properties labels generated with this labeler can have.
+        """
+        return ImputeBenchLabeler.CONF['POSSIBLE_LBL_PROPERTIES']
+
+    def save_labels(self, dataset_name, labels):
+        """
+        Saves the given labels to CSV.
+        
+        Keyword arguments: 
+        dataset_name -- name of the data set to which the labels belong
+        labels -- Pandas DataFrame containing the labels to save. Two columns: Cluster ID, Benchmark Results.
+        
+        Return: -
+        """
+        labels_filename = self._get_labels_filename(dataset_name)
+        labels.to_csv(labels_filename, index=False)
+
+    def load_labels(self, dataset, properties):
+        """
+        Loads the labels of the given data set's name and defined by the specified properties.
+        
+        Keyword arguments: 
+        dataset -- Dataset object to which the labels belong
+        properties -- dict specifying the labels' properties
+        
+        Return: 
+        1. Pandas DataFrame containing the data set's labels. Two columns: Time Series ID and Label.
+        2. List of all possible labels value
+        """
+        # load clusters labels
+        labels_filename = self._get_labels_filename(dataset.name)
+        clusters_labels = pd.read_csv(labels_filename, index_col='Cluster ID')
+        
+        # create labels from benchmark_results
+        clusters_labels_df, algorithms_list = self._get_labels_from_bench_res(clusters_labels, properties)
+        clusters_labels_dict = clusters_labels_df.set_index('Cluster ID').to_dict()['Label']
+        # propagate clusters' label to their time series
+        timeseries_labels = []
+        for _, row in dataset.load_cassignment().iterrows():
+            tid = row['Time Series ID']
+            cid = row['Cluster ID']
+            label = clusters_labels_dict[cid]
+            timeseries_labels.append((tid, label))
+
+        timeseries_labels_df = pd.DataFrame(timeseries_labels, columns=['Time Series ID', 'Label'])
+        return timeseries_labels_df, algorithms_list
+
+    def create_algos_score_matrix(self, all_benchmark_results, score_to_measure):
+        """
+        Creates scores DataFrame from the ImputeBench benchmark results.
+        
+        Keyword arguments: 
+        all_benchmark_results -- Pandas DataFrame with Cluster ID as index and the corresponding ImputeBench 
+                                 benchmark results as the only column
+        score_to_measure -- error to minimize when selecting relevant algorithms
+        
+        Return:
+        Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
+        Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
+        """
+        # create scores data frame
+        score_matrix = pd.DataFrame()
+        for i, benchmark_results_dict in enumerate(all_benchmark_results['Benchmark Results']):
+            # convert bench_res to DataFrame
+            benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
+            benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
+            benchmark_results = benchmark_results.groupby('algorithm').mean()[score_to_measure]
+
+            # identify possible missing algos
+            missing_algos = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in benchmark_results.index]
+            benchmark_results = benchmark_results.reindex(benchmark_results.index.union(missing_algos))
+
+            # merge all versions of cdrec (keep the best one)
+            benchmark_results.loc['cdrec'] = min(benchmark_results.loc['cdrec_k2'], benchmark_results.loc['cdrec_k3'])
+            benchmark_results = benchmark_results.drop(['cdrec_k2', 'cdrec_k3'])
+
+            score_matrix[i] = benchmark_results
+            
+        return score_matrix
+
+    def create_algos_ranking_matrix(self, score_matrix, score_to_measure):
+        """
+        Creates scores DataFrame from the score_matrix created from the ImputeBench benchmark results.
+        
+        Keyword arguments: 
+        score_matrix -- Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
+                        Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
+        score_to_measure -- error to minimize when selecting relevant algorithms
+        
+        Return:
+        Ranking DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
+        Columns: Position at which an algorithm is recommended. Values: Number of clusters labeled with corresponding 
+        algorithm at Nth ranking.
+        """       
+        # create ranking matrix
+        ranking_matrix = pd.DataFrame(index=ImputeBenchLabeler.CONF['ALGORITHMS_LIST'], 
+                                      columns=range(1, len(ImputeBenchLabeler.CONF['ALGORITHMS_LIST']) + 1)).fillna(0)
+        for col in score_matrix:
+            ranking = score_matrix[col].sort_values()
+            for i in range(len(ranking)):
+                algo = ranking.index[i]
+                rank = i + 1
+                ranking_matrix.at[algo, rank] += 1
+
+        return ranking_matrix
 
 
     # private methods
@@ -188,126 +308,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         # return results
         return all_error_results_df, dataset_name
 
-
-    # public static methods
-
-    def get_labels_possible_properties():
-        """
-        Returns a dict containing the possible properties labels generated with this labeler can have.
-        
-        Keyword arguments: -
-        
-        Return: 
-        Dict containing the possible properties labels generated with this labeler can have.
-        """
-        return ImputeBenchLabeler.CONF['POSSIBLE_LBL_PROPERTIES']
-
-    def save_labels(dataset_name, labels):
-        """
-        Saves the given labels to CSV.
-        
-        Keyword arguments: 
-        dataset_name -- name of the data set to which the labels belong
-        labels -- Pandas DataFrame containing the labels to save. Two columns: Cluster ID, Benchmark Results.
-        
-        Return: -
-        """
-        labels_filename = ImputeBenchLabeler._get_labels_filename(dataset_name)
-        labels.to_csv(labels_filename, index=False)
-
-    def load_labels(dataset, properties):
-        """
-        Loads the labels of the given data set's name and defined by the specified properties.
-        
-        Keyword arguments: 
-        dataset -- Dataset object to which the labels belong
-        properties -- dict specifying the labels' properties
-        
-        Return: 
-        1. Pandas DataFrame containing the data set's labels. Two columns: Time Series ID and Label.
-        2. List of all possible labels value
-        """
-        # load clusters labels
-        labels_filename = ImputeBenchLabeler._get_labels_filename(dataset.name)
-        clusters_labels = pd.read_csv(labels_filename, index_col='Cluster ID')
-        
-        # create labels from benchmark_results
-        clusters_labels_df, algorithms_list = ImputeBenchLabeler._get_labels_from_bench_res(clusters_labels, properties)
-        clusters_labels_dict = clusters_labels_df.set_index('Cluster ID').to_dict()['Label']
-        # propagate clusters' label to their time series
-        timeseries_labels = []
-        for _, row in dataset.load_cassignment().iterrows():
-            tid = row['Time Series ID']
-            cid = row['Cluster ID']
-            label = clusters_labels_dict[cid]
-            timeseries_labels.append((tid, label))
-
-        timeseries_labels_df = pd.DataFrame(timeseries_labels, columns=['Time Series ID', 'Label'])
-        return timeseries_labels_df, algorithms_list
-
-    def create_algos_score_matrix(all_benchmark_results, score_to_measure):
-        """
-        Creates scores DataFrame from the ImputeBench benchmark results.
-        
-        Keyword arguments: 
-        all_benchmark_results -- Pandas DataFrame with Cluster ID as index and the corresponding ImputeBench 
-                                 benchmark results as the only column
-        score_to_measure -- error to minimize when selecting relevant algorithms
-        
-        Return:
-        Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
-        Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
-        """
-        # create scores data frame
-        score_matrix = pd.DataFrame()
-        for i, benchmark_results_dict in enumerate(all_benchmark_results['Benchmark Results']):
-            # convert bench_res to DataFrame
-            benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
-            benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
-            benchmark_results = benchmark_results.groupby('algorithm').mean()[score_to_measure]
-
-            # identify possible missing algos
-            missing_algos = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in benchmark_results.index]
-            benchmark_results = benchmark_results.reindex(benchmark_results.index.union(missing_algos))
-
-            # merge all versions of cdrec (keep the best one)
-            benchmark_results.loc['cdrec'] = min(benchmark_results.loc['cdrec_k2'], benchmark_results.loc['cdrec_k3'])
-            benchmark_results = benchmark_results.drop(['cdrec_k2', 'cdrec_k3'])
-
-            score_matrix[i] = benchmark_results
-            
-        return score_matrix
-
-    def create_algos_ranking_matrix(score_matrix, score_to_measure):
-        """
-        Creates scores DataFrame from the score_matrix created from the ImputeBench benchmark results.
-        
-        Keyword arguments: 
-        score_matrix -- Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
-                        Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
-        score_to_measure -- error to minimize when selecting relevant algorithms
-        
-        Return:
-        Ranking DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
-        Columns: Position at which an algorithm is recommended. Values: Number of clusters labeled with corresponding 
-        algorithm at Nth ranking.
-        """       
-        # create ranking matrix
-        ranking_matrix = pd.DataFrame(index=ImputeBenchLabeler.CONF['ALGORITHMS_LIST'], 
-                                      columns=range(1, len(ImputeBenchLabeler.CONF['ALGORITHMS_LIST']) + 1)).fillna(0)
-        for col in score_matrix:
-            ranking = score_matrix[col].sort_values()
-            for i in range(len(ranking)):
-                algo = ranking.index[i]
-                rank = i + 1
-                ranking_matrix.at[algo, rank] += 1
-
-        return ranking_matrix
-
-
-    # private static methods
-
-    def _get_labels_filename(dataset_name):
+    def _get_labels_filename(self, dataset_name):
         """
         Returns the filename of the labels for the given data set's name.
         
@@ -317,9 +318,11 @@ class ImputeBenchLabeler(AbstractLabeler):
         Return: 
         Filename of the labels for the given data set's name.
         """
-        return normp(ImputeBenchLabeler.LABELS_DIR + f'/{dataset_name}{ImputeBenchLabeler.LABELS_APPENDIX}')
+        return normp(
+            ImputeBenchLabeler.LABELS_DIR + \
+            f'/{dataset_name}{ImputeBenchLabeler.LABELS_FILENAMES_ID}{AbstractLabeler.LABELS_APPENDIX}')
 
-    def _get_labels_from_bench_res(all_benchmark_results, properties):
+    def _get_labels_from_bench_res(self, all_benchmark_results, properties):
         """
         Uses the ImputeBench benchmark results to generate clusters' labels.
         
@@ -333,7 +336,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         2. list of all possible labels values
         """
         # identify algorithms to exclude from labels list if some reduction threshold has been specified
-        algos_to_exclude = ImputeBenchLabeler._get_algos_to_exclude(all_benchmark_results, properties) \
+        algos_to_exclude = self._get_algos_to_exclude(all_benchmark_results, properties) \
                             if properties['reduction_threshold'] > 0.0 else []
 
         # get each cluster's label from their benchmark results
@@ -349,12 +352,12 @@ class ImputeBenchLabeler(AbstractLabeler):
                 raise Exception('Rgression not implemented yet')
             elif properties['type'] == 'multilabels':
                 top_n = properties['multi_labels_nb_rel']
-                label = ImputeBenchLabeler._get_multilabels_vector(benchmark_results, 
-                                                                   top_n, ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'],
-                                                                   algos_to_exclude)
+                label = self._get_multilabels_vector(benchmark_results, 
+                                                     top_n, ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'],
+                                                     algos_to_exclude)
             else: # monolabels
-                label = ImputeBenchLabeler._get_best_algo(benchmark_results, 
-                                                          ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'], algos_to_exclude)
+                label = self._get_best_algo(benchmark_results, 
+                                            ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'], algos_to_exclude)
                                       
             clusters_labels.append((cid, label))
 
@@ -362,7 +365,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         clusters_labels_df = pd.DataFrame(clusters_labels, columns=['Cluster ID', 'Label'])
         return clusters_labels_df, algorithms_list
 
-    def _get_algos_to_exclude(all_benchmark_results, properties):
+    def _get_algos_to_exclude(self, all_benchmark_results, properties):
         """
         Returns the list of algorithms for which the original clusters' attribution is lower than the 'reduction_threshold'
         threshold specified in the properties. This is the list of algorithms to exclude from the set of labels.
@@ -376,10 +379,10 @@ class ImputeBenchLabeler(AbstractLabeler):
         List of algorithms to exclude from the set of labels
         """
         # create ranking matrix
-        score_matrix = ImputeBenchLabeler.create_algos_score_matrix(all_benchmark_results, 
-                                                                    ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'])
-        ranking_matrix = ImputeBenchLabeler.create_algos_ranking_matrix(score_matrix, 
-                                                                        ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'])
+        score_matrix = self.create_algos_score_matrix(all_benchmark_results, 
+                                                      ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'])
+        ranking_matrix = self.create_algos_ranking_matrix(score_matrix, 
+                                                          ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'])
         
         nb_clusters = ranking_matrix.iloc[0].sum()
         
@@ -391,7 +394,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         algos_to_exclude = list(used_perc.index)
         return algos_to_exclude
 
-    def _get_multilabels_vector(benchmark_results, top_n, score_to_measure, algos_to_exclude): 
+    def _get_multilabels_vector(self, benchmark_results, top_n, score_to_measure, algos_to_exclude): 
         """
         Creates and returns a multi-labels vector from the ImputeBench benchmark.
         
@@ -421,7 +424,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         
         return vec
 
-    def _get_best_algo(benchmark_results, score_to_measure, algos_to_exclude):
+    def _get_best_algo(self, benchmark_results, score_to_measure, algos_to_exclude):
         """
         Returns the best algorithm's name from the ImputeBench benchmark.
         
@@ -435,13 +438,13 @@ class ImputeBenchLabeler(AbstractLabeler):
         Best algorithm's name from the ImputeBench benchmark.
         """
         # analyze results of benchmark
-        best_algo, _ = ImputeBenchLabeler._get_highest_bench_score(benchmark_results, score_to_measure, algos_to_exclude)
+        best_algo, _ = self._get_highest_bench_score(benchmark_results, score_to_measure, algos_to_exclude)
 
         if 'cdrec_' in best_algo:
             best_algo = 'cdrec'
         return best_algo
 
-    def _get_highest_bench_score(scores, score_to_measure, algos_to_exclude):
+    def _get_highest_bench_score(self, scores, score_to_measure, algos_to_exclude):
         """
         Returns the best algorithm name and its error (score) from the benchmark results.
         
@@ -460,3 +463,19 @@ class ImputeBenchLabeler(AbstractLabeler):
         mean_scores = mean_scores.drop(mean_scores.loc[algos_to_exclude].index)
         
         return mean_scores[score_to_measure].idxmin(), mean_scores[score_to_measure].min()
+
+
+    # static methods
+
+    def get_instance():
+        """
+        Returns the single instance of this class.
+        
+        Keyword arguments: -
+        
+        Return: 
+        Single instance of this class.
+        """
+        if ImputeBenchLabeler._INSTANCE is None:
+            ImputeBenchLabeler._INSTANCE = ImputeBenchLabeler(caller='get_instance')
+        return ImputeBenchLabeler._INSTANCE

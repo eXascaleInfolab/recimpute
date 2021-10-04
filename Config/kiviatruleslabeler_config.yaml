@@ -1,0 +1,37 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# kiviatruleslabeler_config.yaml
+# @author: @chacungu
+
+# KiviatRulesLabeler related configuration file
+# ------------------------------------
+
+# LBL_PROPERTIES: All properties labels can have and their related possible values (e.g. labels can be of type mono or multi)
+POSSIBLE_LBL_PROPERTIES:
+  - type:
+    - monolabels
+
+ALGORITHMS_LIST:
+  - cdrec
+  - dynammo
+  - softimp
+  - svdimp
+  - stmvl
+  - trmf
+
+# FEATURES_THRESHOLDS: Thresholds used to convert the Kiviat features to binary features to be used with the Kiviat rules
+FEATURES_THRESHOLDS:
+  - large_ts: 1000
+  - irregular_ts: 0.15
+  - mixed_corr: 0.05
+  - high_corr: 0.85
+
+# FEATURES_WEIGHTS: Weight of each feature from the Kiviat diagrams. Used to give different importance to different
+# features when labeling the time series
+FEATURES_WEIGHTS:
+  - efficient: 0.25
+  - large_ts: 1.0
+  - irregular_ts: 1.0
+  - mixed_corr: 1.0
+  - high_corr: 1.0

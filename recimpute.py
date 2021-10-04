@@ -13,31 +13,32 @@ import sys
 from Datasets.Dataset import Dataset
 from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
+from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 
 
 def run_all():
-    datasets = Dataset.instantiate_from_dir(cassignment_created=False, labels_created=False)
+    datasets = Dataset.instantiate_from_dir()
     
-    cm = ShapeBasedClustering()
-    datasets = cm.run(datasets)
+    clusterer = ShapeBasedClustering()
+    datasets = clusterer.run(datasets)
 
-    ibl = ImputeBenchLabeler()
-    datasets = ibl.label(datasets)
+    labeler = ImputeBenchLabeler.get_instance() # KiviatRulesLabeler
+    datasets = labeler.label(datasets)
 
     # TODO
 
 def tests():
-    datasets = Dataset.instantiate_from_dir(cassignment_created=True, labels_created=True)
+    datasets = Dataset.instantiate_from_dir()[:2]
 
-    for ds in datasets:
-        ds.set_labeler(ImputeBenchLabeler)
-    
-    properties = ImputeBenchLabeler.get_labels_possible_properties()
+    labeler = ImputeBenchLabeler.get_instance() # KiviatRulesLabeler
+
+    properties = labeler.get_labels_possible_properties()
     properties['type'] = 'multilabels'
     properties['multi_labels_nb_rel'] = 3
     properties['reduction_threshold'] = .05
 
-    labels, labels_list = datasets[0].load_labels(properties)
+    labels, labels_list = datasets[0].load_labels(labeler, properties)
+    print(datasets[0].name)
     print(labels_list)
     print(labels.to_markdown())
 
@@ -45,4 +46,10 @@ def tests():
 if __name__ == '__main__':
     print(str(sys.argv))
 
-    tests()
+    #run_all()
+    #tests()
+
+    datasets = Dataset.instantiate_from_dir()[:3]
+
+    labeler = KiviatRulesLabeler.get_instance()
+    datasets = labeler.label(datasets)

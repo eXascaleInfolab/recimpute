@@ -2,38 +2,49 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-AbstractLabeler.py
+AbstractFeaturesExtracter.py
 @author: @chacungu
 """
 
 import abc
 
-class AbstractLabeler(metaclass=abc.ABCMeta):
+class AbstractFeaturesExtracter(metaclass=abc.ABCMeta):
     """
-    Abstract Labeler class used to label time series and handle those labels.
+    Abstract features extracting class used to extract time series features and handle those features.
     """
     
-    LABELS_APPENDIX = '_labels.csv'
+    FEATURES_APPENDIX = '_features.csv'
     _INSTANCE = None
-    
+
+
+    # constructor
+
+    def __init__(self):
+        pass
+
 
     # public methods
 
     @abc.abstractmethod
-    def label(self, datasets):
+    def extract(self, dataset):
         pass
 
     @abc.abstractmethod
-    def get_labels_possible_properties(self):
+    def save_features(self, dataset_name, features):
         pass
 
     @abc.abstractmethod
-    def save_labels(self, dataset_name, labels):
+    def load_features(self, dataset):
         pass
 
     @abc.abstractmethod
-    def load_labels(self, dataset, properties):
+    def are_features_created(self):
         pass
+
+
+    # private methods
+
+    #def
 
 
     # static methods

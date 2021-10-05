@@ -7,14 +7,21 @@ AbstractFeaturesExtracter.py
 """
 
 import abc
+from os.path import normpath as normp
 
-class AbstractFeaturesExtracter(metaclass=abc.ABCMeta):
+from Utils.Utils import Utils
+from Utils.SingletonClass import SingletonClass
+
+class AbstractFeaturesExtracter(SingletonClass, metaclass=abc.ABCMeta):
     """
     Abstract features extracting class used to extract time series features and handle those features.
     """
     
+    FEATURES_DIR = normp('./FeaturesExtraction/features/')
     FEATURES_APPENDIX = '_features.csv'
-    _INSTANCE = None
+
+    # create necessary directories if not there yet
+    Utils.create_dirs_if_not_exist([FEATURES_DIR])
 
 
     # constructor
@@ -37,18 +44,15 @@ class AbstractFeaturesExtracter(metaclass=abc.ABCMeta):
     def load_features(self, dataset):
         pass
 
-    @abc.abstractmethod
-    def are_features_created(self):
-        pass
-
-
-    # private methods
-
-    #def
-
-
-    # static methods
-
-    @abc.abstractmethod
-    def get_instance():
-        pass
+    def are_features_created(self, dataset_name):
+        """
+        Checks whether the features of the specified data set exists or not.
+        
+        Keyword arguments: 
+        dataset_name -- name of the data set for which we check if the features exist
+        
+        Return: 
+        True if the features have already been computed and saved as CSV, false otherwise.
+        """
+        features_filename = self._get_features_filename(dataset_name)
+        return os.path.isfile(features_filename)

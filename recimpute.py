@@ -14,6 +14,8 @@ from Datasets.Dataset import Dataset
 from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
+from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
+from FeaturesExtraction.TSFreshFeaturesExtracter import TSFreshFeaturesExtracter
 
 
 def run_all():

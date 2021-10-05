@@ -8,13 +8,14 @@ AbstractLabeler.py
 
 import abc
 
-class AbstractLabeler(metaclass=abc.ABCMeta):
+from Utils.SingletonClass import SingletonClass
+
+class AbstractLabeler(SingletonClass, metaclass=abc.ABCMeta):
     """
     Abstract Labeler class used to label time series and handle those labels.
     """
     
     LABELS_APPENDIX = '_labels.csv'
-    _INSTANCE = None
     
 
     # public methods
@@ -33,11 +34,4 @@ class AbstractLabeler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def load_labels(self, dataset, properties):
-        pass
-
-
-    # static methods
-
-    @abc.abstractmethod
-    def get_instance():
         pass

@@ -23,12 +23,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
     Singleton class which computes few "simple" features: Time series' length, an irregularity score, and pairwise correlation.
     """
 
-    FEATURES_DIR = normp('./FeaturesExtraction/features/')
     FEATURES_FILENAMES_ID = '_kiviat'
-    #CONF = Utils.read_conf_file('kiviatfeaturesextracter')
-
-    # create necessary directories if not there yet
-    Utils.create_dirs_if_not_exist([FEATURES_DIR])
 
 
     # constructor
@@ -121,20 +116,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
                                               columns=['Time Series ID', 'Cluster ID', *cluster_features.columns.values.tolist()])
         return timeseries_features_df
 
-    def are_features_created(self, dataset_name):
-        """
-        Checks whether the features of the specified data set exists or not.
-        
-        Keyword arguments: 
-        dataset_name -- name of the data set for which we check if the features exist
-        
-        Return: 
-        True if the features have already been computed and saved as CSV, false otherwise.
-        """
-        features_filename = self._get_features_filename(dataset_name)
-        return os.path.isfile(features_filename)
-
-
+    
     # private methods
 
     def _get_features_filename(self, dataset_name):
@@ -148,7 +130,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         Filename of the features for the given data set's name.
         """
         return normp(
-            KiviatFeaturesExtracter.FEATURES_DIR + \
+            AbstractFeaturesExtracter.FEATURES_DIR + \
             f'/{dataset_name}{KiviatFeaturesExtracter.FEATURES_FILENAMES_ID}{AbstractFeaturesExtracter.FEATURES_APPENDIX}')
 
     def _get_irregularity_score(self, timeseries):
@@ -194,17 +176,16 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         return anomalies_percentage
 
 
-    # public static methods
+    # static methods
 
-    def get_instance():
+    @classmethod
+    def get_instance(cls):
         """
         Returns the single instance of this class.
         
-        Keyword arguments: -
+        Keyword arguments: - (no args required, cls is provided automatically since this is a classmethod)
         
         Return: 
         Single instance of this class.
         """
-        if KiviatFeaturesExtracter._INSTANCE is None:
-            KiviatFeaturesExtracter._INSTANCE = KiviatFeaturesExtracter(caller='get_instance')
-        return KiviatFeaturesExtracter._INSTANCE
+        return super().get_instance(cls)

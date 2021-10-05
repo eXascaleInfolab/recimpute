@@ -467,15 +467,14 @@ class ImputeBenchLabeler(AbstractLabeler):
 
     # static methods
 
-    def get_instance():
+    @classmethod
+    def get_instance(cls):
         """
         Returns the single instance of this class.
         
-        Keyword arguments: -
+        Keyword arguments: - (no args required, cls is provided automatically since this is a classmethod)
         
         Return: 
         Single instance of this class.
         """
-        if ImputeBenchLabeler._INSTANCE is None:
-            ImputeBenchLabeler._INSTANCE = ImputeBenchLabeler(caller='get_instance')
-        return ImputeBenchLabeler._INSTANCE
+        return super().get_instance(cls)

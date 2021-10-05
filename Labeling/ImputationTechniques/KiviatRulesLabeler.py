@@ -199,17 +199,16 @@ class KiviatRulesLabeler(AbstractLabeler):
         return max(scores.keys(), key=(lambda key: scores[key])) # return algorithm with highest score
 
 
-    # public static methods
+    # static methods
 
-    def get_instance():
+    @classmethod
+    def get_instance(cls):
         """
         Returns the single instance of this class.
         
-        Keyword arguments: -
+        Keyword arguments: - (no args required, cls is provided automatically since this is a classmethod)
         
         Return: 
         Single instance of this class.
         """
-        if KiviatRulesLabeler._INSTANCE is None:
-            KiviatRulesLabeler._INSTANCE = KiviatRulesLabeler(caller='get_instance')
-        return KiviatRulesLabeler._INSTANCE
+        return super().get_instance(cls)

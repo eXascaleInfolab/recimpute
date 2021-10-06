@@ -51,7 +51,15 @@ if __name__ == '__main__':
     #run_all()
     #tests()
 
-    datasets = Dataset.instantiate_from_dir()[:3]
+    # datasets = Dataset.instantiate_from_dir()[:3]
 
-    labeler = KiviatRulesLabeler.get_instance()
-    datasets = labeler.label(datasets)
+    # labeler = KiviatRulesLabeler.get_instance()
+    # datasets = labeler.label(datasets)
+
+    dataset = Dataset('_test.zip')
+    tfe = TSFreshFeaturesExtracter.get_instance()
+    dataset = tfe.extract(dataset)
+    features = dataset.load_features(tfe)
+    print(features.shape)
+    print(features.columns)
+    print(features.index)

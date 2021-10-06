@@ -215,7 +215,8 @@ class Dataset:
         features_extracter -- features extracter instance used to create the features to load
         
         Return: 
-        Pandas DataFrame containing the data set's features
+        Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
+        Columns: Time Series ID, Feature 1's name, Feature 2's name, ...
         """
         return features_extracter.load_features(self)
 

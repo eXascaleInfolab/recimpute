@@ -7,6 +7,7 @@ AbstractFeaturesExtracter.py
 """
 
 import abc
+import os
 from os.path import normpath as normp
 
 from Utils.Utils import Utils
@@ -24,14 +25,6 @@ class AbstractFeaturesExtracter(SingletonClass, metaclass=abc.ABCMeta):
     Utils.create_dirs_if_not_exist([FEATURES_DIR])
 
 
-    # constructor
-
-    def __init__(self):
-        pass
-
-
-    # public methods
-
     @abc.abstractmethod
     def extract(self, dataset):
         pass
@@ -44,9 +37,13 @@ class AbstractFeaturesExtracter(SingletonClass, metaclass=abc.ABCMeta):
     def load_features(self, dataset):
         pass
 
+    @abc.abstractmethod
+    def _get_features_filename(self, dataset_name):
+        pass
+
     def are_features_created(self, dataset_name):
         """
-        Checks whether the features of the specified data set exists or not.
+        Checks whether the features of the specified data set exist or not.
         
         Keyword arguments: 
         dataset_name -- name of the data set for which we check if the features exist

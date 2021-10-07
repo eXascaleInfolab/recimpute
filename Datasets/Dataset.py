@@ -38,6 +38,11 @@ class Dataset:
         self.name = archive_name[:-4]
         self.nb_timeseries, self.timeseries_length = self.load_timeseries(transpose=True).shape
 
+        self.cids = None
+        if self.are_clusters_created():
+            cassignment = self.load_cassignment()
+            self.cids = cassignment['Cluster ID'].unique().tolist()
+
 
     # public methods
 
@@ -153,6 +158,7 @@ class Dataset:
         Return: -
         """
         cassignment_filename = self._get_cassignment_filename()
+        self.cids = cassignment['Cluster ID'].unique().tolist()
         cassignment.to_csv(cassignment_filename, index=False)
 
     def load_cassignment(self):
@@ -169,6 +175,18 @@ class Dataset:
         cassignment_filename = self._get_cassignment_filename()
         clusters_assignment = pd.read_csv(cassignment_filename)
         return clusters_assignment
+
+    def are_clusters_created(self):
+        """
+        Checks whether the clusters exist or not.
+        
+        Keyword arguments: -
+        
+        Return: 
+        True if the clusters have already been created and saved as CSV, false otherwise.
+        """
+        cassignment_filename = self._get_cassignment_filename()
+        return os.path.isfile(cassignment_filename)
 
     def get_space_complexity(self):
         """
@@ -216,7 +234,7 @@ class Dataset:
         
         Return: 
         Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
-        Columns: Time Series ID, Feature 1's name, Feature 2's name, ...
+        Columns: Time Series ID, (Cluster ID), Feature 1's name, Feature 2's name, ...
         """
         return features_extracter.load_features(self)
 
@@ -234,6 +252,9 @@ class Dataset:
 
 
     # private methods
+
+    def __repr__(self):
+        return self.name
 
     def _get_cassignment_filename(self):
         """
@@ -308,3 +329,18 @@ class Dataset:
             for cluster_id in clusters_assignment['Cluster ID'].unique(): # for each cluster
                 cluster = dataset.get_cluster_by_id(timeseries, cluster_id, clusters_assignment)
                 yield dataset, timeseries, cluster, cluster_id
+
+    @staticmethod
+    def yield_each_datasets_cluster_id(datasets):
+        """
+        One-by-one, yields each cluster id of all given datasets.
+        
+        Keyword arguments:
+        datasets -- list of Dataset objects containing the time series and their clusters assignment.
+        
+        Return: 
+        ID of the yielded cluster
+        """
+        for dataset in datasets: # for each data set
+            for cid in dataset.cids:
+                yield cid

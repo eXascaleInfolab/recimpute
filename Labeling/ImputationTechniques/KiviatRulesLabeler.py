@@ -57,7 +57,7 @@ class KiviatRulesLabeler(AbstractLabeler):
 
     # public methods
 
-    def label(self, datasets):
+    def label_all_datasets(datasets):
         """
         Labels each cluster from the given list of data sets using the Kiviat rules.
         
@@ -71,29 +71,40 @@ class KiviatRulesLabeler(AbstractLabeler):
         
         # for each data set
         for dataset in datasets:
-            # load the cluster's features needed to apply the Kiviat rules
-            features_extracter = KiviatFeaturesExtracter.get_instance()
-            if not features_extracter.are_features_created(dataset.name):
-                dataset = features_extracter.extract(dataset)
-                print("extract", dataset.name)
-            features = dataset.load_features(features_extracter)
-            # sample 1 features row per Cluster ID 
-            # (all time series of a same cluster have the same features w/ KiviatFeaturesExtracter)
-            features = features.groupby('Cluster ID', group_keys=False).apply(lambda df: df.sample(1))
-
-            # features: DataFrame - Cluster ID, Length, Irregularity, Correlation
-
-            features['STD Correlation'] = features['Correlation'].apply(np.std)
-            features['Median Correlation'] = features['Correlation'].apply(np.median)
-            features = features.drop(columns=['Correlation'])
-            
-            # features: DataFrame - Cluster ID, Length, Irregularity, STD Correlation, Median Correlation
-            
-            # save labels
-            dataset.save_labels(self, features)
+            dataset = self.label(dataset)
             updated_datasets.append(dataset)
-
         return updated_datasets
+
+    def label(self, dataset):
+        """
+        Labels each cluster from the given data set using the Kiviat rules.
+        
+        Keyword arguments:
+        dataset -- Dataset object containing time series to label
+        
+        Return:
+        Updated Dataset object
+        """
+        # load the cluster's features needed to apply the Kiviat rules
+        features_extracter = KiviatFeaturesExtracter.get_instance()
+        if not features_extracter.are_features_created(dataset.name):
+            dataset = features_extracter.extract(dataset)
+        features = dataset.load_features(features_extracter)
+        # sample 1 features row per Cluster ID 
+        # (all time series of a same cluster have the same features w/ KiviatFeaturesExtracter)
+        features = features.groupby('Cluster ID', group_keys=False).apply(lambda df: df.sample(1))
+
+        # features: DataFrame - Cluster ID, Length, Irregularity, Correlation
+
+        features['STD Correlation'] = features['Correlation'].apply(np.std)
+        features['Median Correlation'] = features['Correlation'].apply(np.median)
+        features = features.drop(columns=['Correlation'])
+        
+        # features: DataFrame - Cluster ID, Length, Irregularity, STD Correlation, Median Correlation
+        
+        # save labels
+        dataset.save_labels(self, features)
+        return dataset
 
     def get_labels_possible_properties(self):
         """

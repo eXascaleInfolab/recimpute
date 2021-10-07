@@ -1,0 +1,14 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# trainingsets_config.yaml
+# @author: @chacungu
+
+# Training sets related configuration file
+# ------------------------------------
+
+# TEST_SET_RESERVATION_STRAT: strategy to select the test set's content
+TEST_SET_RESERVATION_STRAT: one_cluster_every_two_dataset 
+# can be one of: one_cluster_every_two_dataset, 
+
+VALIDATION_SIZE_PERCENTAGE: 0.3

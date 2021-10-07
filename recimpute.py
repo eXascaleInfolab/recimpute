@@ -11,6 +11,7 @@ recimpute.py
 import sys
 
 from Datasets.Dataset import Dataset
+from Datasets.TrainingSet import TrainingSet
 from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
@@ -22,7 +23,7 @@ def run_all():
     datasets = Dataset.instantiate_from_dir()
     
     clusterer = ShapeBasedClustering()
-    datasets = clusterer.run(datasets)
+    datasets = clusterer.cluster_all_datasets(datasets)
 
     labeler = ImputeBenchLabeler.get_instance() # KiviatRulesLabeler
     datasets = labeler.label(datasets)
@@ -51,15 +52,15 @@ if __name__ == '__main__':
     #run_all()
     #tests()
 
-    # datasets = Dataset.instantiate_from_dir()[:3]
+    #datasets = Dataset.instantiate_from_dir()[:3]
 
-    # labeler = KiviatRulesLabeler.get_instance()
-    # datasets = labeler.label(datasets)
+    datasets = [Dataset('ACSF1.zip'), Dataset('Adiac.zip'),Dataset('Beef.zip')]
+    clusterer = ShapeBasedClustering()
+    labeler = KiviatRulesLabeler.get_instance()
+    true_labeler = ImputeBenchLabeler.get_instance()
+    features_extracters = [
+        KiviatFeaturesExtracter.get_instance(),
+        TSFreshFeaturesExtracter.get_instance(),
+    ]
 
-    dataset = Dataset('_test.zip')
-    tfe = TSFreshFeaturesExtracter.get_instance()
-    dataset = tfe.extract(dataset)
-    features = dataset.load_features(tfe)
-    print(features.shape)
-    print(features.columns)
-    print(features.index)
+    set = TrainingSet(datasets, clusterer, features_extracters, labeler, true_labeler, force_generation=False)

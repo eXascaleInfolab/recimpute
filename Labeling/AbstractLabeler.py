@@ -7,6 +7,7 @@ AbstractLabeler.py
 """
 
 import abc
+import os
 
 from Utils.SingletonClass import SingletonClass
 
@@ -18,10 +19,12 @@ class AbstractLabeler(SingletonClass, metaclass=abc.ABCMeta):
     LABELS_APPENDIX = '_labels.csv'
     
 
-    # public methods
+    @abc.abstractmethod
+    def label_all_datasets(self, datasets):
+        pass
 
     @abc.abstractmethod
-    def label(self, datasets):
+    def label(self, dataset):
         pass
 
     @abc.abstractmethod
@@ -35,3 +38,20 @@ class AbstractLabeler(SingletonClass, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def load_labels(self, dataset, properties):
         pass
+
+    @abc.abstractmethod
+    def _get_labels_filename(self, dataset_name):
+        pass
+
+    def are_labels_created(self, dataset_name):
+        """
+        Checks whether the labels of the specified data set exist or not.
+        
+        Keyword arguments: 
+        dataset_name -- name of the data set for which we check if the labels exist
+        
+        Return: 
+        True if the labels have already been computed and saved as CSV, false otherwise.
+        """
+        labels_filename = self._get_labels_filename(dataset_name)
+        return os.path.isfile(labels_filename)

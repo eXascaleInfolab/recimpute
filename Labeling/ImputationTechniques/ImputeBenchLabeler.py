@@ -48,7 +48,7 @@ class ImputeBenchLabeler(AbstractLabeler):
 
     # public methods
 
-    def label(self, datasets):
+    def label_all_datasets(datasets):
         """
         Labels each cluster from the given list of data sets using the ImputeBench benchmark.
         
@@ -62,23 +62,36 @@ class ImputeBenchLabeler(AbstractLabeler):
 
         # for each data set
         for dataset in datasets:
-            tmp_labels = []
-            
-            # load time series
-            timeseries = dataset.load_timeseries(transpose=True)
-
-            # for each cluster
-            for cluster, cluster_id, _ in dataset.yield_all_clusters(timeseries):
-                print('Running benchmark for cluster %i' % cluster_id)
-                # label the cluster's time series
-                benchmark_results = self._label_cluster(timeseries, cluster, cluster_id)
-                tmp_labels.append((cluster_id, benchmark_results))
-            tmp_labels_df = pd.DataFrame(tmp_labels, columns=['Cluster ID', 'Benchmark Results'])
-            
-            # save labels
-            dataset.save_labels(self, tmp_labels_df)
+            dataset = self.label(dataset)
             updated_datasets.append(dataset)
         return updated_datasets
+
+    def label(self, dataset):
+        """
+        Labels each cluster from the given data set using the ImputeBench benchmark.
+        
+        Keyword arguments:
+        dataset -- Dataset object containing time series to label
+        
+        Return:
+        Updated Dataset object
+        """
+        tmp_labels = []
+        
+        # load time series
+        timeseries = dataset.load_timeseries(transpose=True)
+
+        # for each cluster
+        for cluster, cluster_id, _ in dataset.yield_all_clusters(timeseries):
+            print('Running benchmark for cluster %i (%s)' % (cluster_id, dataset.name))
+            # label the cluster's time series
+            benchmark_results = self._label_cluster(timeseries, cluster, cluster_id)
+            tmp_labels.append((cluster_id, benchmark_results))
+        tmp_labels_df = pd.DataFrame(tmp_labels, columns=['Cluster ID', 'Benchmark Results'])
+        
+        # save labels
+        dataset.save_labels(self, tmp_labels_df)
+        return dataset
 
     def get_labels_possible_properties(self):
         """

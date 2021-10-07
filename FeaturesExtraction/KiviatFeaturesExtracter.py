@@ -97,7 +97,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         
         Return: 
         Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
-        Columns: Time Series ID, Feature 1's name, Feature 2's name, ...
+        Columns: Time Series ID, Cluster ID, Feature 1's name, Feature 2's name, ...
         """
         # load clusters features
         features_filename = self._get_features_filename(dataset.name)
@@ -111,10 +111,10 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
             tid = row['Time Series ID']
             cid = row['Cluster ID']
             cluster_features = all_clusters_features.loc[[cid]]
-            timeseries_features.append((tid, *cluster_features.values[0]))
+            timeseries_features.append((tid, cid, *cluster_features.values[0]))
 
         timeseries_features_df = pd.DataFrame(timeseries_features, 
-                                              columns=['Time Series ID', *cluster_features.columns.values.tolist()])
+                                              columns=['Time Series ID', 'Cluster ID', *cluster_features.columns.values.tolist()])
         return timeseries_features_df
 
     

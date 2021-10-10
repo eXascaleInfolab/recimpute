@@ -1,0 +1,24 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# modelstrainer_config.yaml
+# @author: @chacungu
+
+# Models training related configuration file
+# ------------------------------------
+
+# NB_CV_SPLITS: Number of cross-validation splits to perform while training
+NB_CV_SPLITS: 3
+
+# GridSearch config: ------------------------------------------------------------------------
+
+# GS_NB_CV_SPLITS: Number of gridsearch cross-validation splits to perform while training
+GS_NB_CV_SPLITS: 2
+
+# T-daub config: ------------------------------------------------------------------------
+
+# TDAUB_NB_RUNS: Number of T-Daub runs: number of training on growing data set sizes (if 0: no T-daub, trains all models on all data)
+TDAUB_NB_RUNS: 0
+
+# TDAUB_NB_BEST_MODELS: number of models to train on the whole data set (top N)
+TDAUB_NB_BEST_MODELS: 3

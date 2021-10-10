@@ -17,6 +17,8 @@ from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
 from FeaturesExtraction.TSFreshFeaturesExtracter import TSFreshFeaturesExtracter
+from Training.ModelsTrainer import ModelsTrainer
+from Training.RecommendationModels import RecommendationModels
 
 
 def run_all():
@@ -54,13 +56,40 @@ if __name__ == '__main__':
 
     #datasets = Dataset.instantiate_from_dir()[:3]
 
+    # init data sets
     datasets = [Dataset('ACSF1.zip'), Dataset('Adiac.zip'),Dataset('Beef.zip')]
+
+    # clustering
     clusterer = ShapeBasedClustering()
+
+    # labeling
     labeler = KiviatRulesLabeler.get_instance()
     true_labeler = ImputeBenchLabeler.get_instance()
+    labeler_properties = labeler.get_labels_possible_properties() # TODO change this to "get_default_properties" like done in TrainingSet
+    labeler_properties['type'] = 'monolabels'
+    true_labeler_properties = true_labeler.get_labels_possible_properties()
+    true_labeler_properties['type'] = labeler_properties['type']
+    true_labeler_properties['reduction_threshold'] = .05
+
+    # features extraction
     features_extracters = [
         KiviatFeaturesExtracter.get_instance(),
         TSFreshFeaturesExtracter.get_instance(),
     ]
 
-    set = TrainingSet(datasets, clusterer, features_extracters, labeler, true_labeler, force_generation=False)
+    # create a training set
+    set = TrainingSet(
+        datasets, 
+        clusterer, 
+        features_extracters, 
+        labeler, labeler_properties,
+        true_labeler, true_labeler_properties,
+        force_generation=False,
+    )
+
+    # init models
+    models = None # TODO: list of RecommendationModels
+
+    # training
+    trainer = ModelsTrainer(set, models)
+    trainer.train() # TODO

@@ -6,6 +6,9 @@ TrainingSet.py
 @author: @chacungu
 """
 
+import numpy as np
+import pandas as pd
+import random as rdm
 import warnings
 
 from Datasets.Dataset import Dataset
@@ -44,6 +47,9 @@ class TrainingSet:
         self.true_labeler = true_labeler
         self.true_labeler_properties = true_labeler_properties
         self.features_extracters = features_extracters # list
+
+        rdm.seed(TrainingSet.CONF['RDM_SEED'])
+        np.random.seed(TrainingSet.CONF['RDM_SEED'])
         
         # make sure clustering has been done (and do it otherwise)
         updated_datasets, clusters_created = self.__init_clustering(datasets, force_generation)
@@ -147,45 +153,56 @@ class TrainingSet:
 
     # public methods
 
-    def get_balanced_training_set(self, train, according_to):
-        # TODO
-        # train is df with extra info cols (such as Cluster ID and Time Series ID) before being splitted into X_train and y_train
-        # according_to can be one of: 'clusters', or 'labels'
-        # returns train_balanced
-        pass
+    def yield_splitted_train_val(data_properties, nb_cv_splits):
+        """
+        Yields splitted train and validation sets.
 
-    def yield_splitted_train_val(properties):
-        # TODO
-        # properties: e.g. augment=True, balance='clusters', data_perc=0.2
-        # split_train_test_sets
-        # yields all_data, all_labels, labels_set, X_train, y_train, X_val, y_val
-        pass
-
-        #---
-        # probability_distribution = np.full(training_dataset['Cluster ID'].nunique(), 1 / training_dataset['Cluster ID'].nunique())
-        # train_indices, test_indices, train_cids = split_train_test_sets(training_dataset, probability_distribution, 
-        #                                                                 test_size=TEST_SIZE, verbose=verbose)
-        # probability_distribution = _update_prob_distrib(training_dataset, probability_distribution, train_cids)
-
-        # data = training_dataset.iloc[:, ds_info['nb_extra_columns']:]
-        # labels = training_dataset['Label']
+        Keyword arguments:
+        data_properties -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.)
+        nb_cv_splits -- number of cross-validation splits to perform
         
-        # # split train/test sets
-        # X_train = np.array(data.iloc[train_indices, :][:].values.tolist())
-        # y_train = np.array(labels.iloc[train_indices].tolist())
-        # X_test = np.array(data.iloc[test_indices, :][:].values.tolist())
-        # y_test = np.array(labels.iloc[test_indices].tolist())
+        Return:
+        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: Time Series ID.
+        2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
+        3. list of all unique labels
+        4. Numpy array of train entries
+        5. Numpy array of train entries' labels
+        6. Numpy array of validation entries
+        7. Numpy array of validation entries' labels
+        """
+        all_data_info, labels_set = self._load()
+        # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
 
-    def augment_train(X_train, y_train):
-        # TODO
-        # returns X_train_augmented, y_train_augmented
-        pass
+        # reduce the data set if required
+        if data_properties['usable_data_perc'] < 1.0:
+            all_data_info = self._reduce_data_set(all_data_info, data_properties['usable_data_perc'])
 
-        #---
-        # min_n_samples = min(np.unique(y_train, return_counts=True)[1]) # new
-        # if min_n_samples >= 2:
-        #     sm = SMOTE(k_neighbors=(min_n_samples-1 if min_n_samples <= 5 else 5))
-        #     X_train, y_train = sm.fit_resample(X_train, y_train)
+        # balance the data set if required
+        if data_properties['balance'] is not None:
+            all_data_info = self._balance_data_set(all_data_info, data_properties['balance'])
+
+        # init probability distribution for data splitting
+        probability_distribution = np.full(all_data_info['Cluster ID'].nunique(), 1 / all_data_info['Cluster ID'].nunique())
+
+        for cv_split_id in range(nb_cv_splits):
+            train_indices, test_indices, train_cids = self._split_train_test_sets(all_data_info, probability_distribution, 
+                                                                                  TrainingSet.CONF['VALIDATION_SIZE_PERCENTAGE'])
+            probability_distribution = self._update_prob_distrib(all_data_info, probability_distribution, train_cids)
+
+            data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
+            labels = all_data_info['Label']
+            
+            # split train/test sets
+            X_train = np.array(data.loc[train_indices, :][:].values.tolist())
+            y_train = np.array(labels.loc[train_indices].tolist())
+            X_val = np.array(data.loc[test_indices, :][:].values.tolist())
+            y_val = np.array(labels.loc[test_indices].tolist())
+
+            # augment training data
+            if data_properties['augment']:
+                X_train, y_train = self._augment_train(X_train, y_train)
+
+            yield data, labels, labels_set, X_train, y_train, X_val, y_val
 
     def is_in_test_set(self, dataset):
         """
@@ -229,21 +246,197 @@ class TrainingSet:
 
     # private methods
 
-    def _get_reduced_train_val_df(self, train_val_df, usable_data_perc):
+    def _load(self, test_set=False):
+        """
+        Loads the labels, features, and clusters' assignment of each data set's time series.
+
+        Keyword arguments:
+        test_set -- set to True if the data to load is from the test set, False if it is the training and 
+                    validation sets (default False).
+        
+        Return:
+        1. Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
+           time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
+           Feature 1's name, Feature 2's name, ...
+        2. list of all unique labels
+        """   
+        labels_set = None
+        all_complete_datasets = []
+        for dataset in self.datasets:
+
+            # only load data set if: (in test set AND test_set is True) or (not in test set AND test_set is False)
+            if self.is_in_test_set(dataset) is test_set:
+
+                # load labels - dataset_labels: df w/ 2 cols: Time Series ID and Label
+                dataset_labels, labels_set = dataset.load_labels(self.labeler, self.labeler_properties)
+                dataset_labels.set_index('Time Series ID', inplace=True)
+
+                # load features - dataset_features: df w/ cols: Time Series ID, (Cluster ID), Feature 1's name, Feature 2's name, ...
+                all_dataset_features = []
+                for features_extracter in self.features_extracters:
+                    tmp_dataset_features = dataset.load_features(features_extracter)
+                    tmp_dataset_features.set_index('Time Series ID', inplace=True)
+                    all_dataset_features.append(tmp_dataset_features)
+                dataset_features = pd.concat(all_dataset_features, axis=1) # concat features dataframes
+
+                # load cassignment if the column is not there already
+                if 'Cluster ID' not in dataset_features.columns:
+                    dataset_cassignment = dataset.load_cassignment()
+                    dataset_cassignment.set_index('Time Series ID', inplace=True)
+
+                # concat data set's labels, features and cassignment
+                complete_dataset = pd.concat(dataset_labels, dataset_features, dataset_cassignment, axis=1)
+                all_complete_datasets.append(complete_dataset)
+        
+        # merge the complete data sets (each row is a time serie's info)
+        all_complete_datasets_df = pd.concat(all_complete_datasets, axis=0)
+        
+        assert labels_set is not None
+        return all_complete_datasets_df, labels_set
+
+    def _balance_data_set(self, all_data_info, according_to):
+        """
+        Balances the data set according to the specified column values (clusters or labels).
+
+        Keyword arguments:
+        all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
+                         time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
+                         Feature 1's name, Feature 2's name, ...
+        according_to -- string identifying the column according to which the data set should be balanced
+        
+        Return:
+        Balanced Pandas DataFrame. Columns: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        """    
+        column_name = None
+        if according_to == 'clusters':
+            column_name = 'Cluster ID'
+        elif according_to == 'labels':
+            column_name = 'Label'
+        else:
+            raise Exception('Invalid argument "according_to" for balancing data set: ', according_to)
+
+        balanced_df = pd.DataFrame(columns=all_data_info.columns)
+        # get number of time series in smallest cluster or less-attributed class (depending on attr. "according_to")
+        n = all_data_info[column_name].value_counts().min()
+        # for each id in the reference column
+        for col_id in all_data_info[column_name].unique():
+            # sample n random time series with this id
+            rows = all_data_info[all_data_info[column_name] == col_id].sample(n)
+            balanced_df = balanced_df.append(rows)
+        return balanced_df
+
+    def _reduce_data_set(self, all_data_info, usable_data_perc):
         """
         Selects and returns a specified percentage of the data. Splits the data in a stratified fashion according 
         to the time series labels.
 
         Keyword arguments:
-        train_val_df -- Pandas DataFrame where each row is a time series or a time series' feature vector.  
-                        Additional columns: Time Series ID, Cluster ID, Label.
+        all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
+                         time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
+                         Feature 1's name, Feature 2's name, ...
+        usable_data_perc -- percentage of time series to keep
         
         Return:
-        Reduced Pandas DataFrame where each row is a time series or a time series' feature vector.  
-        Additional columns: Time Series ID, Cluster ID, Label.
+        Reduced Pandas DataFrame. Columns: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         """    
-        reduced_train_val_df, _, _, _ = sklearn_train_test_split(train_val_df, 
-                                                                 train_val_df['Label'], 
+        reduced_train_val_df, _, _, _ = sklearn_train_test_split(all_data_info, 
+                                                                 all_data_info['Label'], 
                                                                  train_size=usable_data_perc, 
-                                                                 stratify=train_val_df['Label'])
+                                                                 stratify=all_data_info['Label'])
         return reduced_train_val_df
+
+    def _split_train_test_sets(self, all_data_info, probability_distribution, val_size):
+        """
+        Split time series' DataFrame into random train and validation subsets.
+        
+        Keyword arguments:
+        all_data_info -- Pandas DataFrame containing each data set's time series information (ID, CID, labels, features)
+        probability_distribution -- sequence of probabilities associated with each cluster id
+        val_size -- proportion of the data set to include in the validation split
+        
+        Return:
+        1. List containing train indices (Time Series ID).
+        2. List containing validation indices (Time Series ID).
+        3. List containing the indices of the clusters used for training.
+        """
+        cids_value_counts = all_data_info['Cluster ID'].value_counts()
+    
+        train = {'cids': [], 'nb_timeseries': []}
+        test = {'cids': [], 'nb_timeseries': []}
+        
+        # select random cluster (based on the given distribution) and add all its time series to the training set
+        for cluster_id in np.random.choice(sorted(all_data_info['Cluster ID'].unique(), key=int), 
+                                           all_data_info['Cluster ID'].nunique(), 
+                                           replace=False,
+                                           p=probability_distribution):
+            if (sum(train['nb_timeseries']) / len(all_data_info)) < (1 - val_size - (0.25 * val_size)):
+                train['cids'].append(cluster_id)
+                train['nb_timeseries'].append(cids_value_counts[cluster_id])
+            else:
+                test['cids'].append(cluster_id)
+                test['nb_timeseries'].append(cids_value_counts[cluster_id])
+                
+        train_indices, test_indices = [], []
+        
+        for tid, row in all_data_info.iterrows():
+            if row['Cluster ID'] in train['cids']:
+                train_indices.append(tid)
+            else:
+                test_indices.append(tid)
+        
+        return rdm.sample(train_indices, len(train_indices)), rdm.sample(test_indices, len(test_indices)), train['cids']
+
+    def _update_prob_distrib(all_data_info, probability_distribution, train_ids):
+        """
+        Updates the probability distribution vector for clusters (prob to be attributed to the training set).
+        
+        Keyword arguments:
+        all_data_info -- Pandas DataFrame containing each data set's time series information (ID, CID, labels, features)
+        probability_distribution -- sequence of probabilities associated with each cluster id
+        train_ids -- list containing the indices of the clusters used for training.
+        
+        Return:
+        Updated probability_distribution
+        """
+        nb_elems = all_data_info['Cluster ID'].nunique()
+        
+        weights_to_share = 0
+        # compute weight to redistribute
+        for i, (cid, w) in enumerate(zip(sorted(all_data_info['Cluster ID'].unique(), key=int), probability_distribution)):
+            if cid in train_ids:
+                old_weight = probability_distribution[i]
+                probability_distribution[i] *= TrainingSet.CONF['PROB_DEC_FACTOR_AFTER_ATTRIBUTION']
+                weights_to_share += old_weight - probability_distribution[i]
+                
+        # redistribute the extra weight
+        nb_not_train = nb_elems - len(train_ids)
+        for i, (cid, w) in enumerate(zip(sorted(all_data_info['Cluster ID'].unique(), key=int), probability_distribution)):
+            if cid not in train_ids:
+                probability_distribution[i] += weights_to_share / nb_not_train
+
+        assert sum(probability_distribution) == 1.0
+        return probability_distribution
+
+    def _augment_train(X_train, y_train):
+        """
+        Augments the training data using SMOTE.
+        
+        Keyword arguments:
+        X_train -- numpy array of train entries
+        y_train -- numpy array of train entries' labels
+        
+        Return:
+        1. numpy array of augmented train entries
+        2. numpy array of augmented train entries' labels
+        """
+        # count the minimum number of time series in the less-represented class
+        min_n_samples = min(np.unique(y_train, return_counts=True)[1])
+
+        # data augmentation is possible only if the less-represented class contains at least 2 time series
+        if min_n_samples >= 2:
+            sm = SMOTE(k_neighbors=(min_n_samples-1 if min_n_samples <= 5 else 5))
+            # augment
+            X_train_augmented, y_train_augmented = sm.fit_resample(X_train, y_train)
+            return X_train_augmented, y_train_augmented
+
+        return X_train, y_train

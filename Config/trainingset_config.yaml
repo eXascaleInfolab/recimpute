@@ -12,8 +12,12 @@ RDM_SEED: 23
 
 # DATA_PROPERTIES: All properties that can be used to specify data transformations and manipulations 
 DATA_PROPERTIES:
+  # balance: Specifies if the data should be balanced. Value can be one of: clusters, labels, None.
+  - balance: None
   # usable_data_perc: Percentage of data to use for training (used mainly for T-Daub). Value must be within range ]0.0; 1.0].
   - usable_data_perc: 1.0
+  # augment: Specifies if the data should be augmented. Value can be one of: True, False.
+  - augment: False
 
 # Test & validation sets config: ------------------------------------------------------------------------
 
@@ -21,4 +25,9 @@ DATA_PROPERTIES:
 TEST_SET_RESERVATION_STRAT: one_cluster_every_two_dataset 
 # can be one of: one_cluster_every_two_dataset, 
 
+# VALIDATION_SIZE_PERCENTAGE: percentage of the non-test set to use for validation
 VALIDATION_SIZE_PERCENTAGE: 0.3
+
+# PROB_DEC_FACTOR_AFTER_ATTRIBUTION: Factor by which divide a cluster's probability to be attributed to the training set after
+# having been attributed to this set
+PROB_DEC_FACTOR_AFTER_ATTRIBUTION: 0.5

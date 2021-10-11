@@ -170,7 +170,7 @@ class Dataset:
         Return:
         Pandas DataFrame containing clusters' assignment of the data set's time series. Its index is the same 
         as the real world data set of this object. The associated values are the clusters' id to which are
-        assigned the time series.
+        assigned the time series. Two columns: Time Series ID, Cluster ID.
         """
         cassignment_filename = self._get_cassignment_filename()
         clusters_assignment = pd.read_csv(cassignment_filename)

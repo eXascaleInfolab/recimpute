@@ -53,8 +53,7 @@ class ModelsTrainer:
         # TODO _gridsearch_and_training
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
         try:
-            for cv_split_id in range(ModelsTrainer.CONF['NB_CV_SPLITS']):
-                yielded = self.training_set.yield_splitted_train_val(training_set_params) # TODO
+            for yielded in self.training_set.yield_splitted_train_val(training_set_params, ModelsTrainer.CONF['NB_CV_SPLITS']):
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
                 for model in self.models:

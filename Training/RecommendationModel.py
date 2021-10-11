@@ -6,6 +6,8 @@ RecommendationModel.py
 @author: @chacungu
 """
 
+import importlib.util
+from os.path import normpath as normp
 from sklearn.metrics import accuracy_score, precision_score, recall_score, hamming_loss, f1_score
 import time
 
@@ -16,14 +18,17 @@ class RecommendationModel:
     Class which handles a recommendation model (classification / regression model).
     """
 
-    #
+    MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
 
 
     # constructor
-    def __init__(self, name, pipeline):
-        self.pipeline = pipeline
-        assert hasattr(self.pipeline[-1], 'fit') and ismethod(getattr(self.pipeline[-1], 'fit'))
-        self.params = None # TODO
+    def __init__(self, name, steps, params_range, multiclass_strategy=None, bagging_strategy=None):
+        self.steps = steps
+        assert hasattr(self.steps[-1], 'fit') and callable(getattr(self.steps[-1], 'fit'))
+
+        self.params_range = params_range
+        self.multiclass_strategy = multiclass_strategy
+        self.bagging_strategy = bagging_strategy
     
 
     # public methods
@@ -92,3 +97,40 @@ class RecommendationModel:
     # private methods
 
     #def
+
+    
+    # static methods
+    def init_from_descriptions(models_descriptions_to_use):
+        """
+        Initializes objects of type RecommendationModel from the given list of models' descriptions files.
+
+        Keyword arguments:
+        models_descriptions_to_use -- list of models' descriptions files
+
+        Return:
+        List of initialized RecommendationModel instances.
+        """
+        models = []
+
+        # for each model description
+        for model_description_fname in models_descriptions_to_use:
+
+            # load description
+            spec = importlib.util.spec_from_file_location(
+                'Training.ModelsDescription', 
+                normp(RecommendationModel.MODELS_DESCRIPTION_DIR + '/' + model_description_fname)
+            )
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            # init model
+            model = RecommendationModel(
+                module.model_info['name'], 
+                module.model_info['steps'], 
+                module.model_info['params_range'], 
+                module.model_info['multiclass_strategy'], 
+                module.model_info['bagging_strategy']
+            )
+            
+            models.append(model)
+        return models

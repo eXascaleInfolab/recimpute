@@ -18,7 +18,7 @@ from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
 from FeaturesExtraction.TSFreshFeaturesExtracter import TSFreshFeaturesExtracter
 from Training.ModelsTrainer import ModelsTrainer
-from Training.RecommendationModels import RecommendationModels
+from Training.RecommendationModel import RecommendationModel
 
 
 def run_all():
@@ -50,9 +50,6 @@ def tests():
 
 if __name__ == '__main__':
     print(str(sys.argv))
-
-    #run_all()
-    #tests()
 
     #datasets = Dataset.instantiate_from_dir()[:3]
 
@@ -88,8 +85,11 @@ if __name__ == '__main__':
     )
 
     # init models
-    models = None # TODO: list of RecommendationModels
+    models_descriptions_to_use = [
+        'normalizer_randomforest.py',
+    ]
+    models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
-    # training
-    trainer = ModelsTrainer(set, models)
-    trainer.train() # TODO
+    # # training
+    # trainer = ModelsTrainer(set, models)
+    # trainer.train() # TODO

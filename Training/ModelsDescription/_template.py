@@ -31,6 +31,10 @@ model_info = {
         'None': None, # CHANGE THIS
     },
 
+    # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model. The slowest, the less
+    # gridsearch iterations will be done.
+    training_speed_factor: None, # CHANGE THIS
+
     # ---------------------------------------------------------------
     # OPTIONAL FIELDS (if set to None, these fields will not be used)
 

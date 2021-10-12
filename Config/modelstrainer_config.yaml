@@ -15,6 +15,12 @@ NB_CV_SPLITS: 3
 # GS_NB_CV_SPLITS: Number of gridsearch cross-validation splits to perform while training
 GS_NB_CV_SPLITS: 2
 
+# GS_ITER_RANGE: Number of gridsearch iterations to perform depending on the model's training speed (training efficiency).
+GS_ITER_RANGE:
+  - fast: 60
+  - medium: 50
+  - slow: 40
+
 # T-daub config: ------------------------------------------------------------------------
 
 # TDAUB_NB_RUNS: Number of T-Daub runs: number of training on growing data set sizes (if 0: no T-daub, trains all models on all data)

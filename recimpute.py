@@ -91,5 +91,5 @@ if __name__ == '__main__':
     models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
     # # training
-    # trainer = ModelsTrainer(set, models)
-    # trainer.train() # TODO
+    trainer = ModelsTrainer(set, models)
+    #trainer.train() # TODO

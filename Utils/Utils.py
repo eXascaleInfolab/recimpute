@@ -7,8 +7,13 @@ Utils.py
 """
 
 from collections import ChainMap
+import math
+import matplotlib
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import os
 from os.path import normpath as normp
+from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix, ConfusionMatrixDisplay
 import yaml
 
 class Utils:
@@ -16,7 +21,6 @@ class Utils:
     Static class with utilitary methods.
     """
 
-    @staticmethod
     def read_conf_file(conf_name):
         """
         Loads a YAML configuration file.
@@ -45,7 +49,6 @@ class Utils:
         except FileNotFoundError:
             raise FileNotFoundError('Configuration file %s not found.' % filename)
 
-    @staticmethod
     def create_dirs_if_not_exist(paths):
         """
         For each path in the given list, creates the directory at specified path if it does not exist yet.
@@ -59,7 +62,6 @@ class Utils:
             if not os.path.exists(path):
                 os.makedirs(path)
 
-    @staticmethod
     def strictly_upper_triang_val(m):
         """
         Returns only the strictly upper triangular values from the given matrix.
@@ -71,3 +73,65 @@ class Utils:
         List of strictly upper triangular values from the given matrix
         """
         return [m[i,j] for i in range(len(m)) for j in range(len(m[i])) if i < j]
+
+    def plot_confusion_matrix(y_true, y_pred, multilabels, normalize=True, labels=None, title=None, verbose=0):
+        """
+        Plots a confusion matrix.
+        
+        Keyword arguments:
+        y_true -- numpy array of ground truth labels
+        y_pred -- numpy array of predicted labels
+        multilabels -- True if the labels are multi-labels, False if they are mono-labels
+        normalize -- True if the confusion matrix should be normalized, False otherwise (default: True)
+        labels -- list of unique labels that may appear in y_true and y_pred (default: None)
+        title -- title of the plot (default: None)
+        verbose -- degree of method's verbosity, if set to 2, plots the conf matrix (default: 0)
+        
+        Return: 
+        1. Matplotlib Figure containing the confusion matrix plot
+        2. Matplotlib Axes used to plot the confusion matrix
+        3. Numpy nd array. Confusion matrix whose i-th row and j-th column entry indicates the number of samples
+           with true label being i-th class and predicted label being j-th class
+        """
+        if labels is None and multilabels is True:
+            raise Exception('Labels list must be specified if multilabels is True')
+        elif labels is not None and multilabels is False:
+            warnings.warn("Warning: given labels list won't be used for confusion matrix plot.")
+            
+        if verbose < 2:
+            plt.ioff()
+            
+        if not title:
+            if normalize:
+                title = 'Normalized confusion matrix'
+            else:
+                title = 'Confusion matrix, without normalization'
+            
+        normalize = 'all' if normalize else None
+        if multilabels:
+            cm = multilabel_confusion_matrix(y_true, y_pred)
+            if normalize == 'all':
+                cm = cm / cm.sum()
+            labels = list(labels.keys())
+        else:
+            cm = confusion_matrix(y_true, y_pred, normalize=normalize)
+            
+        ncols = 3 if multilabels else 1
+        nrows = math.ceil(len(labels) / ncols) if multilabels else 1
+        fig, axes = plt.subplots(ncols=ncols, nrows=nrows, figsize = (14, 14) if multilabels else (7, 7), dpi=80)
+        if not issubclass(type(axes), matplotlib.axes.SubplotBase) and \
+            (type(axes[0]) is list or type(axes[0]) is np.array or type(axes[0]) is np.ndarray):
+            axes = list(chain.from_iterable(axes))
+        fig.suptitle(title, fontsize=12)
+        
+        if multilabels:
+            for i, (ax, lbl) in enumerate(zip(axes, labels)):
+                disp = ConfusionMatrixDisplay(confusion_matrix=cm[i], display_labels=[lbl, 'other'])
+                disp.plot(include_values=True, cmap=plt.cm.Blues, ax=ax, colorbar=False)
+        else:
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels(y_true, y_pred))
+            disp.plot(include_values=True, cmap=plt.cm.Blues, ax=axes, colorbar=False)
+        fig.tight_layout()
+        if verbose >= 2:
+            plt.show()
+        return fig, axes, cm

@@ -44,26 +44,26 @@ class ModelsTrainer:
         nb_best_models = ModelsTrainer.CONF['TDAUB_NB_BEST_MODELS']
         models_to_train = self._t_daub(t_daub_nb_runs, nb_best_models) if t_daub_nb_runs > 0 else self.models
         
-        train_results = self._train() # TODO
+        train_results = self._train(models_to_train) # TODO
         
     
     # private methods
 
-    def _train(training_set_params=None):
+    def _train(models_to_train, training_set_params=None):
         # TODO _gridsearch_and_training
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
         try:
             for yielded in self.training_set.yield_splitted_train_val(training_set_params, ModelsTrainer.CONF['NB_CV_SPLITS']):
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
-                for model in self.models:
+                for model in models_to_train:
 
-                    # gridsearch if necessary
-                    if not model.are_params_set(): # TODO
-                        gs = RandomizedSearchCV(model.get_pipeline(), # TODO
-                                                model.get_params_ranges(), # TODO
+                    # run gridsearch if necessary
+                    if not model.are_params_set:
+                        gs = RandomizedSearchCV(model.get_pipeline(),
+                                                model.get_params_ranges(),
                                                 cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
-                                                n_iter=model.get_nb_gridsearch_iter(), # TODO
+                                                n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
                                                 scoring='f1_macro')
                         gs.fit(np.array(data.to_numpy()), np.array(labels.iloc[:].tolist()))
                         model.set_params(gs.best_params_)
@@ -108,7 +108,7 @@ class ModelsTrainer:
             training_set_properties = self.training_set.get_default_properties()
             training_set_properties['usable_data_perc'] = usable_data_perc
             # train each model on the reduced data set
-            train_results = self._train(training_set_properties) # TODO
+            train_results = self._train(self.models, training_set_properties) # TODO
             
             # retrieve the F1-Score of each model from the results
             for model in train_results.get_all_models(): # TODO

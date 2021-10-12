@@ -38,11 +38,14 @@ model_info = {
         'RandomForestClassifier__n_jobs': [-1],
     },
 
+    # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model.
+    training_speed_factor: 2,
+
     # ---------------------------------------------------------------
     # OPTIONAL FIELDS (if set to None, these fields will not be used)
 
-    'multiclass_strategy': None, # CHANGE THIS
+    'multiclass_strategy': None,
 
-    'bagging_strategy': None, # CHANGE THIS
+    'bagging_strategy': None,
     
 }

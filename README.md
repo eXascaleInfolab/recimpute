@@ -56,6 +56,8 @@ ___
     - The data sets' archive must be placed in the ./Datasets/RealWorld/ directory.
     - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this behaviour, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of data sets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
     - It is recommended to z-normalize the time series before-hand.
+- To add and train new models:
+    -  TODO
 
 
 ___

@@ -156,6 +156,8 @@ class RecommendationModel:
 
         return trained_pipeline, scores, (fig, cm_val) if plot_cm else None
     
+    def __repr__(self):
+        return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
 
     # static methods
     def init_from_descriptions(models_descriptions_to_use):

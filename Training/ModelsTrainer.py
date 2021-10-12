@@ -19,12 +19,11 @@ class ModelsTrainer:
     Class which handles classification / regression models and provides methods for its training and evaluation.
     """
 
-    #
-
     CONF = Utils.read_conf_file('modelstrainer')
 
 
     # constructor
+
     def __init__(self, training_set, models):
         """
         Initializes a ModelsTrainer object.
@@ -40,6 +39,7 @@ class ModelsTrainer:
     # public methods
 
     def train():
+        # TODO
         t_daub_nb_runs = ModelsTrainer.CONF['TDAUB_NB_RUNS']
         nb_best_models = ModelsTrainer.CONF['TDAUB_NB_BEST_MODELS']
         models_to_train = self._t_daub(t_daub_nb_runs, nb_best_models) if t_daub_nb_runs > 0 else self.models
@@ -49,9 +49,20 @@ class ModelsTrainer:
     
     # private methods
 
-    def _train(models_to_train, training_set_params=None):
-        # TODO _gridsearch_and_training
+    def _train(models_to_train, training_set_params=None, save_results=True):
+        """
+        Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
+
+        Keyword arguments:
+        models_to_train -- list of RecommendationModel instances that should be trained and evaluated
+        training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
+        save_results -- True if the results should be saved to disk, False otherwise (default: True)
+
+        Return:
+        A TrainResults' instance containing the training results
+        """
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
+        train_results = TrainResults(models_to_train)
         try:
             for yielded in self.training_set.yield_splitted_train_val(training_set_params, ModelsTrainer.CONF['NB_CV_SPLITS']):
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
@@ -73,11 +84,15 @@ class ModelsTrainer:
                                                                         self.training_set.get_labeler_properties(), labels_set)
 
                     # save results
-                    # TODO TrainResults contain a dict grouping the results of each trained model
+                    # TrainResults contain a dict grouping the results of each trained model
+                    train_results.add_model_cv_split_result(model, trained_pipeline, scores, cm) # TODO
 
         finally:
-            # TODO save results to disk
-            pass
+            # save results to disk
+            if save_results:
+                train_results.save() # TODO
+
+        return train_results
 
     def _t_daub(self, nb_runs, nb_best_models):
         """
@@ -108,10 +123,10 @@ class ModelsTrainer:
             training_set_properties = self.training_set.get_default_properties()
             training_set_properties['usable_data_perc'] = usable_data_perc
             # train each model on the reduced data set
-            train_results = self._train(self.models, training_set_properties) # TODO
+            train_results = self._train(self.models, training_set_properties, save_results=False) # TODO
             
             # retrieve the F1-Score of each model from the results
-            for model in train_results.get_all_models(): # TODO
+            for model in train_results.models:
                 model_results = train_results.get_model_results(model.name) # TODO
                 f1score = model_results['F1-Score']
                 try:

@@ -6,6 +6,7 @@ KiviatRulesLabeler.py
 @author: @chacungu
 """
 
+import pandas as pd
 import numpy as np
 from os.path import normpath as normp
 
@@ -89,7 +90,7 @@ class KiviatRulesLabeler(AbstractLabeler):
         features_extracter = KiviatFeaturesExtracter.get_instance()
         if not features_extracter.are_features_created(dataset.name):
             dataset = features_extracter.extract(dataset)
-        features = dataset.load_features(features_extracter)
+        features = features_extracter.load_raw_features(dataset)
         # sample 1 features row per Cluster ID 
         # (all time series of a same cluster have the same features w/ KiviatFeaturesExtracter)
         features = features.groupby('Cluster ID', group_keys=False).apply(lambda df: df.sample(1))

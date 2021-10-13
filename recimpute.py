@@ -51,10 +51,10 @@ def tests():
 if __name__ == '__main__':
     print(str(sys.argv))
 
-    #datasets = Dataset.instantiate_from_dir()[:3]
 
     # init data sets
-    datasets = [Dataset('ACSF1.zip'), Dataset('Adiac.zip'),Dataset('Beef.zip')]
+    datasets = Dataset.instantiate_from_dir()
+    print('Loaded data sets:', *datasets)
 
     # clustering
     clusterer = ShapeBasedClustering()
@@ -90,6 +90,8 @@ if __name__ == '__main__':
     ]
     models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
-    # # training
+    # training
     trainer = ModelsTrainer(set, models)
-    #trainer.train() # TODO
+    results = trainer.train()
+
+    print(results.results.to_markdown)

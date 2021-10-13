@@ -88,16 +88,16 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         features.to_csv(features_filename, index=False)
         np.set_printoptions(threshold=1000)
         
-    def load_features(self, dataset):
+    def load_raw_features(self, dataset):
         """
-        Loads the features of the given data set's name.
+        Loads the raw features of the given data set's name.
         
         Keyword arguments: 
         dataset -- Dataset object to which the features belong
         
         Return: 
-        Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
-        Columns: Time Series ID, Cluster ID, Feature 1's name, Feature 2's name, ...
+        Pandas DataFrame containing the data set's raw features. Each row is a time series feature vector.
+        Columns: Time Series ID, Cluster ID, Length, Irregularity, Correlation
         """
         # load clusters features
         features_filename = self._get_features_filename(dataset.name)
@@ -117,6 +117,20 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
                                               columns=['Time Series ID', 'Cluster ID', *cluster_features.columns.values.tolist()])
         return timeseries_features_df
 
+    def load_features(self, dataset):
+        """
+        Loads the features of the given data set's name.
+        
+        Keyword arguments: 
+        dataset -- Dataset object to which the features belong
+        
+        Return: 
+        Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
+        Columns: Time Series ID, Cluster ID, Feature 1's name, Feature 2's name, ...
+        """
+        features = self.load_raw_features(dataset)
+        features['Correlation'] = features['Correlation'].apply(lambda array: np.median(array))
+        return features
     
     # private methods
 

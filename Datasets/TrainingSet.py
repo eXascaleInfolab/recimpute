@@ -6,9 +6,11 @@ TrainingSet.py
 @author: @chacungu
 """
 
+from imblearn.over_sampling import SMOTE
 import numpy as np
 import pandas as pd
 import random as rdm
+from sklearn.model_selection import train_test_split as sklearn_train_test_split
 import warnings
 
 from Datasets.Dataset import Dataset
@@ -153,7 +155,7 @@ class TrainingSet:
 
     # public methods
 
-    def yield_splitted_train_val(data_properties, nb_cv_splits):
+    def yield_splitted_train_val(self, data_properties, nb_cv_splits):
         """
         Yields splitted train and validation sets.
 
@@ -170,7 +172,7 @@ class TrainingSet:
         6. Numpy array of validation entries
         7. Numpy array of validation entries' labels
         """
-        all_data_info, labels_set = self._load()
+        all_data_info, labels_set = self._load(test_set=False)
         # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
 
         # reduce the data set if required
@@ -191,12 +193,12 @@ class TrainingSet:
 
             data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
             labels = all_data_info['Label']
-            
+
             # split train/test sets
-            X_train = np.array(data.loc[train_indices, :][:].values.tolist())
-            y_train = np.array(labels.loc[train_indices].tolist())
-            X_val = np.array(data.loc[test_indices, :][:].values.tolist())
-            y_val = np.array(labels.loc[test_indices].tolist())
+            X_train = data.loc[train_indices, :][:].to_numpy()
+            y_train = labels.loc[train_indices].to_numpy()
+            X_val = data.loc[test_indices, :][:].to_numpy()
+            y_val = labels.loc[test_indices].to_numpy()
 
             # augment training data
             if data_properties['augment']:
@@ -246,13 +248,13 @@ class TrainingSet:
 
     # private methods
 
-    def _load(self, test_set=False):
+    def _load(self, test_set):
         """
         Loads the labels, features, and clusters' assignment of each data set's time series.
 
         Keyword arguments:
         test_set -- set to True if the data to load is from the test set, False if it is the training and 
-                    validation sets (default False).
+                    validation sets.
         
         Return:
         1. Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
@@ -264,32 +266,54 @@ class TrainingSet:
         all_complete_datasets = []
         for dataset in self.datasets:
 
-            # only load data set if: (in test set AND test_set is True) or (not in test set AND test_set is False)
-            if self.is_in_test_set(dataset) is test_set:
+            # load labels - dataset_labels: df w/ 2 cols: Time Series ID and Label
+            dataset_labels, labels_set = dataset.load_labels(self.labeler, self.labeler_properties)
+            dataset_labels.set_index('Time Series ID', inplace=True)
 
-                # load labels - dataset_labels: df w/ 2 cols: Time Series ID and Label
-                dataset_labels, labels_set = dataset.load_labels(self.labeler, self.labeler_properties)
-                dataset_labels.set_index('Time Series ID', inplace=True)
+            # load features - dataset_features: df w/ cols: Time Series ID, (Cluster ID), Feature 1's name, Feature 2's name, ...
+            all_dataset_features = []
+            for features_extracter in self.features_extracters:
+                tmp_dataset_features = dataset.load_features(features_extracter)
+                tmp_dataset_features.set_index('Time Series ID', inplace=True)
+                all_dataset_features.append(tmp_dataset_features)
+            dataset_features = pd.concat(all_dataset_features, axis=1) # concat features dataframes
 
-                # load features - dataset_features: df w/ cols: Time Series ID, (Cluster ID), Feature 1's name, Feature 2's name, ...
-                all_dataset_features = []
-                for features_extracter in self.features_extracters:
-                    tmp_dataset_features = dataset.load_features(features_extracter)
-                    tmp_dataset_features.set_index('Time Series ID', inplace=True)
-                    all_dataset_features.append(tmp_dataset_features)
-                dataset_features = pd.concat(all_dataset_features, axis=1) # concat features dataframes
+            to_concat = [dataset_labels, dataset_features]
 
-                # load cassignment if the column is not there already
-                if 'Cluster ID' not in dataset_features.columns:
-                    dataset_cassignment = dataset.load_cassignment()
-                    dataset_cassignment.set_index('Time Series ID', inplace=True)
+            # load cassignment if the column is not there already
+            if 'Cluster ID' not in dataset_features.columns:
+                dataset_cassignment = dataset.load_cassignment()
+                dataset_cassignment.set_index('Time Series ID', inplace=True)
+                to_concat.append(dataset_cassignment)
 
-                # concat data set's labels, features and cassignment
-                complete_dataset = pd.concat(dataset_labels, dataset_features, dataset_cassignment, axis=1)
-                all_complete_datasets.append(complete_dataset)
+            # concat data set's labels, features and cassignment
+            complete_dataset = pd.concat(to_concat, axis=1)
+            
+            # only keep either the test set or the training and validation sets
+            if self.test_set_level == 'clusters':
+                if test_set:
+                    complete_dataset = complete_dataset.loc[complete_dataset['Cluster ID'].isin(self.test_set_ids)]
+                else:
+                    complete_dataset = complete_dataset.loc[~complete_dataset['Cluster ID'].isin(self.test_set_ids)]
+            elif self.test_set_level == 'datasets':
+                if test_set and dataset.name in self.test_set_ids:
+                    pass
+                else:
+                    continue # the whole data set is in the test set but we want the train & val sets: skip this data set
+            else:
+                raise Exception('Test set reservation strategy not implemented: ', TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
+
+            all_complete_datasets.append(complete_dataset)
         
         # merge the complete data sets (each row is a time serie's info)
         all_complete_datasets_df = pd.concat(all_complete_datasets, axis=0)
+
+        # drop columns that contain NaN values (feature columns that not all data sets can have)
+        nb_cols = all_complete_datasets_df.shape[1]
+        all_complete_datasets_df = all_complete_datasets_df.dropna(axis=1)
+        nb_dropped_cols = all_complete_datasets_df.shape[1] - nb_cols
+        if nb_dropped_cols > nb_cols / 10:
+            warnings.warn("Warning: %i/%i feature columns were dropped because they contained NaN values!" % (nb_dropped_cols, nb_cols))
         
         assert labels_set is not None
         return all_complete_datasets_df, labels_set
@@ -386,7 +410,7 @@ class TrainingSet:
         
         return rdm.sample(train_indices, len(train_indices)), rdm.sample(test_indices, len(test_indices)), train['cids']
 
-    def _update_prob_distrib(all_data_info, probability_distribution, train_ids):
+    def _update_prob_distrib(self, all_data_info, probability_distribution, train_ids):
         """
         Updates the probability distribution vector for clusters (prob to be attributed to the training set).
         
@@ -399,25 +423,29 @@ class TrainingSet:
         Updated probability_distribution
         """
         nb_elems = all_data_info['Cluster ID'].nunique()
+        nb_not_train = nb_elems - len(train_ids) # number of elements that were not used for training during the last split
         
-        weights_to_share = 0
-        # compute weight to redistribute
-        for i, (cid, w) in enumerate(zip(sorted(all_data_info['Cluster ID'].unique(), key=int), probability_distribution)):
-            if cid in train_ids:
-                old_weight = probability_distribution[i]
-                probability_distribution[i] *= TrainingSet.CONF['PROB_DEC_FACTOR_AFTER_ATTRIBUTION']
-                weights_to_share += old_weight - probability_distribution[i]
-                
-        # redistribute the extra weight
-        nb_not_train = nb_elems - len(train_ids)
-        for i, (cid, w) in enumerate(zip(sorted(all_data_info['Cluster ID'].unique(), key=int), probability_distribution)):
-            if cid not in train_ids:
-                probability_distribution[i] += weights_to_share / nb_not_train
+        if nb_not_train > 0:        
+            weights_to_share = 0
+            # compute weight to redistribute
+            for i, (cid, w) in enumerate(zip(sorted(all_data_info['Cluster ID'].unique(), key=int), probability_distribution)):
+                if cid in train_ids:
+                    old_weight = probability_distribution[i]
+                    probability_distribution[i] *= TrainingSet.CONF['PROB_DEC_FACTOR_AFTER_ATTRIBUTION']
+                    weights_to_share += old_weight - probability_distribution[i]
+                    
+            # redistribute the extra weight
+            for i, (cid, w) in enumerate(zip(sorted(all_data_info['Cluster ID'].unique(), key=int), probability_distribution)):
+                if cid not in train_ids:
+                    probability_distribution[i] += weights_to_share / nb_not_train
 
-        assert sum(probability_distribution) == 1.0
+            assert round(sum(probability_distribution), 5) == 1.0
+            return probability_distribution
+        
+        assert round(sum(probability_distribution), 5) == 1.0
         return probability_distribution
 
-    def _augment_train(X_train, y_train):
+    def _augment_train(self, X_train, y_train):
         """
         Augments the training data using SMOTE.
         

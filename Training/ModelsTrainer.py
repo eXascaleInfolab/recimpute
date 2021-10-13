@@ -8,7 +8,9 @@ ModelsTrainer.py
 
 import math
 import numpy as np
+import operator
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import RandomizedSearchCV
 
 from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
@@ -38,18 +40,27 @@ class ModelsTrainer:
 
     # public methods
 
-    def train():
-        # TODO
+    def train(self):
+        """
+        Trains and evaluates models given to this initialization of this trainer. Uses T-Daub for best-algorithms selection
+        and cross-validation.
+
+        Keyword arguments: -
+
+        Return:
+        A TrainResults' instance containing the training results
+        """
         t_daub_nb_runs = ModelsTrainer.CONF['TDAUB_NB_RUNS']
         nb_best_models = ModelsTrainer.CONF['TDAUB_NB_BEST_MODELS']
         models_to_train = self._t_daub(t_daub_nb_runs, nb_best_models) if t_daub_nb_runs > 0 else self.models
         
-        train_results = self._train(models_to_train) # TODO
+        train_results = self._train(models_to_train)
+        return train_results
         
     
     # private methods
 
-    def _train(models_to_train, training_set_params=None, save_results=True):
+    def _train(self, models_to_train, training_set_params=None, save_results=True):
         """
         Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
 
@@ -62,9 +73,11 @@ class ModelsTrainer:
         A TrainResults' instance containing the training results
         """
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
+
         train_results = TrainResults(models_to_train)
         try:
-            for yielded in self.training_set.yield_splitted_train_val(training_set_params, ModelsTrainer.CONF['NB_CV_SPLITS']):
+            for split_id, yielded in enumerate(self.training_set.yield_splitted_train_val(training_set_params, 
+                                                                                          ModelsTrainer.CONF['NB_CV_SPLITS'])):
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
                 for model in models_to_train:
@@ -76,7 +89,7 @@ class ModelsTrainer:
                                                 cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
                                                 n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
                                                 scoring='f1_macro')
-                        gs.fit(np.array(data.to_numpy()), np.array(labels.iloc[:].tolist()))
+                        gs.fit(all_data.to_numpy(), all_labels.to_numpy())
                         model.set_params(gs.best_params_)
 
                     # training
@@ -85,12 +98,12 @@ class ModelsTrainer:
 
                     # save results
                     # TrainResults contain a dict grouping the results of each trained model
-                    train_results.add_model_cv_split_result(model, trained_pipeline, scores, cm) # TODO
+                    train_results.add_model_cv_split_result(split_id, model, trained_pipeline, scores, cm)
 
         finally:
             # save results to disk
             if save_results:
-                train_results.save() # TODO
+                train_results.save()
 
         return train_results
 
@@ -123,11 +136,11 @@ class ModelsTrainer:
             training_set_properties = self.training_set.get_default_properties()
             training_set_properties['usable_data_perc'] = usable_data_perc
             # train each model on the reduced data set
-            train_results = self._train(self.models, training_set_properties, save_results=False) # TODO
+            train_results = self._train(self.models, training_set_properties, save_results=False)
             
             # retrieve the F1-Score of each model from the results
             for model in train_results.models:
-                model_results = train_results.get_model_results(model.name) # TODO
+                model_results = train_results.get_avg_model_results(model)
                 f1score = model_results['F1-Score']
                 try:
                     all_models_results[model].append(f1score)
@@ -150,7 +163,7 @@ class ModelsTrainer:
         # sort ranking
         sorted_ranking = list(sorted(ranking.items(), key=operator.itemgetter(1), reverse=True))
         # selection of the top ranked pipelines
-        best_models = sorted_ranking[:nb_best_models]
+        best_models = [elem[0] for elem in sorted_ranking[:nb_best_models]]
 
         return best_models
 

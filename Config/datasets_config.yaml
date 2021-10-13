@@ -13,139 +13,139 @@ USE_LIST:
   - ACSF1.zip                                                                                          # 200x1460
   - Adiac.zip                                                                                          # 781x176
   - airq.zip                                                                                           # 10x1000
-  - ArrowHead.zip                                                                                      # 211x251
-  - bafu_1.zip                                                                                         # 10x6250
-  - bafu_2.zip                                                                                         # 10x6250
-  - bafu_3.zip                                                                                         # 10x6250
-  - bafu_4.zip                                                                                         # 10x6250
-  - bafu_5.zip                                                                                         # 10x6250
-  - bafu_6.zip                                                                                         # 10x6250
-  - bafu_7.zip                                                                                         # 10x6250
-  - bafu_8.zip                                                                                         # 10x6250
-  - Beef.zip                                                                                           # 60x470
-  - BeetleFly.zip                                                                                      # 40x512
-  - BirdChicken.zip                                                                                    # 40x512
-  - BME.zip                                                                                            # 180x128
-  - Car.zip                                                                                            # 120x577
-  - CBF.zip                                                                                            # 930x128
-  - Chinatown.zip                                                                                      # 363x24
-  - chlorine.zip                                                                                       # 50x1000
-  - ChlorineConcentration.zip                                                                          # 4307x166
-  - CinCECGTorso.zip                                                                                   # 1420x1639
-  - climate_CH4.zip                                                                                    # 125x156
-  - climate_CLD.zip                                                                                    # 125x156
-  - climate_CO.zip                                                                                     # 125x156
-  - climate_CO2.zip                                                                                    # 125x156
-  - climate_DTR.zip                                                                                    # 125x156
-  - climate_ETR.zip                                                                                    # 125x156
-  - climate_ETRN.zip                                                                                   # 125x156
-  - climate_FRS.zip                                                                                    # 125x156
-  - climate_GLO.zip                                                                                    # 125x156
-  - climate_H2.zip                                                                                     # 125x156
-  - climate_PRE.zip                                                                                    # 125x156
-  - climate_TMN.zip                                                                                    # 125x156
-  - climate_TMP.zip                                                                                    # 125x156
-  - climate_TMX.zip                                                                                    # 125x156
-  - climate_VAP.zip                                                                                    # 125x156
-  - climate_WET.zip                                                                                    # 125x156
-  - Coffee.zip                                                                                         # 56x286
-  - Computers.zip                                                                                      # 500x720
-  - CricketX.zip                                                                                       # 780x300
-  - CricketY.zip                                                                                       # 780x300
-  - CricketZ.zip                                                                                       # 780x300
-  - DiatomSizeReduction.zip                                                                            # 322x345
-  - DistalPhalanxOutlineAgeGroup.zip                                                                   # 539x80
-  - DistalPhalanxOutlineCorrect.zip                                                                    # 876x80
-  - DistalPhalanxTW.zip                                                                                # 539x80
-  - drift10.zip                                                                                        # 100x1000
-  - Earthquakes.zip                                                                                    # 461x512
-  - ECG200.zip                                                                                         # 200x96
-  - ECG5000.zip                                                                                        # 5000x140
-  - ECGFiveDays.zip                                                                                    # 884x136
-  - electricity.zip                                                                                    # 20x5000
-  - EOGHorizontalSignal.zip                                                                            # 724x1250
-  - EthanolLevel.zip                                                                                   # 1004x1751
-  - FaceAll.zip                                                                                        # 2250x131
-  - FaceFour.zip                                                                                       # 112x350
-  - FacesUCR.zip                                                                                       # 2250x131
-  - FiftyWords.zip                                                                                     # 905x270
-  - Fish.zip                                                                                           # 350x463
-  - FordA.zip                                                                                          # 4921x500
-  - FordB.zip                                                                                          # 4446x500
-  - FreezerRegularTrain.zip                                                                            # 3000x301
-  - FreezerSmallTrain.zip                                                                              # 2878x301
-  - Fungi.zip                                                                                          # 204x201
-  - GunPoint.zip                                                                                       # 200x150
-  - GunPointAgeSpan.zip                                                                                # 451x150
-  - GunPointMaleVersusFemale.zip                                                                       # 451x150
-  - GunPointOldVersusYoung.zip                                                                         # 451x150
-  - Ham.zip                                                                                            # 214x431
-  - HandOutlines.zip                                                                                   # 1370x2709
-  - Haptics.zip                                                                                        # 463x1092
-  - Herring.zip                                                                                        # 128x512
-  - HouseTwenty.zip                                                                                    # 159x2000
-  - InlineSkate.zip                                                                                    # 650x1882
-  - InsectEPGRegularTrain.zip                                                                          # 311x601
-  - InsectEPGSmallTrain.zip                                                                            # 266x601
-  - InsectWingbeatSound.zip                                                                            # 2200x256
-  - ItalyPowerDemand.zip                                                                               # 1096x24
-  - LargeKitchenAppliances.zip                                                                         # 750x720
-  - Lightning2.zip                                                                                     # 121x637
-  - Lightning7.zip                                                                                     # 143x319
-  - Mallat.zip                                                                                         # 2400x1024
-  - Meat.zip                                                                                           # 120x448
-  - MedicalImages.zip                                                                                  # 1141x99
-  - meteo.zip                                                                                          # 20x5000
-  - MiddlePhalanxOutlineAgeGroup.zip                                                                   # 554x80
-  - MiddlePhalanxOutlineCorrect.zip                                                                    # 891x80
-  - MiddlePhalanxTW.zip                                                                                # 553x80
-  - MixedShapesRegularTrain.zip                                                                        # 2925x1024
-  - MixedShapesSmallTrain.zip                                                                          # 2525x1024
-  - MoteStrain.zip                                                                                     # 1272x84
-  - NonInvasiveFetalECGThorax1.zip                                                                     # 3765x750
-  - NonInvasiveFetalECGThorax2.zip                                                                     # 3765x750
-  - OliveOil.zip                                                                                       # 60x570
-  - OSULeaf.zip                                                                                        # 442x427
-  - parking.zip                                                                                        # 12x1312
-  - PhalangesOutlinesCorrect.zip                                                                       # 2658x80
-  - Phoneme.zip                                                                                        # 2110x1024
-  - PigAirwayPressure.zip                                                                              # 312x2000
-  - PigArtPressure.zip                                                                                 # 312x2000
-  - PigCVP.zip                                                                                         # 312x2000
-  - Plane.zip                                                                                          # 210x144
-  - PowerCons.zip                                                                                      # 360x144
-  - ProximalPhalanxOutlineAgeGroup.zip                                                                 # 605x80
-  - ProximalPhalanxOutlineCorrect.zip                                                                  # 891x80
-  - ProximalPhalanxTW.zip                                                                              # 605x80
-  - RefrigerationDevices.zip                                                                           # 750x720
-  - Rock.zip                                                                                           # 70x2844
-  - ScreenType.zip                                                                                     # 750x720
-  - SemgHandGenderCh2.zip                                                                              # 900x1500
-  - SemgHandMovementCh2.zip                                                                            # 900x1500
-  - SemgHandSubjectCh2.zip                                                                             # 900x1500
-  - ShapeletSim.zip                                                                                    # 200x500
-  - ShapesAll.zip                                                                                      # 1200x512
-  - SmallKitchenAppliances.zip                                                                         # 750x720
-  - SmoothSubspace.zip                                                                                 # 300x15
-  - SonyAIBORobotSurface1.zip                                                                          # 621x70
-  - SonyAIBORobotSurface2.zip                                                                          # 980x65
-  - stock_exchange.zip                                                                                 # 8x536
-  - Strawberry.zip                                                                                     # 983x235
-  - SwedishLeaf.zip                                                                                    # 1125x128
-  - Symbols.zip                                                                                        # 1020x398
-  - SyntheticControl.zip                                                                               # 600x60
-  - temp.zip                                                                                           # 50x5000
-  - ToeSegmentation1.zip                                                                               # 268x277
-  - ToeSegmentation2.zip                                                                               # 166x343
-  - Trace.zip                                                                                          # 200x275
-  - TwoLeadECG.zip                                                                                     # 1162x82
-  - TwoPatterns.zip                                                                                    # 5000x128
-  - UMD.zip                                                                                            # 180x150
-  - UWaveGestureLibraryAll.zip                                                                         # 4478x945
-  - UWaveGestureLibraryX.zip                                                                           # 4478x315
-  - UWaveGestureLibraryY.zip                                                                           # 4478x315
-  - Wine.zip                                                                                           # 111x234
-  - WordSynonyms.zip                                                                                   # 905x270
-  - Worms.zip                                                                                          # 258x900
-  - WormsTwoClass.zip                                                                                  # 258x900
-  - Yoga.zip                                                                                           # 3300x426
+  # - ArrowHead.zip                                                                                      # 211x251
+  # - bafu_1.zip                                                                                         # 10x6250
+  # - bafu_2.zip                                                                                         # 10x6250
+  # - bafu_3.zip                                                                                         # 10x6250
+  # - bafu_4.zip                                                                                         # 10x6250
+  # - bafu_5.zip                                                                                         # 10x6250
+  # - bafu_6.zip                                                                                         # 10x6250
+  # - bafu_7.zip                                                                                         # 10x6250
+  # - bafu_8.zip                                                                                         # 10x6250
+  # - Beef.zip                                                                                           # 60x470
+  # - BeetleFly.zip                                                                                      # 40x512
+  # - BirdChicken.zip                                                                                    # 40x512
+  # - BME.zip                                                                                            # 180x128
+  # - Car.zip                                                                                            # 120x577
+  # - CBF.zip                                                                                            # 930x128
+  # - Chinatown.zip                                                                                      # 363x24
+  # - chlorine.zip                                                                                       # 50x1000
+  # - ChlorineConcentration.zip                                                                          # 4307x166
+  # - CinCECGTorso.zip                                                                                   # 1420x1639
+  # - climate_CH4.zip                                                                                    # 125x156
+  # - climate_CLD.zip                                                                                    # 125x156
+  # - climate_CO.zip                                                                                     # 125x156
+  # - climate_CO2.zip                                                                                    # 125x156
+  # - climate_DTR.zip                                                                                    # 125x156
+  # - climate_ETR.zip                                                                                    # 125x156
+  # - climate_ETRN.zip                                                                                   # 125x156
+  # - climate_FRS.zip                                                                                    # 125x156
+  # - climate_GLO.zip                                                                                    # 125x156
+  # - climate_H2.zip                                                                                     # 125x156
+  # - climate_PRE.zip                                                                                    # 125x156
+  # - climate_TMN.zip                                                                                    # 125x156
+  # - climate_TMP.zip                                                                                    # 125x156
+  # - climate_TMX.zip                                                                                    # 125x156
+  # - climate_VAP.zip                                                                                    # 125x156
+  # - climate_WET.zip                                                                                    # 125x156
+  # - Coffee.zip                                                                                         # 56x286
+  # - Computers.zip                                                                                      # 500x720
+  # - CricketX.zip                                                                                       # 780x300
+  # - CricketY.zip                                                                                       # 780x300
+  # - CricketZ.zip                                                                                       # 780x300
+  # - DiatomSizeReduction.zip                                                                            # 322x345
+  # - DistalPhalanxOutlineAgeGroup.zip                                                                   # 539x80
+  # - DistalPhalanxOutlineCorrect.zip                                                                    # 876x80
+  # - DistalPhalanxTW.zip                                                                                # 539x80
+  # - drift10.zip                                                                                        # 100x1000
+  # - Earthquakes.zip                                                                                    # 461x512
+  # - ECG200.zip                                                                                         # 200x96
+  # - ECG5000.zip                                                                                        # 5000x140
+  # - ECGFiveDays.zip                                                                                    # 884x136
+  # - electricity.zip                                                                                    # 20x5000
+  # - EOGHorizontalSignal.zip                                                                            # 724x1250
+  # - EthanolLevel.zip                                                                                   # 1004x1751
+  # - FaceAll.zip                                                                                        # 2250x131
+  # - FaceFour.zip                                                                                       # 112x350
+  # - FacesUCR.zip                                                                                       # 2250x131
+  # - FiftyWords.zip                                                                                     # 905x270
+  # - Fish.zip                                                                                           # 350x463
+  # - FordA.zip                                                                                          # 4921x500
+  # - FordB.zip                                                                                          # 4446x500
+  # - FreezerRegularTrain.zip                                                                            # 3000x301
+  # - FreezerSmallTrain.zip                                                                              # 2878x301
+  # - Fungi.zip                                                                                          # 204x201
+  # - GunPoint.zip                                                                                       # 200x150
+  # - GunPointAgeSpan.zip                                                                                # 451x150
+  # - GunPointMaleVersusFemale.zip                                                                       # 451x150
+  # - GunPointOldVersusYoung.zip                                                                         # 451x150
+  # - Ham.zip                                                                                            # 214x431
+  # - HandOutlines.zip                                                                                   # 1370x2709
+  # - Haptics.zip                                                                                        # 463x1092
+  # - Herring.zip                                                                                        # 128x512
+  # - HouseTwenty.zip                                                                                    # 159x2000
+  # - InlineSkate.zip                                                                                    # 650x1882
+  # - InsectEPGRegularTrain.zip                                                                          # 311x601
+  # - InsectEPGSmallTrain.zip                                                                            # 266x601
+  # - InsectWingbeatSound.zip                                                                            # 2200x256
+  # - ItalyPowerDemand.zip                                                                               # 1096x24
+  # - LargeKitchenAppliances.zip                                                                         # 750x720
+  # - Lightning2.zip                                                                                     # 121x637
+  # - Lightning7.zip                                                                                     # 143x319
+  # - Mallat.zip                                                                                         # 2400x1024
+  # - Meat.zip                                                                                           # 120x448
+  # - MedicalImages.zip                                                                                  # 1141x99
+  # - meteo.zip                                                                                          # 20x5000
+  # - MiddlePhalanxOutlineAgeGroup.zip                                                                   # 554x80
+  # - MiddlePhalanxOutlineCorrect.zip                                                                    # 891x80
+  # - MiddlePhalanxTW.zip                                                                                # 553x80
+  # - MixedShapesRegularTrain.zip                                                                        # 2925x1024
+  # - MixedShapesSmallTrain.zip                                                                          # 2525x1024
+  # - MoteStrain.zip                                                                                     # 1272x84
+  # - NonInvasiveFetalECGThorax1.zip                                                                     # 3765x750
+  # - NonInvasiveFetalECGThorax2.zip                                                                     # 3765x750
+  # - OliveOil.zip                                                                                       # 60x570
+  # - OSULeaf.zip                                                                                        # 442x427
+  # - parking.zip                                                                                        # 12x1312
+  # - PhalangesOutlinesCorrect.zip                                                                       # 2658x80
+  # - Phoneme.zip                                                                                        # 2110x1024
+  # - PigAirwayPressure.zip                                                                              # 312x2000
+  # - PigArtPressure.zip                                                                                 # 312x2000
+  # - PigCVP.zip                                                                                         # 312x2000
+  # - Plane.zip                                                                                          # 210x144
+  # - PowerCons.zip                                                                                      # 360x144
+  # - ProximalPhalanxOutlineAgeGroup.zip                                                                 # 605x80
+  # - ProximalPhalanxOutlineCorrect.zip                                                                  # 891x80
+  # - ProximalPhalanxTW.zip                                                                              # 605x80
+  # - RefrigerationDevices.zip                                                                           # 750x720
+  # - Rock.zip                                                                                           # 70x2844
+  # - ScreenType.zip                                                                                     # 750x720
+  # - SemgHandGenderCh2.zip                                                                              # 900x1500
+  # - SemgHandMovementCh2.zip                                                                            # 900x1500
+  # - SemgHandSubjectCh2.zip                                                                             # 900x1500
+  # - ShapeletSim.zip                                                                                    # 200x500
+  # - ShapesAll.zip                                                                                      # 1200x512
+  # - SmallKitchenAppliances.zip                                                                         # 750x720
+  # - SmoothSubspace.zip                                                                                 # 300x15
+  # - SonyAIBORobotSurface1.zip                                                                          # 621x70
+  # - SonyAIBORobotSurface2.zip                                                                          # 980x65
+  # - stock_exchange.zip                                                                                 # 8x536
+  # - Strawberry.zip                                                                                     # 983x235
+  # - SwedishLeaf.zip                                                                                    # 1125x128
+  # - Symbols.zip                                                                                        # 1020x398
+  # - SyntheticControl.zip                                                                               # 600x60
+  # - temp.zip                                                                                           # 50x5000
+  # - ToeSegmentation1.zip                                                                               # 268x277
+  # - ToeSegmentation2.zip                                                                               # 166x343
+  # - Trace.zip                                                                                          # 200x275
+  # - TwoLeadECG.zip                                                                                     # 1162x82
+  # - TwoPatterns.zip                                                                                    # 5000x128
+  # - UMD.zip                                                                                            # 180x150
+  # - UWaveGestureLibraryAll.zip                                                                         # 4478x945
+  # - UWaveGestureLibraryX.zip                                                                           # 4478x315
+  # - UWaveGestureLibraryY.zip                                                                           # 4478x315
+  # - Wine.zip                                                                                           # 111x234
+  # - WordSynonyms.zip                                                                                   # 905x270
+  # - Worms.zip                                                                                          # 258x900
+  # - WormsTwoClass.zip                                                                                  # 258x900
+  # - Yoga.zip                                                                                           # 3300x426

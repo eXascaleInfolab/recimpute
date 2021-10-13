@@ -20,26 +20,26 @@ model_info = {
 
     'name': 'normalizer_randomforest',
 
-    ## Ordered list of transformations and operations applied to the data. Should end with a classification or regression model.
-    ## Should be a list of classes (not instances!).
+    ## List of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they are chained, 
+    ## with the last object an estimator. Name should be the transform class' name. Transform should be a class (not an instance!). 
     'steps': [
-        Normalizer,
-        RandomForestClassifier,
+        ('Normalizer', Normalizer),
+        ('RandomForestClassifier', RandomForestClassifier),
     ],
 
     ## Dictionary defining the ranges of possible values of each step's parameters.
-    'params_range': {
-        'Normalizer__norm': ['l1', 'l2'],
+    'params_ranges': {
+        # 'Normalizer__norm': ['l1', 'l2'],
 
-        'RandomForestClassifier__n_estimators': [10, 50, 200, 500, 1000],
-        'RandomForestClassifier__max_depth': [5, 8, 15, None],
-        'RandomForestClassifier__min_samples_split': [2, 5, 10, 15],
-        'RandomForestClassifier__min_samples_leaf': [1, 2, 5, 10],
-        'RandomForestClassifier__n_jobs': [-1],
+        # 'RandomForestClassifier__n_estimators': [10, 50, 200, 500, 1000],
+        # 'RandomForestClassifier__max_depth': [5, 8, 15, None],
+        # 'RandomForestClassifier__min_samples_split': [2, 5, 10, 15],
+        # 'RandomForestClassifier__min_samples_leaf': [1, 2, 5, 10],
+        # 'RandomForestClassifier__n_jobs': [-1],
     },
 
     # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model.
-    training_speed_factor: 2,
+    'training_speed_factor': 2,
 
     # ---------------------------------------------------------------
     # OPTIONAL FIELDS (if set to None, these fields will not be used)

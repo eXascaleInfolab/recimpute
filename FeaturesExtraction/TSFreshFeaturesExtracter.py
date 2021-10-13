@@ -107,7 +107,7 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         """
         # load clusters features
         features_filename = self._get_features_filename(dataset.name)
-        features_df = pd.read_csv(features_filename, index_col='Time Series ID')
+        features_df = pd.read_csv(features_filename)
         return features_df
 
     

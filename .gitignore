@@ -5,6 +5,7 @@ Datasets/RealWorld
 Datasets/TrainingSets
 FeaturesExtraction/features
 Labeling/ImputationTechniques/labels
+Training/Results
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,venv,virtualenv,visualstudiocode,python

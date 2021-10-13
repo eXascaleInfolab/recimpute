@@ -29,14 +29,19 @@ class RecommendationModel:
 
         Keyword arguments:
         name -- name of this model
-        steps -- ordered list of classes that will be used to create this model's pipeline
+        steps -- list of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they 
+                 are chained, with the last object an estimator
         params_ranges -- dict with keys being parameters' names and values being ranges of possible parameter value
         training_speed_factor -- integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model
         multiclass_strategy -- Class of a multiclass strategy (default: None)
         bagging_strategy -- Class of a bagging strategy (default: None)
         """
-        self.steps = steps
-        assert hasattr(self.steps[-1], 'fit') and callable(getattr(self.steps[-1], 'fit'))
+        self.name = name
+        self.steps_name, self.steps = zip(*steps)
+        # for step in self.steps:
+        #     assert hasattr(step, 'fit') and callable(getattr(step, 'fit'))
+        #     print(step)
+        #     assert hasattr(step, 'transform') and callable(getattr(step, 'transform'))
 
         self.params_ranges = params_ranges
         self.training_speed_factor = training_speed_factor
@@ -48,7 +53,7 @@ class RecommendationModel:
 
     # public methods
 
-    def get_pipeline(self, use_best_params_if_set=true):
+    def get_pipeline(self, use_best_params_if_set=True):
         """
         Instantiates and returns a Scikit-Learn Pipeline object created from this model's individual steps.
 
@@ -60,15 +65,16 @@ class RecommendationModel:
         Scikit-Learn Pipeline object created from this model's individual steps and optimal parameters (if set).
         """
         # instantiate the Pipeline object
-        pipeline = Pipeline(steps=self.steps)
+        pipeline_steps = [(name, step()) for name, step in zip(self.steps_name, self.steps)]
+        pipeline = Pipeline(steps=pipeline_steps)
         if self.are_params_set and use_best_params_if_set:
-            pipeline.set_params(self.best_params)
+            pipeline.set_params(**self.best_params) # TODO check if this works w/ bagging & multiclass_strategy
         
-        if bagging_strategy is not None:
+        if self.bagging_strategy is not None:
             #n_estimators = 10
-            pipeline = bagging(pipeline, n_jobs=-1) # , n_estimators=n_estimators, max_samples=1.0 / n_estimators, 
-        if multiclass_strategy is not None:
-            pipeline = multiclass_strategy(pipeline)
+            pipeline = bagging_strategy(pipeline, n_jobs=-1) # , n_estimators=n_estimators, max_samples=1.0 / n_estimators, 
+        if self.multiclass_strategy is not None:
+            pipeline = self.multiclass_strategy(pipeline)
         return pipeline
 
     def set_params(self, gs_best_params):
@@ -129,7 +135,7 @@ class RecommendationModel:
         
         Return: 
         1. trained pipeline
-        2. list of scores measured during the pipeline's evaluation
+        2. dict of scores measured during the pipeline's evaluation
         3. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
         """
         # train model
@@ -143,13 +149,13 @@ class RecommendationModel:
         are_multi_labels = labels_info['type'] == 'multilabels'
         average_strat = 'samples' if are_multi_labels else 'weighted'
 
-        scores = [
-            accuracy_score(y_val, y_pred, normalize=True, sample_weight=None), 
-            precision_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
-            recall_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
-            hamming_loss(y_val, y_pred),
-            f1_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0),
-        ]
+        scores = {
+            'Accuracy': accuracy_score(y_val, y_pred, normalize=True, sample_weight=None), 
+            'F1-Score': f1_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0),
+            'Precision': precision_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
+            'Recall': recall_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
+            'Hamming Loss': hamming_loss(y_val, y_pred),
+        }
 
         if plot_cm:
             fig, _, cm_val = Utils.plot_confusion_matrix(y_val, y_pred, are_multi_labels, normalize=True, labels=labels_set)

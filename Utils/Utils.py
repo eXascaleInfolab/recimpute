@@ -7,6 +7,7 @@ Utils.py
 """
 
 from collections import ChainMap
+from glob import glob
 import math
 import matplotlib
 import matplotlib.image as mpimg
@@ -14,6 +15,8 @@ import matplotlib.pyplot as plt
 import os
 from os.path import normpath as normp
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix, ConfusionMatrixDisplay
+from sklearn.utils.multiclass import unique_labels
+import warnings
 import yaml
 
 class Utils:
@@ -74,6 +77,20 @@ class Utils:
         """
         return [m[i,j] for i in range(len(m)) for j in range(len(m[i])) if i < j]
 
+    def get_files_from_dir(dir_path):
+        """
+        Returns a list of files' path from the specified directory.
+        
+        Keyword arguments:
+        dir_path -- path to the directory to search files in
+        
+        Return: 
+        List of files' path from the specified directory
+        """
+        glob_pattern = os.path.join(dir_path, '*')
+        files = sorted(glob(glob_pattern), key=os.path.getctime)
+        return files
+
     def plot_confusion_matrix(y_true, y_pred, multilabels, normalize=True, labels=None, title=None, verbose=0):
         """
         Plots a confusion matrix.
@@ -95,8 +112,8 @@ class Utils:
         """
         if labels is None and multilabels is True:
             raise Exception('Labels list must be specified if multilabels is True')
-        elif labels is not None and multilabels is False:
-            warnings.warn("Warning: given labels list won't be used for confusion matrix plot.")
+        # elif labels is not None and multilabels is False:
+        #     warnings.warn("Warning: given labels list won't be used for confusion matrix plot.")
             
         if verbose < 2:
             plt.ioff()

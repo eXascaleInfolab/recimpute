@@ -7,8 +7,10 @@
 # KiviatRulesLabeler related configuration file
 # ------------------------------------
 
-# LBL_PROPERTIES: All properties labels can have and their related possible values (e.g. labels can be of type mono or multi)
-POSSIBLE_LBL_PROPERTIES:
+# LBL_PROPERTIES: All properties that labels can have (e.g. labels can be of type mono or multi)
+LBL_PROPERTIES:
+  # type: Specifies if the labels are mono or multi labels. Value can be one of: monolabels (multilabels are not 
+  # supported yet with Kiviat rules labeler)
   - type:
     - monolabels
 

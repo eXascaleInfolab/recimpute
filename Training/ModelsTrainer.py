@@ -9,8 +9,10 @@ ModelsTrainer.py
 import math
 import numpy as np
 import operator
+from sklearn.exceptions import FitFailedWarning
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import RandomizedSearchCV
+import warnings
 
 from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
@@ -72,6 +74,7 @@ class ModelsTrainer:
         Return:
         A TrainResults' instance containing the training results
         """
+        #warnings.filterwarnings("ignore", category=FitFailedWarning)
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
 
         train_results = TrainResults(models_to_train)
@@ -89,12 +92,13 @@ class ModelsTrainer:
                                                 cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
                                                 n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
                                                 scoring='f1_macro')
-                        gs.fit(all_data.to_numpy(), all_labels.to_numpy())
+                        gs.fit(all_data.to_numpy(), all_labels.to_numpy().astype('str'))
                         model.set_params(gs.best_params_)
 
                     # training
                     trained_pipeline, scores, cm = model.train_and_eval(X_train, y_train, X_val, y_val, 
-                                                                        self.training_set.get_labeler_properties(), labels_set)
+                                                                        self.training_set.get_labeler_properties(), labels_set,
+                                                                        plot_cm=False)
 
                     # save results
                     # TrainResults contain a dict grouping the results of each trained model
@@ -103,7 +107,7 @@ class ModelsTrainer:
         finally:
             # save results to disk
             if save_results:
-                train_results.save()
+                train_results.save(self.training_set)
 
         return train_results
 

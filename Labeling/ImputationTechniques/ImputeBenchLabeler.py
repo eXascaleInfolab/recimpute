@@ -93,16 +93,16 @@ class ImputeBenchLabeler(AbstractLabeler):
         dataset.save_labels(self, tmp_labels_df)
         return dataset
 
-    def get_labels_possible_properties(self):
+    def get_default_properties(self):
         """
-        Returns a dict containing the possible properties labels generated with this labeler can have.
+        Returns a dict containing the default properties that labels generated with this labeler have.
         
         Keyword arguments: -
         
         Return: 
-        Dict containing the possible properties labels generated with this labeler can have.
+        Dict containing the default properties that labels generated with this labeler have.
         """
-        return ImputeBenchLabeler.CONF['POSSIBLE_LBL_PROPERTIES']
+        return ImputeBenchLabeler.CONF['LBL_PROPERTIES']
 
     def save_labels(self, dataset_name, labels):
         """

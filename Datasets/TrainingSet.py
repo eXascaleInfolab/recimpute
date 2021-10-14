@@ -155,6 +155,22 @@ class TrainingSet:
 
     # public methods
 
+    def get_test_set(self):
+        """
+        Returns the test set.
+
+        Keyword arguments: -
+        
+        Return:
+        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: Time Series ID.
+        2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
+        3. list of all unique labels
+        """
+        all_data_info, labels_set = self._load(test_set=True)
+        data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
+        labels = all_data_info['Label']
+        return data, labels, labels_set
+
     def yield_splitted_train_val(self, data_properties, nb_cv_splits):
         """
         Yields splitted train and validation sets.
@@ -196,9 +212,9 @@ class TrainingSet:
 
             # split train/test sets
             X_train = data.loc[train_indices, :][:].to_numpy()
-            y_train = labels.loc[train_indices].to_numpy()
+            y_train = labels.loc[train_indices].to_numpy().astype('str')
             X_val = data.loc[test_indices, :][:].to_numpy()
-            y_val = labels.loc[test_indices].to_numpy()
+            y_val = labels.loc[test_indices].to_numpy().astype('str')
 
             # augment training data
             if data_properties['augment']:
@@ -264,6 +280,7 @@ class TrainingSet:
         """   
         labels_set = None
         all_complete_datasets = []
+        all_train_test_complete_datasets = []
         for dataset in self.datasets:
 
             # load labels - dataset_labels: df w/ 2 cols: Time Series ID and Label
@@ -288,6 +305,8 @@ class TrainingSet:
 
             # concat data set's labels, features and cassignment
             complete_dataset = pd.concat(to_concat, axis=1)
+
+            all_train_test_complete_datasets.append(complete_dataset) # this list contains train, val & test sets
             
             # only keep either the test set or the training and validation sets
             if self.test_set_level == 'clusters':
@@ -303,17 +322,22 @@ class TrainingSet:
             else:
                 raise Exception('Test set reservation strategy not implemented: ', TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
 
-            all_complete_datasets.append(complete_dataset)
+            all_complete_datasets.append(complete_dataset) # this list contains either train & val sets or test set
         
         # merge the complete data sets (each row is a time serie's info)
+        all_train_test_complete_datasets_df = pd.concat(all_train_test_complete_datasets, axis=0)
         all_complete_datasets_df = pd.concat(all_complete_datasets, axis=0)
 
         # drop columns that contain NaN values (feature columns that not all data sets can have)
-        nb_cols = all_complete_datasets_df.shape[1]
-        all_complete_datasets_df = all_complete_datasets_df.dropna(axis=1)
-        nb_dropped_cols = all_complete_datasets_df.shape[1] - nb_cols
+        # do this on the df that contains ALL data (train, val & test sets)
+        nb_cols = all_train_test_complete_datasets_df.shape[1]
+        all_train_test_complete_datasets_df = all_train_test_complete_datasets_df.dropna(axis=1)
+        nb_dropped_cols = all_train_test_complete_datasets_df.shape[1] - nb_cols
         if nb_dropped_cols > nb_cols / 10:
             warnings.warn("Warning: %i/%i feature columns were dropped because they contained NaN values!" % (nb_dropped_cols, nb_cols))
+        
+        # only keep the columns with no NaN in either train, val & test sets
+        all_complete_datasets_df = all_complete_datasets_df[all_train_test_complete_datasets_df.columns]
         
         assert labels_set is not None
         return all_complete_datasets_df, labels_set

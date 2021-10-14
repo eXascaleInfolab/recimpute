@@ -23,7 +23,8 @@ class RecommendationModel:
 
 
     # constructor
-    def __init__(self, name, steps, params_ranges, training_speed_factor, multiclass_strategy=None, bagging_strategy=None):
+    def __init__(self, name, steps, params_ranges, training_speed_factor, 
+                 multiclass_strategy=None, bagging_strategy=None, description_filename=None):
         """
         Initializes a RecommendationModel object.
 
@@ -35,6 +36,7 @@ class RecommendationModel:
         training_speed_factor -- integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model
         multiclass_strategy -- Class of a multiclass strategy (default: None)
         bagging_strategy -- Class of a bagging strategy (default: None)
+        description_filename -- filename of this model's description file (default: None)
         """
         self.name = name
         self.steps_name, self.steps = zip(*steps)
@@ -47,6 +49,7 @@ class RecommendationModel:
         self.training_speed_factor = training_speed_factor
         self.multiclass_strategy = multiclass_strategy
         self.bagging_strategy = bagging_strategy
+        self.description_filename = description_filename
 
         self.are_params_set = False
     
@@ -67,14 +70,16 @@ class RecommendationModel:
         # instantiate the Pipeline object
         pipeline_steps = [(name, step()) for name, step in zip(self.steps_name, self.steps)]
         pipeline = Pipeline(steps=pipeline_steps)
-        if self.are_params_set and use_best_params_if_set:
-            pipeline.set_params(**self.best_params) # TODO check if this works w/ bagging & multiclass_strategy
         
         if self.bagging_strategy is not None:
-            #n_estimators = 10
-            pipeline = bagging_strategy(pipeline, n_jobs=-1) # , n_estimators=n_estimators, max_samples=1.0 / n_estimators, 
+            n_estimators = 10
+            pipeline = self.bagging_strategy(pipeline, n_jobs=-1, n_estimators=n_estimators, max_samples=1.0 / n_estimators)
         if self.multiclass_strategy is not None:
             pipeline = self.multiclass_strategy(pipeline)
+            
+        if self.are_params_set and use_best_params_if_set:
+            pipeline.set_params(**self.best_params)
+
         return pipeline
 
     def set_params(self, gs_best_params):
@@ -98,7 +103,18 @@ class RecommendationModel:
         Return:
         Dict with keys being parameters' names and values being ranges of possible parameter value.
         """
-        return self.params_ranges
+        updated_params_ranges = {}
+        for param_key in self.params_ranges.keys():
+            new_param_key = param_key
+
+            if self.bagging_strategy is not None:
+                new_param_key = 'base_estimator__' + new_param_key
+                
+            if self.multiclass_strategy is not None:
+                new_param_key = 'estimator__' + new_param_key
+               
+            updated_params_ranges[new_param_key] = self.params_ranges[param_key]
+        return updated_params_ranges
 
     def get_nb_gridsearch_iter(self, gs_iter_range):
         """
@@ -142,30 +158,52 @@ class RecommendationModel:
         start_time = time.time()
         trained_pipeline = self.get_pipeline().fit(X_train, y_train)
         end_time = time.time()
+        
+        # evaluate the model
+        scores, cm = RecommendationModel.eval(trained_pipeline, X_val, y_val, labels_info, labels_set, plot_cm)
 
+        return trained_pipeline, scores, cm
+
+    def __repr__(self):
+        return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
+
+    # static methods
+    
+    def eval(trained_pipeline, X, y, labels_info, labels_set, plot_cm=False):
+        """
+        Evaluates the model on the given validation/test data. 
+        
+        Keyword arguments: 
+        trained_pipeline -- trained pipeline
+        X -- numpy array of validation/test entries
+        y -- numpy array of validation/test entries' labels
+        labels_info -- dict specifying the labels' properties
+        labels_set -- list of unique labels that may appear in y_train and y_val
+        plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
+        
+        Return: 
+        1. dict of scores measured during the pipeline's evaluation
+        2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
+        """
         # predict new data's labels
-        y_pred = trained_pipeline.predict(X_val)
+        y_pred = trained_pipeline.predict(X)
 
         are_multi_labels = labels_info['type'] == 'multilabels'
         average_strat = 'samples' if are_multi_labels else 'weighted'
 
         scores = {
-            'Accuracy': accuracy_score(y_val, y_pred, normalize=True, sample_weight=None), 
-            'F1-Score': f1_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0),
-            'Precision': precision_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
-            'Recall': recall_score(y_true=y_val, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
-            'Hamming Loss': hamming_loss(y_val, y_pred),
+            'Accuracy': accuracy_score(y, y_pred, normalize=True, sample_weight=None), 
+            'F1-Score': f1_score(y_true=y, y_pred=y_pred, average=average_strat, zero_division=0),
+            'Precision': precision_score(y_true=y, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
+            'Recall': recall_score(y_true=y, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
+            'Hamming Loss': hamming_loss(y, y_pred),
         }
 
         if plot_cm:
-            fig, _, cm_val = Utils.plot_confusion_matrix(y_val, y_pred, are_multi_labels, normalize=True, labels=labels_set)
+            fig, _, cm_val = Utils.plot_confusion_matrix(y, y_pred, are_multi_labels, normalize=True, labels=labels_set)
 
-        return trained_pipeline, scores, (fig, cm_val) if plot_cm else None
+        return scores, (fig, cm_val) if plot_cm else None
     
-    def __repr__(self):
-        return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
-
-    # static methods
     def init_from_descriptions(models_descriptions_to_use):
         """
         Initializes objects of type RecommendationModel from the given list of models' descriptions files.
@@ -188,7 +226,7 @@ class RecommendationModel:
             )
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            
+
             # init model
             model = RecommendationModel(
                 module.model_info['name'], 
@@ -196,7 +234,8 @@ class RecommendationModel:
                 module.model_info['params_ranges'], 
                 module.model_info['training_speed_factor'], 
                 module.model_info['multiclass_strategy'], 
-                module.model_info['bagging_strategy']
+                module.model_info['bagging_strategy'],
+                model_description_fname,
             )
             
             models.append(model)

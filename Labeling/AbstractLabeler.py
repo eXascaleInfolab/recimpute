@@ -28,7 +28,7 @@ class AbstractLabeler(SingletonClass, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_labels_possible_properties(self):
+    def get_default_properties(self):
         pass
 
     @abc.abstractmethod

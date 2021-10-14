@@ -8,13 +8,17 @@ TrainResults.py
 
 import datetime
 from joblib import dump
+import os
 from os.path import normpath as normp
 import pandas as pd
 import pickle
+import numpy as np
 import random as rdm
 import sys
 import time
+import zipfile
 
+from Training.RecommendationModel import RecommendationModel
 from Utils.Utils import Utils
 
 class TrainResults:
@@ -41,6 +45,8 @@ class TrainResults:
             'Conf Matrix', 'Trained Pipeline',
         ]
         self.results = pd.DataFrame(index=multiindex, columns=columns)
+        for col in 'Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss':
+            self.results[col] = self.results[col].astype(np.float64)
         self.models = models
 
 
@@ -98,19 +104,65 @@ class TrainResults:
         """
         return self.get_model_results(model).loc[:, ~self.results.columns.isin(['Conf Matrix', 'Trained Pipeline'])].mean()
 
-    def save(self):
+    def get_model_best_split(self, model, metric='F1-Score'):
+        """
+        Returns the results of the model's best cross-validation split.
+
+        Keyword arguments:
+        model -- RecommendationModel for which the training results should be returned
+        metric -- name of the score column to consider when sorting the results
+
+        Return: 
+        Pandas Series containing the average cross-validation results of the model. 
+        Columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix, Trained Pipeline
+        """
+        return self.results.loc[(self.get_model_results(model)[metric].idxmax(), model), :]
+
+    def save(self, training_set):
         """
         Saves this TrainResult's instance to disk.
 
-        Keyword arguments: -
+        Keyword arguments: 
+        training_set -- TrainingSet instance used for the models' training
 
         Return: -
         """
-        with open(TrainResults.get_filename(self.id), 'wb') as f_out:
+        archive_filename, pickle_filename, info_filename = TrainResults._get_filenames(self.id)
+
+        # serialize this object
+        with open(pickle_filename, 'wb') as f_out:
             pickle.dump(self, f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
-        # TODO save information file w/ data sets, features extracters, labeler, true labeler and their params, 
-        # the models, their params ranges, the gridsearch results
+        # create an info file
+        with open(info_filename, 'w') as f_out:
+            f_out.write('# Information about those results:')
+            f_out.write('\n## Data sets used:')
+            f_out.write( ''.join('\n- ' + str(d) for d in training_set.datasets) )
+            f_out.write('\n## Features extracters used:')
+            f_out.write( ''.join(['\n- ' + fe.__class__.__name__ for fe in training_set.features_extracters]) )
+            f_out.write('\n## Labeler used:')
+            f_out.write('\n' + training_set.labeler.__class__.__name__)
+            f_out.write('\n## True labeler used:')
+            f_out.write('\n' + training_set.true_labeler.__class__.__name__ if training_set.true_labeler is not None else 'None')
+            f_out.write('\n## Models trained and their optimal parameters:')
+            f_out.write( ''.join([f'\n- {m}: {m.best_params}' for m in self.models]) )
+            f_out.write('\n## Test set\'s IDs:\n')
+            f_out.write(', '.join(map(str, training_set.test_set_ids)))
+
+        # zip those two files and the Config & used Models descriptions
+        with zipfile.ZipFile(archive_filename, 'w') as f_out:
+            f_out.write(pickle_filename, os.path.split(pickle_filename)[1], compress_type=zipfile.ZIP_DEFLATED)
+            f_out.write(info_filename, os.path.split(info_filename)[1], compress_type=zipfile.ZIP_DEFLATED)
+            
+            
+            for filepath in [*Utils.get_files_from_dir(RecommendationModel.MODELS_DESCRIPTION_DIR),
+                             *Utils.get_files_from_dir(normp('Config/'))]:
+                if not any(s in filepath for s in ['_template.py', '__pycache__']):
+                    f_out.write(filepath, compress_type=zipfile.ZIP_DEFLATED)
+
+        # clean up
+        os.remove(pickle_filename)
+        os.remove(info_filename)
 
 
     # static methods
@@ -125,10 +177,12 @@ class TrainResults:
         Return: 
         TrainResults instance
         """
-        with open(TrainResults.get_filename(id), 'rb') as f_in:
-            return pickle.load(f_in)
+        archive_filename, pickle_filename, _ = TrainResults._get_filenames(id)
+        with zipfile.ZipFile(archive_filename, 'r') as archive:
+            with archive.open(os.path.split(pickle_filename)[1], 'r') as pickle_file:
+                return pickle.load(pickle_file)
     
-    def get_filename(id):
+    def _get_filenames(id):
         """
         Returns the filename of a TrainResults instance from its id.
 
@@ -136,6 +190,12 @@ class TrainResults:
         id -- id of the TrainResults instance
 
         Return: 
-        Filename of a TrainResults instance
+        1. Filename of a TrainResults instance's save archive
+        2. Filename of a TrainResults instance's pickle file
+        3. Filename of a TrainResults instance's info file
         """
-        return normp(TrainResults.RESULTS_DIR + f'/{id}.p')
+        return (
+            normp(TrainResults.RESULTS_DIR + f'/{id}.zip'), # archive's filename
+            normp(TrainResults.RESULTS_DIR + f'/{id}_serialized.p'), # pickle filename
+            normp(TrainResults.RESULTS_DIR + f'/{id}_info.txt'), # info filename
+        )

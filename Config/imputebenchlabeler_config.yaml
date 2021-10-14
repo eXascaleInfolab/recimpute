@@ -7,12 +7,10 @@
 # ImputeBenchLabeler related configuration file
 # ------------------------------------
 
-# LBL_PROPERTIES: All properties labels can have and their related possible values (e.g. labels can be of type mono or multi)
-POSSIBLE_LBL_PROPERTIES:
-  - type:
-    - monolabels
-    - regression
-    - multilabels
+# LBL_PROPERTIES: All properties that labels can have (e.g. labels can be of type mono or multi)
+LBL_PROPERTIES:
+  # type: Specifies if the labels are mono or multi labels. Value can be one of: monolabels, regression, multilabels
+  - type: monolabels
   # multi_labels_nb_rel: Top N algorithms to consider relevant in a multi-labels vector
   - multi_labels_nb_rel: 3 
   # reduction_threshold: For a label, if the percentage of clusters with this label is lower than this threshold,

@@ -10,48 +10,20 @@ recimpute.py
 
 import sys
 
+from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Datasets.Dataset import Dataset
 from Datasets.TrainingSet import TrainingSet
-from Clustering.ShapeBasedClustering import ShapeBasedClustering
-from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
-from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
+from Evaluation.ModelsEvaluater import ModelsEvaluater
 from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
 from FeaturesExtraction.TSFreshFeaturesExtracter import TSFreshFeaturesExtracter
+from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
+from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 from Training.ModelsTrainer import ModelsTrainer
 from Training.RecommendationModel import RecommendationModel
+from Training.TrainResults import TrainResults
 
 
 def run_all():
-    datasets = Dataset.instantiate_from_dir()
-    
-    clusterer = ShapeBasedClustering()
-    datasets = clusterer.cluster_all_datasets(datasets)
-
-    labeler = ImputeBenchLabeler.get_instance() # KiviatRulesLabeler
-    datasets = labeler.label(datasets)
-
-    # TODO
-
-def tests():
-    datasets = Dataset.instantiate_from_dir()[:2]
-
-    labeler = ImputeBenchLabeler.get_instance() # KiviatRulesLabeler
-
-    properties = labeler.get_labels_possible_properties()
-    properties['type'] = 'multilabels'
-    properties['multi_labels_nb_rel'] = 3
-    properties['reduction_threshold'] = .05
-
-    labels, labels_list = datasets[0].load_labels(labeler, properties)
-    print(datasets[0].name)
-    print(labels_list)
-    print(labels.to_markdown())
-
-
-if __name__ == '__main__':
-    print(str(sys.argv))
-
-
     # init data sets
     datasets = Dataset.instantiate_from_dir()
     print('Loaded data sets:', *datasets)
@@ -62,11 +34,10 @@ if __name__ == '__main__':
     # labeling
     labeler = KiviatRulesLabeler.get_instance()
     true_labeler = ImputeBenchLabeler.get_instance()
-    labeler_properties = labeler.get_labels_possible_properties() # TODO change this to "get_default_properties" like done in TrainingSet
+    labeler_properties = labeler.get_default_properties()
     labeler_properties['type'] = 'monolabels'
-    true_labeler_properties = true_labeler.get_labels_possible_properties()
+    true_labeler_properties = true_labeler.get_default_properties()
     true_labeler_properties['type'] = labeler_properties['type']
-    true_labeler_properties['reduction_threshold'] = .05
 
     # features extraction
     features_extracters = [
@@ -86,12 +57,31 @@ if __name__ == '__main__':
 
     # init models
     models_descriptions_to_use = [
+        'standardscaler_svc.py',
         'normalizer_randomforest.py',
     ]
     models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
     # training
     trainer = ModelsTrainer(set, models)
-    results = trainer.train()
+    tr = trainer.train()
 
-    print(results.results.to_markdown)
+    # testing
+    evaluater = ModelsEvaluater(set, models, tr)
+    evaluater.test_models()
+
+    return tr, set, models
+
+
+if __name__ == '__main__':
+    print(str(sys.argv))
+
+    tr, set, models = run_all()
+    id = tr.id
+    
+
+    # ---
+
+    # print(id)
+    # tr = TrainResults.load(id)
+    # print(tr.results.to_markdown)

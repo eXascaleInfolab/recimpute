@@ -107,16 +107,16 @@ class KiviatRulesLabeler(AbstractLabeler):
         dataset.save_labels(self, features)
         return dataset
 
-    def get_labels_possible_properties(self):
+    def get_default_properties(self):
         """
-        Returns a dict containing the possible properties labels generated with this labeler can have.
+        Returns a dict containing the default properties that labels generated with this labeler have.
         
         Keyword arguments: -
         
         Return: 
-        Dict containing the possible properties labels generated with this labeler can have.
+        Dict containing the default properties that labels generated with this labeler have.
         """
-        return KiviatRulesLabeler.CONF['POSSIBLE_LBL_PROPERTIES']
+        return KiviatRulesLabeler.CONF['LBL_PROPERTIES']
 
     def save_labels(self, dataset_name, labels):
         """

@@ -18,7 +18,7 @@ model_info = {
     'name': 'normalizer_randomforest',
 
     ## List of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they are chained, 
-    ## with the last object an estimator. Name should be the transform class' name. Transform should be a class (not an instance!). 
+    ## with the last object an estimator. Transform should be a class (not an instance!). 
     ## Example: 'RandomForestClassifier': sklearn.ensemble.RandomForestClassifier.
     'steps': [
         ('None', None), # CHANGE THIS

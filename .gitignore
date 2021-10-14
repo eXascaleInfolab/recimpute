@@ -6,6 +6,8 @@ Datasets/TrainingSets
 FeaturesExtraction/features
 Labeling/ImputationTechniques/labels
 Training/Results
+catboost_info
+results_tmp.txt
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,venv,virtualenv,visualstudiocode,python

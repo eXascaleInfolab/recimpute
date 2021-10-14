@@ -18,7 +18,7 @@ GS_NB_CV_SPLITS: 3
 # GS_ITER_RANGE: Number of gridsearch iterations to perform depending on the model's training speed (training efficiency).
 GS_ITER_RANGE:
   - fast: 60
-  - medium: 2 # 50 TODO
+  - medium: 50
   - slow: 40
 
 # T-daub config: ------------------------------------------------------------------------

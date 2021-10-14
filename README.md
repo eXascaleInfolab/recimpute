@@ -13,14 +13,18 @@ Our system uses:
 ___
 
 ## Prerequisites
-TODO
-
+- Ubuntu 16 or Ubuntu 18 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
+- Clone this repository.
+- Mono: Install mono from https://www.mono-project.com/download/stable/ and reboot your terminal.
 
 ___
 
 
 ## Training
 TODO
+```python
+    $ python recimpute.py > results.txt 2>&1
+```
 
 
 ___
@@ -58,6 +62,9 @@ ___
     - It is recommended to z-normalize the time series before-hand.
 - To add and train new models:
     -  TODO
+    - copy paste the Training/ModelsDescription/_template.py file and rename it with the name of your new model
+    - fill in all the required info (check other ModelsDescription files if you need examples)
+    - TEMPORARY: add your model to the "models_descriptions_to_use" list defined in the "run_all" method in the recimpute.py file.
 
 
 ___

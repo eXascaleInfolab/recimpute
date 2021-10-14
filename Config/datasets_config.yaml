@@ -7,7 +7,7 @@
 # Data sets related configuration file
 # ------------------------------------
 
-USE_ALL: False
+USE_ALL: True
 # if USE_ALL is False, loads only data sets which are listed below:
 USE_LIST: 
   - ACSF1.zip                                                                                          # 200x1460

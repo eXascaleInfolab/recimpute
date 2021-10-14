@@ -57,8 +57,11 @@ def run_all():
 
     # init models
     models_descriptions_to_use = [
-        'standardscaler_svc.py',
+        'kneighbors.py',
+        'maxabsscaler_catboostclassifier.py',
         'normalizer_randomforest.py',
+        'standardscaler_randomforest.py',
+        #'standardscaler_svc.py',
     ]
     models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
@@ -78,10 +81,17 @@ if __name__ == '__main__':
 
     tr, set, models = run_all()
     id = tr.id
+    print(id)
     
 
     # ---
 
+    # id = '1410_1546_53480'
     # print(id)
     # tr = TrainResults.load(id)
+    # training_set = None # TODO: find a way to re-create the training_set from the config files I guess?
     # print(tr.results.to_markdown)
+
+    # # testing
+    # evaluater = ModelsEvaluater(training_set, tr.models, tr)
+    # evaluater.test_models()

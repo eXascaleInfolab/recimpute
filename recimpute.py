@@ -24,20 +24,22 @@ from Training.TrainResults import TrainResults
 
 
 def run_all():
+
+    print('#########  RecImpute - run all  #########')
+
     # init data sets
     datasets = Dataset.instantiate_from_dir()
-    print('Loaded data sets:', *datasets)
+    print('Loaded data sets:', ''.join(['\n- %s' % d for d in datasets]))
 
     # clustering
     clusterer = ShapeBasedClustering()
 
     # labeling
-    labeler = KiviatRulesLabeler.get_instance()
-    true_labeler = ImputeBenchLabeler.get_instance()
+    labeler = ImputeBenchLabeler.get_instance() #KiviatRulesLabeler.get_instance()
+    #true_labeler = ImputeBenchLabeler.get_instance()
     labeler_properties = labeler.get_default_properties()
-    labeler_properties['type'] = 'monolabels'
-    true_labeler_properties = true_labeler.get_default_properties()
-    true_labeler_properties['type'] = labeler_properties['type']
+    #true_labeler_properties = true_labeler.get_default_properties()
+    #true_labeler_properties['type'] = labeler_properties['type']
 
     # features extraction
     features_extracters = [
@@ -51,7 +53,7 @@ def run_all():
         clusterer, 
         features_extracters, 
         labeler, labeler_properties,
-        true_labeler, true_labeler_properties,
+        #true_labeler=true_labeler, true_labeler_properties=true_labeler_properties,
         force_generation=False,
     )
 
@@ -69,6 +71,9 @@ def run_all():
     trainer = ModelsTrainer(set, models)
     tr = trainer.train()
 
+    print("=======================================") # TODO tmp
+    print(tr.results[['Accuracy', 'F1-Score', 'Precision', 'Recall']].to_markdown()) # TODO tmp
+
     # testing
     evaluater = ModelsEvaluater(set, models, tr)
     evaluater.test_models()
@@ -82,6 +87,21 @@ if __name__ == '__main__':
     tr, set, models = run_all()
     id = tr.id
     print(id)
+
+
+    """ TODO
+    Save & load prev. training results & trained models:
+    - pickle dump the RecommendationModels
+        - OK: add labels_info
+        - OK: add labels_set
+        - OK: add features_name
+        - add trained_pipeline - save the best model out of the training? - questions
+        - OK: dump all except trained_pipeline
+        - OK: dump trained_pipeline independently
+        - load & initialization methods
+        - fix ModelsEvaluater
+    """
+
     
 
     # ---
@@ -89,9 +109,3 @@ if __name__ == '__main__':
     # id = '1410_1546_53480'
     # print(id)
     # tr = TrainResults.load(id)
-    # training_set = None # TODO: find a way to re-create the training_set from the config files I guess?
-    # print(tr.results.to_markdown)
-
-    # # testing
-    # evaluater = ModelsEvaluater(training_set, tr.models, tr)
-    # evaluater.test_models()

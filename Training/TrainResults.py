@@ -7,15 +7,16 @@ TrainResults.py
 """
 
 import datetime
-from joblib import dump
+from joblib import dump as j_dump, load as j_load
 import os
 from os.path import normpath as normp
 import pandas as pd
-import pickle
+from pickle import dump as p_dump, load as p_load
 import numpy as np
 import random as rdm
 import sys
 import time
+import warnings
 import zipfile
 
 from Training.RecommendationModel import RecommendationModel
@@ -42,7 +43,7 @@ class TrainResults:
         multiindex = pd.MultiIndex(names=['CV Split ID', 'Model'], levels=[[],[]], codes=[[],[]])
         columns = [
             'Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss',
-            'Conf Matrix', 'Trained Pipeline',
+            'Conf Matrix',
         ]
         self.results = pd.DataFrame(index=multiindex, columns=columns)
         for col in 'Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss':
@@ -52,22 +53,23 @@ class TrainResults:
 
     # public methods
 
-    def add_model_cv_split_result(self, split_id, model, trained_pipeline, scores, cm):
+    def add_model_cv_split_result(self, split_id, model, scores, cm):
         """
         Stores the model's training results after a cross-validation split.
 
         Keyword arguments:
         split_id -- cross-validation split id
         model -- RecommendationModel instance whose pipeline has been trained
-        trained_pipeline -- trained pipeline
         scores -- dict of scores measured during the model's evaluation
         cm -- tuple containing the confusion matrix's Matplotlib Figure, its Matplotlib Axes, and its values (numpy nd array)
 
         Return: -
         """
+        warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
         assert model in self.models
 
-        self.results.loc[(split_id, model),:] = {
+        key = (split_id, model)
+        values = {
             'Accuracy': scores['Accuracy'],
             'F1-Score': scores['F1-Score'],
             'Precision': scores['Precision'],
@@ -75,8 +77,8 @@ class TrainResults:
             'Hamming Loss': scores['Hamming Loss'],
 
             'Conf Matrix': cm,
-            'Trained Pipeline': trained_pipeline,
         }
+        self.results.loc[key,:] = values
 
     def get_model_results(self, model):
         """
@@ -87,7 +89,7 @@ class TrainResults:
 
         Return: 
         Pandas DataFrame containing the cross-validation results of the model. One row per cross-validation split.
-        Columns: CV Split ID (index), Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix, Trained Pipeline
+        Columns: CV Split ID (index), Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix
         """
         return self.results.xs(model, level='Model', drop_level=True)
         
@@ -102,7 +104,7 @@ class TrainResults:
         Pandas Series containing the average cross-validation results of the model. 
         Columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss.
         """
-        return self.get_model_results(model).loc[:, ~self.results.columns.isin(['Conf Matrix', 'Trained Pipeline'])].mean()
+        return self.get_model_results(model).loc[:, ~self.results.columns.isin(['Conf Matrix'])].mean()
 
     def get_model_best_split(self, model, metric='F1-Score'):
         """
@@ -114,7 +116,7 @@ class TrainResults:
 
         Return: 
         Pandas Series containing the average cross-validation results of the model. 
-        Columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix, Trained Pipeline
+        Columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix
         """
         return self.results.loc[(self.get_model_results(model)[metric].idxmax(), model), :]
 
@@ -129,32 +131,46 @@ class TrainResults:
         """
         archive_filename, pickle_filename, info_filename = TrainResults._get_filenames(self.id)
 
-        # serialize this object
-        with open(pickle_filename, 'wb') as f_out:
-            pickle.dump(self, f_out, protocol=pickle.HIGHEST_PROTOCOL)
-
         # create an info file
         with open(info_filename, 'w') as f_out:
             f_out.write('# Information about those results:')
             f_out.write('\n## Data sets used:')
             f_out.write( ''.join('\n- ' + str(d) for d in training_set.datasets) )
+            f_out.write('\n## Test set\'s IDs:\n')
+            f_out.write(', '.join(map(str, training_set.test_set_ids)))
             f_out.write('\n## Features extracters used:')
             f_out.write( ''.join(['\n- ' + fe.__class__.__name__ for fe in training_set.features_extracters]) )
+            # f_out.write('\n## Used features\' name:') # TODO
+            # f_out.write(  ) # TODO save the used features' name
             f_out.write('\n## Labeler used:')
             f_out.write('\n' + training_set.labeler.__class__.__name__)
             f_out.write('\n## True labeler used:')
-            f_out.write('\n' + training_set.true_labeler.__class__.__name__ if training_set.true_labeler is not None else 'None')
+            f_out.write('\n' + training_set.true_labeler.__class__.__name__ if training_set.true_labeler is not None else '\nNone')
+            # f_out.write('\n## Labels list:') # TODO
+            # f_out.write(  ) # TODO save the labels list
             f_out.write('\n## Models trained and their optimal parameters:')
             f_out.write( ''.join([f'\n- {m}: {m.best_params}' for m in self.models]) )
-            f_out.write('\n## Test set\'s IDs:\n')
-            f_out.write(', '.join(map(str, training_set.test_set_ids)))
 
         # zip those two files and the Config & used Models descriptions
         with zipfile.ZipFile(archive_filename, 'w') as f_out:
-            f_out.write(pickle_filename, os.path.split(pickle_filename)[1], compress_type=zipfile.ZIP_DEFLATED)
-            f_out.write(info_filename, os.path.split(info_filename)[1], compress_type=zipfile.ZIP_DEFLATED)
+
+            # serialize each model
+            for model in self.models:
+                model_filename, model_tp_filename = model.save()
+
+                # write serialized RecommendationModel instance to zip archive & clean up
+                f_out.write(model_filename, os.path.split(model_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+                os.remove(model_filename)
+                
+                # write serialized trained_pipeline to zip archive & clean up
+                f_out.write(model_tp_filename, os.path.split(model_tp_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+                os.remove(model_tp_filename)
+                
+            # save the TrainResults instance & info file to the archive
+            f_out.write(pickle_filename, os.path.split(pickle_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+            f_out.write(info_filename, os.path.split(info_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
             
-            
+            # save the Config & used Models descriptions files to the archive
             for filepath in [*Utils.get_files_from_dir(RecommendationModel.MODELS_DESCRIPTION_DIR),
                              *Utils.get_files_from_dir(normp('Config/'))]:
                 if not any(s in filepath for s in ['_template.py', '__pycache__']):
@@ -167,7 +183,7 @@ class TrainResults:
 
     # static methods
 
-    def load(id):
+    def load(id): # TODO fix: not working w/ new version
         """
         Loads a TrainResults instance from disk.
 
@@ -179,7 +195,7 @@ class TrainResults:
         """
         archive_filename, pickle_filename, _ = TrainResults._get_filenames(id)
         with zipfile.ZipFile(archive_filename, 'r') as archive:
-            with archive.open(os.path.split(pickle_filename)[1], 'r') as pickle_file:
+            with archive.open(os.path.split(pickle_filename)[-1], 'r') as pickle_file:
                 return pickle.load(pickle_file)
     
     def _get_filenames(id):

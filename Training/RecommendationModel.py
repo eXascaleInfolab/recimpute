@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, hammi
 from sklearn.pipeline import Pipeline
 import time
 
+from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
 
 class RecommendationModel:
@@ -20,6 +21,7 @@ class RecommendationModel:
     """
 
     MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
+    _PROPS_TO_NOT_PICKLE = ['trained_pipeline', ]
 
 
     # constructor
@@ -42,15 +44,19 @@ class RecommendationModel:
         self.steps_name, self.steps = zip(*steps)
         # for step in self.steps:
         #     assert hasattr(step, 'fit') and callable(getattr(step, 'fit'))
-        #     print(step)
+        #     assert hasattr(step, 'predict') and callable(getattr(step, 'predict'))
         #     assert hasattr(step, 'transform') and callable(getattr(step, 'transform'))
 
         self.params_ranges = params_ranges
+        self.best_params = None
         self.training_speed_factor = training_speed_factor
         self.multiclass_strategy = multiclass_strategy
         self.bagging_strategy = bagging_strategy
         self.description_filename = description_filename
 
+        self.trained_pipeline = None
+        self.labels_info = None
+        self.labels_set = None
         self.are_params_set = False
     
 
@@ -136,7 +142,7 @@ class RecommendationModel:
         else:
             raise Exception('Invalid "training_speed_factor" parameter:', self.training_speed_factor)
 
-    def train_and_eval(self, X_train, y_train, X_val, y_val, labels_info, labels_set, plot_cm=False):
+    def train_and_eval(self, X_train, y_train, X_val, y_val, features_name, labels_info, labels_set, plot_cm=False):
         """
         Trains and evaluates the model on the given train and validation data. 
         
@@ -145,38 +151,7 @@ class RecommendationModel:
         y_train -- numpy array of train entries' labels
         X_val -- numpy array of validation entries
         y_val -- numpy array of validation entries' labels
-        labels_info -- dict specifying the labels' properties
-        labels_set -- list of unique labels that may appear in y_train and y_val
-        plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
-        
-        Return: 
-        1. trained pipeline
-        2. dict of scores measured during the pipeline's evaluation
-        3. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
-        """
-        # train model
-        start_time = time.time()
-        trained_pipeline = self.get_pipeline().fit(X_train, y_train)
-        end_time = time.time()
-        
-        # evaluate the model
-        scores, cm = RecommendationModel.eval(trained_pipeline, X_val, y_val, labels_info, labels_set, plot_cm)
-
-        return trained_pipeline, scores, cm
-
-    def __repr__(self):
-        return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
-
-    # static methods
-    
-    def eval(trained_pipeline, X, y, labels_info, labels_set, plot_cm=False):
-        """
-        Evaluates the model on the given validation/test data. 
-        
-        Keyword arguments: 
-        trained_pipeline -- trained pipeline
-        X -- numpy array of validation/test entries
-        y -- numpy array of validation/test entries' labels
+        features_name -- training set's features name
         labels_info -- dict specifying the labels' properties
         labels_set -- list of unique labels that may appear in y_train and y_val
         plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
@@ -185,10 +160,37 @@ class RecommendationModel:
         1. dict of scores measured during the pipeline's evaluation
         2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
         """
-        # predict new data's labels
-        y_pred = trained_pipeline.predict(X)
+        self.features_name = features_name
+        self.labels_info = labels_info
+        self.labels_set = labels_set
 
-        are_multi_labels = labels_info['type'] == 'multilabels'
+        # train model
+        start_time = time.time()
+        self.trained_pipeline = self.get_pipeline().fit(X_train, y_train)
+        end_time = time.time()
+        
+        # evaluate the model
+        scores, cm = self.eval(X_val, y_val, plot_cm)
+
+        return scores, cm
+    
+    def eval(self, X, y, plot_cm=False):
+        """
+        Evaluates the model on the given validation/test data. 
+        
+        Keyword arguments: 
+        X -- numpy array of validation/test entries
+        y -- numpy array of validation/test entries' labels
+        plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
+        
+        Return: 
+        1. dict of scores measured during the pipeline's evaluation
+        2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
+        """
+        # predict new data's labels
+        y_pred = self.trained_pipeline.predict(X)
+
+        are_multi_labels = self.labels_info['type'] == 'multilabels'
         average_strat = 'samples' if are_multi_labels else 'weighted'
 
         scores = {
@@ -200,9 +202,45 @@ class RecommendationModel:
         }
 
         if plot_cm:
-            fig, _, cm_val = Utils.plot_confusion_matrix(y, y_pred, are_multi_labels, normalize=True, labels=labels_set)
+            fig, _, cm_val = Utils.plot_confusion_matrix(y, y_pred, are_multi_labels, 
+                                                         normalize=True, labels=self.labels_set, 
+                                                         verbose=0)
 
         return scores, (fig, cm_val) if plot_cm else None
+
+    def save(self):
+        """
+        Saves a RecommendationModel instance to disk (serialization).
+
+        Keyword arguments: -
+
+        Return:
+        1. Filename of a serialized RecommendationModel instance
+        2. Filename of a serialized trained_pipeline
+        """
+        model_filename, model_tp_filename = RecommendationModel._get_filenames(self.name)
+
+        # serialize the RecommendationModel instance but not its trained_pipeline (using pickle)
+        with open(model_filename, 'w') as model_f_out:
+            p_dump(self, model_f_out)
+
+        # serialize the model's trained_pipeline (using joblib)
+        with open(model_tp_filename, 'w') as model_f_out:
+            j_dump(self.trained_pipeline, model_f_out)
+
+        return model_filename, model_tp_filename
+
+    def __repr__(self):
+        return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
+
+
+    # private methods
+    
+    def __getstate__(self):
+        return {k: v for (k, v) in self.__dict__.items() if k not in RecommendationModel._PROPS_TO_NOT_PICKLE}
+
+
+    # static methods
     
     def init_from_descriptions(models_descriptions_to_use):
         """
@@ -240,3 +278,19 @@ class RecommendationModel:
             
             models.append(model)
         return models
+    
+    def _get_filenames(repr):
+        """
+        Returns the filenames of a Recommendation instance from its repr.
+
+        Keyword arguments: 
+        repr -- string identifying a model
+
+        Return: 
+        1. Filename of a serialized RecommendationModel instance
+        2. Filename of a serialized trained_pipeline
+        """
+        return (
+            normp(TrainResults.RESULTS_DIR + f'/{repr}.p'), # Recommendation instance filename
+            normp(TrainResults.RESULTS_DIR + f'/{repr}_pipe.joblib'), # trained_pipeline filename
+        )

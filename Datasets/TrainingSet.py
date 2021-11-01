@@ -54,14 +54,18 @@ class TrainingSet:
         np.random.seed(TrainingSet.CONF['RDM_SEED'])
         
         # make sure clustering has been done (and do it otherwise)
+        print('Running clustering (if not done already).')
         updated_datasets, clusters_created = self.__init_clustering(datasets, force_generation)
+        print('Clustering done.')
 
         # reserve some data for testing
         self.test_set_level, self.test_set_ids = self.__init_test_set(datasets, 
                                                                       TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
 
         # make sure labeling & features extraction has been done (and do it otherwise)
+        print('Running labeling & features extraction (if not done already).')
         updated_datasets = self.__init_labeling_and_fe(updated_datasets, force_generation | clusters_created)
+        print('Labeling & features extraction done.')
         self.datasets = updated_datasets
 
     def __init_test_set(self, datasets, strategy):
@@ -211,9 +215,11 @@ class TrainingSet:
             labels = all_data_info['Label']
 
             # split train/test sets
-            X_train = data.loc[train_indices, :][:].to_numpy()
+            print(labels.loc[train_indices].value_counts()) # TODO tmp
+            print(labels.loc[test_indices].value_counts()) # TODO tmp
+            X_train = data.loc[train_indices, :][:].to_numpy().astype('float32')
             y_train = labels.loc[train_indices].to_numpy().astype('str')
-            X_val = data.loc[test_indices, :][:].to_numpy()
+            X_val = data.loc[test_indices, :][:].to_numpy().astype('float32')
             y_val = labels.loc[test_indices].to_numpy().astype('str')
 
             # augment training data

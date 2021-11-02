@@ -49,6 +49,24 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         """
         timeseries = dataset.load_timeseries(transpose=False) # /!\ transpose False
 
+        features_df = self.extract_from_timeseries(timeseries, dataset.nb_timeseries, dataset.timeseries_length)
+        
+        # save features as CSV
+        dataset.save_features(self, features_df)
+        return dataset
+
+    def extract_from_timeseries(self, timeseries, nb_timeseries, timeseries_length):
+        """
+        Extracts the given time series' features.
+        
+        Keyword arguments:
+        timeseries -- 
+        nb_timeseries -- number of time series
+        timeseries_length -- time series' length
+        
+        Return:
+        Pandas DataFrame containing the time series (each row is a time series)
+        """
         # prepare data to be used in tsfresh
         # DataFrame used as input of tsfresh:
         # time series id, time index, measured feature 1, measured feature 2, etc.
@@ -56,10 +74,10 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         # we always have the three following columns: time series id, time index, values
 
         tsfresh_df = pd.DataFrame(columns=['Time Series ID', 'Time', 'Values'])
-        timeseries_ids = [list(id for _ in range(dataset.timeseries_length)) 
-                          for id in range(1, dataset.nb_timeseries+1)]
+        timeseries_ids = [list(id for _ in range(timeseries_length)) 
+                          for id in range(1, nb_timeseries+1)]
         tsfresh_df['Time Series ID'] = list(itertools.chain.from_iterable(timeseries_ids))
-        times = [timeseries.index.tolist() for _ in range(dataset.nb_timeseries)]
+        times = [timeseries.index.tolist() for _ in range(nb_timeseries)]
         tsfresh_df['Time'] = list(itertools.chain.from_iterable(times))
         tsfresh_df['Values'] = timeseries.stack().sort_values().tolist()
         
@@ -74,11 +92,8 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         # tsfresh imputation: remove NaNs, impute some missing values
         features_df = impute(features_df)
         
-        features_df['Time Series ID'] = list(range(0, dataset.nb_timeseries))
-        
-        # save features as CSV
-        dataset.save_features(self, features_df)
-        return dataset
+        features_df['Time Series ID'] = list(range(0, nb_timeseries))
+        return features_df
 
     def save_features(self, dataset_name, features):
         """

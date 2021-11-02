@@ -73,6 +73,9 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         dataset.save_features(self, features_df)
         return dataset
 
+    def extract_from_timeseries(self, timeseries): # TODO
+        pass
+
     def save_features(self, dataset_name, features):
         """
         Saves the given features to CSV.

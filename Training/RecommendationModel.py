@@ -7,12 +7,14 @@ RecommendationModel.py
 """
 
 import importlib.util
+from joblib import dump as j_dump, load as j_load
+import os
 from os.path import normpath as normp
+from pickle import dump as p_dump, load as p_load
 from sklearn.metrics import accuracy_score, precision_score, recall_score, hamming_loss, f1_score
 from sklearn.pipeline import Pipeline
 import time
 
-from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
 
 class RecommendationModel:
@@ -55,6 +57,7 @@ class RecommendationModel:
         self.description_filename = description_filename
 
         self.trained_pipeline = None
+        self.features_name = None
         self.labels_info = None
         self.labels_set = None
         self.are_params_set = False
@@ -208,24 +211,25 @@ class RecommendationModel:
 
         return scores, (fig, cm_val) if plot_cm else None
 
-    def save(self):
+    def save(self, results_dir):
         """
         Saves a RecommendationModel instance to disk (serialization).
 
-        Keyword arguments: -
+        Keyword arguments: 
+        results_dir -- path to the results' directory that will or already does store those files
 
         Return:
         1. Filename of a serialized RecommendationModel instance
         2. Filename of a serialized trained_pipeline
         """
-        model_filename, model_tp_filename = RecommendationModel._get_filenames(self.name)
+        model_filename, model_tp_filename = RecommendationModel._get_filenames(self.name, results_dir)
 
         # serialize the RecommendationModel instance but not its trained_pipeline (using pickle)
-        with open(model_filename, 'w') as model_f_out:
+        with open(model_filename, 'wb') as model_f_out:
             p_dump(self, model_f_out)
 
         # serialize the model's trained_pipeline (using joblib)
-        with open(model_tp_filename, 'w') as model_f_out:
+        with open(model_tp_filename, 'wb') as model_f_out:
             j_dump(self.trained_pipeline, model_f_out)
 
         return model_filename, model_tp_filename
@@ -278,19 +282,43 @@ class RecommendationModel:
             
             models.append(model)
         return models
-    
-    def _get_filenames(repr):
+
+    def load_from_archive(archive, repr):
         """
-        Returns the filenames of a Recommendation instance from its repr.
+        Loads and returns a RecommendationModel instance.
+
+        Keyword arguments: 
+        archive -- archive object containing the RecommendationModel serialized files to load
+        repr -- string identifying a model
+
+        Return:
+        RecommendationModel instance
+        """
+        model_filename, model_tp_filename = RecommendationModel._get_filenames(repr, '')
+
+        # load RecommendationModel instance (using pickle)
+        with archive.open(os.path.split(model_filename)[-1], 'r') as model_file:
+            model = p_load(model_file)
+
+        # load its trained_pipeline (using joblib)
+        with archive.open(os.path.split(model_tp_filename)[-1], 'r') as model_tp_file:
+            model_tp = j_load(model_tp_file)
+        model.trained_pipeline = model_tp
+        return model
+    
+    def _get_filenames(repr, results_dir):
+        """
+        Returns the filenames of a RecommendationModel instance from its repr.
 
         Keyword arguments: 
         repr -- string identifying a model
+        results_dir -- path to the results' directory that will or already does store those files
 
         Return: 
         1. Filename of a serialized RecommendationModel instance
         2. Filename of a serialized trained_pipeline
         """
         return (
-            normp(TrainResults.RESULTS_DIR + f'/{repr}.p'), # Recommendation instance filename
-            normp(TrainResults.RESULTS_DIR + f'/{repr}_pipe.joblib'), # trained_pipeline filename
+            normp(results_dir + f'/{repr}.p'), # Recommendation instance filename
+            normp(results_dir + f'/{repr}_pipe.joblib'), # trained_pipeline filename
         )

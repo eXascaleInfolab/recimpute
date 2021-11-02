@@ -8,7 +8,7 @@
 # ------------------------------------
 
 # NB_CV_SPLITS: Number of cross-validation splits to perform while training
-NB_CV_SPLITS: 4
+NB_CV_SPLITS: 3
 
 # GridSearch config: ------------------------------------------------------------------------
 

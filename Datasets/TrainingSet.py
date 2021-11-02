@@ -194,7 +194,7 @@ class TrainingSet:
         """
         all_data_info, labels_set = self._load(test_set=False)
         # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
-
+        
         # reduce the data set if required
         if data_properties['usable_data_perc'] < 1.0:
             all_data_info = self._reduce_data_set(all_data_info, data_properties['usable_data_perc'])
@@ -214,9 +214,7 @@ class TrainingSet:
             data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
             labels = all_data_info['Label']
 
-            # split train/test sets
-            print(labels.loc[train_indices].value_counts()) # TODO tmp
-            print(labels.loc[test_indices].value_counts()) # TODO tmp
+            # split train/val sets
             X_train = data.loc[train_indices, :][:].to_numpy().astype('float32')
             y_train = labels.loc[train_indices].to_numpy().astype('str')
             X_val = data.loc[test_indices, :][:].to_numpy().astype('float32')
@@ -283,7 +281,7 @@ class TrainingSet:
            time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
            Feature 1's name, Feature 2's name, ...
         2. list of all unique labels
-        """   
+        """
         labels_set = None
         all_complete_datasets = []
         all_train_test_complete_datasets = []

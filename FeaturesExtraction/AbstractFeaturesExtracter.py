@@ -30,6 +30,10 @@ class AbstractFeaturesExtracter(SingletonClass, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def extract_from_timeseries(self, dataset):
+        pass
+
+    @abc.abstractmethod
     def save_features(self, dataset_name, features):
         pass
 

@@ -7,11 +7,10 @@ TrainResults.py
 """
 
 import datetime
-from joblib import dump as j_dump, load as j_load
 import os
 from os.path import normpath as normp
 import pandas as pd
-from pickle import dump as p_dump, load as p_load
+from pickle import HIGHEST_PROTOCOL, dump as p_dump, load as p_load
 import numpy as np
 import random as rdm
 import sys
@@ -131,6 +130,10 @@ class TrainResults:
         """
         archive_filename, pickle_filename, info_filename = TrainResults._get_filenames(self.id)
 
+        # serialize this object
+        with open(pickle_filename, 'wb') as f_out:
+            p_dump(self, f_out, protocol=HIGHEST_PROTOCOL)
+
         # create an info file
         with open(info_filename, 'w') as f_out:
             f_out.write('# Information about those results:')
@@ -156,7 +159,7 @@ class TrainResults:
 
             # serialize each model
             for model in self.models:
-                model_filename, model_tp_filename = model.save()
+                model_filename, model_tp_filename = model.save(TrainResults.RESULTS_DIR)
 
                 # write serialized RecommendationModel instance to zip archive & clean up
                 f_out.write(model_filename, os.path.split(model_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
@@ -181,9 +184,16 @@ class TrainResults:
         os.remove(info_filename)
 
 
+    # private methods
+    
+    def __getstate__(self):
+        return {k: v if k != 'models' else [model.name for model in v] 
+                for (k, v) in self.__dict__.items()}
+
+
     # static methods
 
-    def load(id): # TODO fix: not working w/ new version
+    def load(id):
         """
         Loads a TrainResults instance from disk.
 
@@ -195,8 +205,17 @@ class TrainResults:
         """
         archive_filename, pickle_filename, _ = TrainResults._get_filenames(id)
         with zipfile.ZipFile(archive_filename, 'r') as archive:
+            # load TrainResults instance
             with archive.open(os.path.split(pickle_filename)[-1], 'r') as pickle_file:
-                return pickle.load(pickle_file)
+                tr = p_load(pickle_file)
+
+            # load RecommendationModel instances
+            real_models = []
+            for model_name in tr.models:
+                model = RecommendationModel.load_from_archive(archive, model_name)
+                real_models.append(model)
+            tr.models = real_models
+        return tr
     
     def _get_filenames(id):
         """

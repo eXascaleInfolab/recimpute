@@ -8,6 +8,7 @@ recimpute.py
 
 #!/usr/bin/env python
 
+import re
 import sys
 
 from Clustering.ShapeBasedClustering import ShapeBasedClustering
@@ -34,14 +35,14 @@ def run_all():
     # clustering
     clusterer = ShapeBasedClustering()
 
-    # labeling
+    # labeling # TODO: the choice of which labeler & true_labeler use should be a parameter
     labeler = ImputeBenchLabeler.get_instance() #KiviatRulesLabeler.get_instance()
     #true_labeler = ImputeBenchLabeler.get_instance()
     labeler_properties = labeler.get_default_properties()
     #true_labeler_properties = true_labeler.get_default_properties()
     #true_labeler_properties['type'] = labeler_properties['type']
 
-    # features extraction
+    # features extraction # TODO: the choice of which feature extracter use should be a parameter
     features_extracters = [
         #KiviatFeaturesExtracter.get_instance(), # TODO: currently not usable if production data is not clustered...
         TSFreshFeaturesExtracter.get_instance(),
@@ -57,7 +58,7 @@ def run_all():
         force_generation=False,
     )
 
-    # init models
+    # init models # TODO: the choice of which model train should be a parameter
     models_descriptions_to_use = [
         'kneighbors.py',
         'maxabsscaler_catboostclassifier.py',
@@ -69,74 +70,76 @@ def run_all():
 
     # training & cross-validation evaluation
     trainer = ModelsTrainer(set, models)
-    tr = trainer.train()
+    train_on_all_data = False # TODO: this should be a parameter
+    tr = trainer.train(train_on_all_data=train_on_all_data) 
 
-    print("=======================================") # TODO tmp
-    print(tr.results[['Accuracy', 'F1-Score', 'Precision', 'Recall']].to_markdown()) # TODO tmp
+    print("=================== Cross-validation results (averaged) ===================")
+    print(tr.results[['Accuracy', 'F1-Score', 'Precision', 'Recall']].to_markdown())
 
     return tr, set, models
 
-def use(timeseries, model, features_name, fes, fes_config): # TODO
-    # load config files
-    # get an instance of each FeaturesExtracter (one per config file)
-    # initialize each FeaturesExtracter with its corresponding loaded config file
-    # for each FeaturesExtracter: call fe.extract_from_timeseries()
-    # X = concat all features
-    # remove unwanted features (those not listed in features_name)
-    # verify that the features' order is the same as in features_name and that all features are there
-    # y = model.trained_pipeline.predict(X) / predict_proba(X) / more complex recommendation method ?
-    # return y
-    pass
+def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
-def load_models_from_tr(id, models_names):
+    print('#########  RecImpute - use a model  #########')
+
+    # get an instance of each FeaturesExtracter
+    features_extracters = []
+    for fe_name in fes_names:
+        fe_class = getattr(sys.modules[__name__], fe_name)
+        features_extracters.append(fe_class.get_instance())
+
+    # for each FeaturesExtracter: call fe.extract_from_timeseries()
+    nb_timeseries, timeseries_length = timeseries.shape()
+    all_ts_features = []
+    for features_extracter in self.features_extracters:
+        tmp_ts_features = features_extracter.extract_from_timeseries(timeseries, nb_timeseries, timeseries_length)
+        tmp_ts_features.set_index('Time Series ID', inplace=True)
+        all_ts_features.append(tmp_ts_features)
+    timeseries_features = pd.concat(all_ts_features, axis=1) # concat features dataframes
+
+    # remove unwanted features (those not listed in features_name)
+    timeseries_features = timeseries_features.loc[:, timeseries_features.columns.isin(features_name)]
+
+    # verify that the features' order is the same as in features_name and that all features are there
+    assert timeseries_features.columns == features_name
+
+    # use the model to get recommendation(s) for each time series
+    X = timeseries_features.to_numpy().astype('float32')
+    labels = model.predict(X, use_pipeline_prod=True)
+    
+    return labels
+
+def load_models_from_tr(id, model_names):
     tr = TrainResults.load(id)
+    single_model = False
+    if type(model_names) == str:
+        single_model = True
+        model_names = [model_names]
     selected_models = []
     for model in tr.models:
-        if model.name in models_names:
+        if model.name in model_names:
             selected_models.append(model)
-    return selected_models
+    assert len(model_names) == len(selected_models)
+    return tr, selected_models[0] if single_model else selected_models
 
 
 if __name__ == '__main__':
     print(str(sys.argv))
 
-    tr, set, models = run_all()
-    id = tr.id
-    print(id)
+    CMD = 'RUN' # TODO: this should be a parameter
 
-    # advanced evaluation in Jupyter Notebooks (TODO)
-    # models selection (done by a human)
-    # call load_models_from_tr()
-    # train them on ALL data before production (TODO) -- problem: TrainingSet needs to be re-created to access the data...
-    #                                                    solution: train before the advanced eval -> no more models selection
-    # save the final model to disk (TODO)
-
-    # load a final model (TODO)
-    # load the time series to label (TODO)
-    # call use()
-
+    if CMD == 'RUN': # RUN and EVALUATE W/ CROSS-VAL
+        tr, set, models = run_all()
+        print(tr.id)
     
+    elif CMD == 'USE': # USE MODELS
+        id = '0311_1541_53480' # TODO: this should be a parameter
+        model_name = 'kneighbors' # TODO: this should be a parameter
+        tr, model = load_models_from_tr(id, model_name)
+        timeseries = None # TODO: load the timeseries we want to label
 
-
-    """ TODO
-    Save & load prev. training results & trained models:
-    - pickle dump the RecommendationModels
-        - OK: add labels_info
-        - OK: add labels_set
-        - OK: add features_name
-        - add trained_pipeline - save the best model out of the training? - see questions
-        - OK: dump all except trained_pipeline
-        - OK: dump trained_pipeline independently
-        - OK: load & initialization methods
-        - OK: test save & load methods
-    - fix ModelsEvaluater (remove and replace by the existing notebooks?)
-    """
-
-    
-
-    # ---
-
-    # id = '0211_1723_53480'
-    # print(id)
-    # tr = TrainResults.load(id)
-    # y = tr.models[0].trained_pipeline.predict(X)
+        # read the _info.txt and get the values under "## Features extracters used:"
+        info_file = tr.get_info_file()
+        fes_names = re.search('## Features extracters used:\n(- \w+\n)+', info_file).group(0).replace('- ', '').split('\n')[1:-1]
+        labels = use(timeseries, model, model.features_name, fes_names)
+        print(labels) # TODO should the predicted labels be stored to disk? probably

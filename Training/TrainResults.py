@@ -143,14 +143,14 @@ class TrainResults:
             f_out.write(', '.join(map(str, training_set.test_set_ids)))
             f_out.write('\n## Features extracters used:')
             f_out.write( ''.join(['\n- ' + fe.__class__.__name__ for fe in training_set.features_extracters]) )
-            # f_out.write('\n## Used features\' name:') # TODO
-            # f_out.write(  ) # TODO save the used features' name
+            f_out.write('\n## Used features\' name:')
+            f_out.write(', '.join(self.models[0].features_name))
             f_out.write('\n## Labeler used:')
             f_out.write('\n' + training_set.labeler.__class__.__name__)
             f_out.write('\n## True labeler used:')
             f_out.write('\n' + training_set.true_labeler.__class__.__name__ if training_set.true_labeler is not None else '\nNone')
-            # f_out.write('\n## Labels list:') # TODO
-            # f_out.write(  ) # TODO save the labels list
+            f_out.write('\n## Labels list:')
+            f_out.write(', '.join(self.models[0].labels_set))
             f_out.write('\n## Models trained and their optimal parameters:')
             f_out.write( ''.join([f'\n- {m}: {m.best_params}' for m in self.models]) )
 
@@ -159,7 +159,7 @@ class TrainResults:
 
             # serialize each model
             for model in self.models:
-                model_filename, model_tp_filename = model.save(TrainResults.RESULTS_DIR)
+                model_filename, model_tp_filename, model_tpp_filename = model.save(TrainResults.RESULTS_DIR)
 
                 # write serialized RecommendationModel instance to zip archive & clean up
                 f_out.write(model_filename, os.path.split(model_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
@@ -169,6 +169,11 @@ class TrainResults:
                 f_out.write(model_tp_filename, os.path.split(model_tp_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
                 os.remove(model_tp_filename)
                 
+                # write serialized trained_pipeline_prod to zip archive & clean up
+                if os.path.isfile(model_tpp_filename):
+                    f_out.write(model_tpp_filename, os.path.split(model_tpp_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+                    os.remove(model_tpp_filename)
+                
             # save the TrainResults instance & info file to the archive
             f_out.write(pickle_filename, os.path.split(pickle_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
             f_out.write(info_filename, os.path.split(info_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
@@ -177,11 +182,25 @@ class TrainResults:
             for filepath in [*Utils.get_files_from_dir(RecommendationModel.MODELS_DESCRIPTION_DIR),
                              *Utils.get_files_from_dir(normp('Config/'))]:
                 if not any(s in filepath for s in ['_template.py', '__pycache__']):
-                    f_out.write(filepath, compress_type=zipfile.ZIP_DEFLATED)
+                    f_out.write(filepath, self.id + '_' + filepath, compress_type=zipfile.ZIP_DEFLATED)
 
         # clean up
         os.remove(pickle_filename)
         os.remove(info_filename)
+
+    def get_info_file(self):
+        """
+        Reads and returns the info file's content of this TrainResults' instance.
+
+        Keyword arguments: -
+
+        Return: 
+        String containing the info file's content of this TrainResults' instance.
+        """
+        archive_filename, _, info_filename = TrainResults._get_filenames(self.id)
+        with zipfile.ZipFile(archive_filename, 'r') as archive:
+            with archive.open(os.path.split(info_filename)[-1], 'r') as f:
+                return f.read().decode("utf-8")
 
 
     # private methods

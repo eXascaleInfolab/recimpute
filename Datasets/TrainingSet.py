@@ -170,7 +170,7 @@ class TrainingSet:
         2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
         3. list of all unique labels
         """
-        all_data_info, labels_set = self._load(test_set=True)
+        all_data_info, labels_set = self._load(data_to_load='test')
         data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
         labels = all_data_info['Label']
         return data, labels, labels_set
@@ -192,16 +192,10 @@ class TrainingSet:
         6. Numpy array of validation entries
         7. Numpy array of validation entries' labels
         """
-        all_data_info, labels_set = self._load(test_set=False)
+        all_data_info, labels_set = self._load(data_to_load='train')
         # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         
-        # reduce the data set if required
-        if data_properties['usable_data_perc'] < 1.0:
-            all_data_info = self._reduce_data_set(all_data_info, data_properties['usable_data_perc'])
-
-        # balance the data set if required
-        if data_properties['balance'] is not None:
-            all_data_info = self._balance_data_set(all_data_info, data_properties['balance'])
+        all_data_info = self._prepare_data_set(all_data_info, data_properties)
 
         # init probability distribution for data splitting
         probability_distribution = np.full(all_data_info['Cluster ID'].nunique(), 1 / all_data_info['Cluster ID'].nunique())
@@ -222,9 +216,39 @@ class TrainingSet:
 
             # augment training data
             if data_properties['augment']:
-                X_train, y_train = self._augment_train(X_train, y_train)
+                X_train, y_train = self._augment_data(X_train, y_train)
 
             yield data, labels, labels_set, X_train, y_train, X_val, y_val
+
+    def get_all_data(self, data_properties):
+        """
+        Returns all data ready to be used as input of a classification/regression model.
+
+        Keyword arguments:
+        data_properties -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.)
+        
+        Return:
+        1. list of all unique labels
+        2. Numpy array of entries
+        3. Numpy array of entries' labels
+        """
+        all_data_info, labels_set = self._load(data_to_load='all')
+        # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        
+        all_data_info = self._prepare_data_set(all_data_info, data_properties)
+
+        data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
+        labels = all_data_info['Label']
+
+        X_all = data.to_numpy().astype('float32')
+        y_all = labels.to_numpy().astype('str')
+
+        # augment training data
+        if data_properties['augment']:
+            X_all, y_all = self._augment_data(X_all, y_all)
+
+        return labels_set, X_all, y_all
+
 
     def is_in_test_set(self, dataset):
         """
@@ -268,13 +292,12 @@ class TrainingSet:
 
     # private methods
 
-    def _load(self, test_set):
+    def _load(self, data_to_load):
         """
         Loads the labels, features, and clusters' assignment of each data set's time series.
 
         Keyword arguments:
-        test_set -- set to True if the data to load is from the test set, False if it is the training and 
-                    validation sets.
+        data_to_load -- String that defines which data load. Can be one of: 'train', 'test', 'all'.
         
         Return:
         1. Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
@@ -282,6 +305,7 @@ class TrainingSet:
            Feature 1's name, Feature 2's name, ...
         2. list of all unique labels
         """
+        assert data_to_load in ['train', 'test', 'all']
         labels_set = None
         all_complete_datasets = []
         all_train_test_complete_datasets = []
@@ -313,18 +337,19 @@ class TrainingSet:
             all_train_test_complete_datasets.append(complete_dataset) # this list contains train, val & test sets
             
             # only keep either the test set or the training and validation sets
-            if self.test_set_level == 'clusters':
-                if test_set:
-                    complete_dataset = complete_dataset.loc[complete_dataset['Cluster ID'].isin(self.test_set_ids)]
+            if data_to_load != 'all':
+                if self.test_set_level == 'clusters':
+                    if data_to_load == 'test':
+                        complete_dataset = complete_dataset.loc[complete_dataset['Cluster ID'].isin(self.test_set_ids)]
+                    else:
+                        complete_dataset = complete_dataset.loc[~complete_dataset['Cluster ID'].isin(self.test_set_ids)]
+                elif self.test_set_level == 'datasets':
+                    if data_to_load == 'test' and dataset.name in self.test_set_ids:
+                        pass
+                    else:
+                        continue # the whole data set is in the test set but we want the train & val sets: skip this data set
                 else:
-                    complete_dataset = complete_dataset.loc[~complete_dataset['Cluster ID'].isin(self.test_set_ids)]
-            elif self.test_set_level == 'datasets':
-                if test_set and dataset.name in self.test_set_ids:
-                    pass
-                else:
-                    continue # the whole data set is in the test set but we want the train & val sets: skip this data set
-            else:
-                raise Exception('Test set reservation strategy not implemented: ', TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
+                    raise Exception('Test set reservation strategy not implemented: ', TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
 
             all_complete_datasets.append(complete_dataset) # this list contains either train & val sets or test set
         
@@ -344,8 +369,32 @@ class TrainingSet:
         all_complete_datasets_df = all_complete_datasets_df[all_train_test_complete_datasets_df.columns]
         
         assert labels_set is not None
-        return all_complete_datasets_df, labels_set
+        df_to_return = all_train_test_complete_datasets_df if data_to_load == 'all' else all_complete_datasets_df
+        return df_to_return, labels_set
 
+    def _prepare_data_set(self, all_data_info, data_properties):
+        """
+        Prepares the data. Applies preprocessing steps if required (e.g. class balancing).
+
+        Keyword arguments:
+        all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
+                         time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
+                         Feature 1's name, Feature 2's name, ...
+        data_properties -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.)
+        
+        Return:
+        Updated data_properties
+        """
+        # reduce the data set if required
+        if data_properties['usable_data_perc'] < 1.0:
+            all_data_info = self._reduce_data_set(all_data_info, data_properties['usable_data_perc'])
+
+        # balance the data set if required
+        if data_properties['balance'] is not None:
+            all_data_info = self._balance_data_set(all_data_info, data_properties['balance'])
+
+        return all_data_info
+    
     def _balance_data_set(self, all_data_info, according_to):
         """
         Balances the data set according to the specified column values (clusters or labels).
@@ -473,26 +522,26 @@ class TrainingSet:
         assert round(sum(probability_distribution), 5) == 1.0
         return probability_distribution
 
-    def _augment_train(self, X_train, y_train):
+    def _augment_data(self, X, y):
         """
-        Augments the training data using SMOTE.
+        Augments the data using SMOTE.
         
         Keyword arguments:
-        X_train -- numpy array of train entries
-        y_train -- numpy array of train entries' labels
+        X -- numpy array of entries
+        y -- numpy array of entries' labels
         
         Return:
-        1. numpy array of augmented train entries
-        2. numpy array of augmented train entries' labels
+        1. numpy array of augmented entries
+        2. numpy array of augmented entries' labels
         """
         # count the minimum number of time series in the less-represented class
-        min_n_samples = min(np.unique(y_train, return_counts=True)[1])
+        min_n_samples = min(np.unique(y, return_counts=True)[1])
 
         # data augmentation is possible only if the less-represented class contains at least 2 time series
         if min_n_samples >= 2:
             sm = SMOTE(k_neighbors=(min_n_samples-1 if min_n_samples <= 5 else 5))
             # augment
-            X_train_augmented, y_train_augmented = sm.fit_resample(X_train, y_train)
-            return X_train_augmented, y_train_augmented
+            X_augmented, y_augmented = sm.fit_resample(X, y)
+            return X_augmented, y_augmented
 
-        return X_train, y_train
+        return X, y

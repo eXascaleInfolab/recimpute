@@ -23,7 +23,7 @@ class RecommendationModel:
     """
 
     MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
-    _PROPS_TO_NOT_PICKLE = ['trained_pipeline', ]
+    _PROPS_TO_NOT_PICKLE = ['trained_pipeline', 'trained_pipeline_prod']
 
 
     # constructor
@@ -56,7 +56,8 @@ class RecommendationModel:
         self.bagging_strategy = bagging_strategy
         self.description_filename = description_filename
 
-        self.trained_pipeline = None
+        self.trained_pipeline = None # TODO do we still need to store this since we god the trained_pipeline_prod ?
+        self.trained_pipeline_prod = None
         self.features_name = None
         self.labels_info = None
         self.labels_set = None
@@ -211,6 +212,22 @@ class RecommendationModel:
 
         return scores, (fig, cm_val) if plot_cm else None
 
+    def predict(self, X, use_pipeline_prod=True):
+        """
+        Uses a trained pipeline to predict the labels of the given time series.
+        
+        Keyword arguments: 
+        X -- numpy array of entries to label
+        use_pipeline_prod -- True to use the production pipeline trained on all data, False to use the last pipeline
+                             trained during cross-validation (default: True)
+        
+        Return: 
+        Numpy array of recommendations
+        """
+        trained_pipeline = self.trained_pipeline_prod if use_pipeline_prod else self.trained_pipeline
+        y = trained_pipeline.predict(X) # TODO implement a more complex recommendation method (top 3?)
+        return y
+
     def save(self, results_dir):
         """
         Saves a RecommendationModel instance to disk (serialization).
@@ -222,7 +239,7 @@ class RecommendationModel:
         1. Filename of a serialized RecommendationModel instance
         2. Filename of a serialized trained_pipeline
         """
-        model_filename, model_tp_filename = RecommendationModel._get_filenames(self.name, results_dir)
+        model_filename, model_tp_filename, model_tpp_filename = RecommendationModel._get_filenames(self.name, results_dir)
 
         # serialize the RecommendationModel instance but not its trained_pipeline (using pickle)
         with open(model_filename, 'wb') as model_f_out:
@@ -232,7 +249,12 @@ class RecommendationModel:
         with open(model_tp_filename, 'wb') as model_f_out:
             j_dump(self.trained_pipeline, model_f_out)
 
-        return model_filename, model_tp_filename
+        # serialize the model's trained_pipeline_prod (using joblib)
+        if self.trained_pipeline_prod is not None:
+            with open(model_tpp_filename, 'wb') as model_f_out:
+                j_dump(self.trained_pipeline_prod, model_f_out)
+
+        return model_filename, model_tp_filename, model_tpp_filename
 
     def __repr__(self):
         return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
@@ -294,7 +316,7 @@ class RecommendationModel:
         Return:
         RecommendationModel instance
         """
-        model_filename, model_tp_filename = RecommendationModel._get_filenames(repr, '')
+        model_filename, model_tp_filename, model_tpp_filename = RecommendationModel._get_filenames(repr, '')
 
         # load RecommendationModel instance (using pickle)
         with archive.open(os.path.split(model_filename)[-1], 'r') as model_file:
@@ -304,6 +326,15 @@ class RecommendationModel:
         with archive.open(os.path.split(model_tp_filename)[-1], 'r') as model_tp_file:
             model_tp = j_load(model_tp_file)
         model.trained_pipeline = model_tp
+
+        # load its trained_pipeline (using joblib)
+        try:
+            with archive.open(os.path.split(model_tpp_filename)[-1], 'r') as model_tpp_file:
+                model_tpp = j_load(model_tpp_file)
+            model.trained_pipeline_prod = model_tpp
+        except KeyError: # it is possible, the model has not been trained on all data to prepare for production
+            model.trained_pipeline_prod = None
+
         return model
     
     def _get_filenames(repr, results_dir):
@@ -317,8 +348,10 @@ class RecommendationModel:
         Return: 
         1. Filename of a serialized RecommendationModel instance
         2. Filename of a serialized trained_pipeline
+        2. Filename of a serialized trained_pipeline_prod
         """
         return (
             normp(results_dir + f'/{repr}.p'), # Recommendation instance filename
             normp(results_dir + f'/{repr}_pipe.joblib'), # trained_pipeline filename
+            normp(results_dir + f'/{repr}_pipe_prod.joblib'), # trained_pipeline_prod filename
         )

@@ -42,12 +42,14 @@ class ModelsTrainer:
 
     # public methods
 
-    def train(self):
+    def train(self, train_on_all_data=False):
         """
         Trains and evaluates models given to this initialization of this trainer. Uses T-Daub for best-algorithms selection
         and cross-validation.
 
-        Keyword arguments: -
+        Keyword arguments: 
+        train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
+                             otherwise (default: False)
 
         Return:
         A TrainResults' instance containing the training results
@@ -56,18 +58,20 @@ class ModelsTrainer:
         nb_best_models = ModelsTrainer.CONF['TDAUB_NB_BEST_MODELS']
         models_to_train = self._t_daub(t_daub_nb_runs, nb_best_models) if t_daub_nb_runs > 0 else self.models
         
-        train_results = self._train(models_to_train)
+        train_results = self._train(models_to_train, train_on_all_data=train_on_all_data)
         return train_results
         
     
     # private methods
 
-    def _train(self, models_to_train, training_set_params=None, save_results=True):
+    def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True):
         """
         Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
 
         Keyword arguments:
         models_to_train -- list of RecommendationModel instances that should be trained and evaluated
+        train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
+                             otherwise (default: False)
         training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
         save_results -- True if the results should be saved to disk, False otherwise (default: True)
 
@@ -81,6 +85,7 @@ class ModelsTrainer:
         try:
             for split_id, yielded in enumerate(self.training_set.yield_splitted_train_val(training_set_params, 
                                                                                           ModelsTrainer.CONF['NB_CV_SPLITS'])):
+                print('\nCross-validation split n°%i' % split_id)
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
                 print(X_train.dtype, X_val.dtype, y_train.dtype, y_val.dtype) # TODO tmp
@@ -111,6 +116,13 @@ class ModelsTrainer:
                     # save results
                     # TrainResults contain a dict grouping the results of each trained model
                     train_results.add_model_cv_split_result(split_id, model, scores, cm)
+
+            if train_on_all_data: # train the models on all data: 
+                print('\nTraining models on all data.')
+                # Warning this model should not be used for any kind of evaluation but only for production use
+                _, X_all, y_all = self.training_set.get_all_data(training_set_params)
+                for model in models_to_train:
+                    model.trained_pipeline_prod = model.get_pipeline().fit(X_all, y_all)
 
         finally:
             # save results to disk

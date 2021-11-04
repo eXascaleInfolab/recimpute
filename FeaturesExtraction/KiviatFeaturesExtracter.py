@@ -73,8 +73,9 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         dataset.save_features(self, features_df)
         return dataset
 
-    def extract_from_timeseries(self, timeseries): # TODO
-        pass
+    def extract_from_timeseries(self, timeseries):
+        raise Exception('The KiviatFeaturesExtracter is not capable of extracting features on time series that are not clustered.'
+                      + ' Please use the "extract" method to extract features for a whole clustered data set.')
 
     def save_features(self, dataset_name, features):
         """

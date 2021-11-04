@@ -2,7 +2,8 @@
 # Custom
 Clustering/Results
 Datasets/RealWorld
-Datasets/TrainingSets
+Datasets/SystemInputs
+Datasets/Recommendations
 FeaturesExtraction/features
 Labeling/ImputationTechniques/labels
 Training/Results

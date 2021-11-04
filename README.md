@@ -30,7 +30,11 @@ TODO
 ___
 
 ## Execution
-TODO
+
+```bash
+    $ cd recimpute/
+    $ python recimpute.py [arguments]
+```
 
 ### Arguments
 TODO
@@ -48,7 +52,7 @@ TODO
 ___
 
 ## Extension
-- To use new data sets:
+- To train models on new data sets:
     - Each data set must be stored in its own zip archive.
     - This archive must contain:
         - One .txt or .csv file containing the time series. Each column is a time series. No headers. Delimiters is a single space. If the first column contains only date time objects, it will be used as index.
@@ -62,9 +66,13 @@ ___
     - It is recommended to z-normalize the time series before-hand.
 - To add and train new models:
     -  TODO
-    - copy paste the Training/ModelsDescription/_template.py file and rename it with the name of your new model
-    - fill in all the required info (check other ModelsDescription files if you need examples)
+    - Copy paste the Training/ModelsDescription/_template.py file and rename it with the name of your new model.
+    - Fill in all the required info (check other ModelsDescription files if you need examples).
     - TEMPORARY: add your model to the "models_descriptions_to_use" list defined in the "run_all" method in the recimpute.py file.
+- To get recommendations for any new time series:
+    - TODO
+    - Save the sequence(s) to a text (.csv, .txt) file in the Datasets/SystemInputs/ directory. The sequence(s) should have been z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
+    - TEMPORARY: in recimpute.py set the 'ts_filename' value to the name of your file.
 
 
 ___

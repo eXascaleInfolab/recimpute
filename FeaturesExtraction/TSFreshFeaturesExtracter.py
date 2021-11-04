@@ -60,12 +60,12 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         Extracts the given time series' features.
         
         Keyword arguments:
-        timeseries -- 
+        timeseries -- Pandas DataFrame containing the time series ( /!\ each column is a time series)
         nb_timeseries -- number of time series
         timeseries_length -- time series' length
         
         Return:
-        Pandas DataFrame containing the time series (each row is a time series)
+        Pandas DataFrame containing the time series' features ( /!\ each row is a time series' feature vector)
         """
         # prepare data to be used in tsfresh
         # DataFrame used as input of tsfresh:

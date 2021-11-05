@@ -49,6 +49,8 @@ Note: many parameters and strategies can be set from the configuration files sto
  |             |             |         | standardscaler_svc                 |
  |             |             |         | *all*                              |
 
+ <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
+
 - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
 - *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name.
 - *-fes*: Name of the features' extracter(s) to use to create time series' feature vectors. Expected: one or multiple values separated by commas.

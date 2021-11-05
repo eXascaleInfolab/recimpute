@@ -33,12 +33,22 @@ from Utils.Utils import Utils
 SYSTEM_INPUTS_DIR = normp('./Datasets/SystemInputs/')
 SYSTEM_OUTPUTS_DIR = normp('./Datasets/Recommendations/')
 
+LABELERS = { # maps the argument name to the actual class name
+    'ImputeBench': ImputeBenchLabeler, 
+    'KiviatRules': KiviatRulesLabeler,
+}
+FEATURES_EXTRACTERS = { # maps the argument name to the actual class name
+    'Kiviat': KiviatFeaturesExtracter, 
+    'TSFresh': TSFreshFeaturesExtracter,
+}
+
+
 # create necessary directories if not there yet
 Utils.create_dirs_if_not_exist([SYSTEM_INPUTS_DIR])
 Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
 
-def train_and_eval():
+def train_and_eval(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extracters, models_descriptions_to_use, train_on_all_data):
 
     print('#########  RecImpute - train & eval  #########')
 
@@ -49,24 +59,14 @@ def train_and_eval():
     # clustering
     clusterer = ShapeBasedClustering()
 
-    # labeling # TODO: the choice of which labeler & true_labeler use should be a parameter
-    labeler = ImputeBenchLabeler.get_instance() #KiviatRulesLabeler.get_instance()
-    #true_labeler = ImputeBenchLabeler.get_instance()
-    labeler_properties = labeler.get_default_properties()
-    #true_labeler_properties = true_labeler.get_default_properties()
-    #true_labeler_properties['type'] = labeler_properties['type']
-
-    # features extraction # TODO: the choice of which feature extracter use should be a parameter
-    features_extracters = [
-        KiviatFeaturesExtracter.get_instance(),
-        TSFreshFeaturesExtracter.get_instance(),
-    ]
-
     if any(isinstance(fe, KiviatFeaturesExtracter) for fe in features_extracters):
         warnings.warn('You are using a KiviatFeaturesExtracter. This features extracter can only compute features for clusters' \
                     + '(and not individual time series). If you use the resulting models in production, since those time series' \
                     + 'won\'t be clustered, its features will have to be imputed (or set to 0). This may impact the system\'s' \
                     + 'performances.')
+
+    true_labeler_info = {'true_labeler': true_labeler, 'true_labeler_properties': true_labeler_properties} \
+                        if true_labeler is not None else {}
 
     # create a training set
     set = TrainingSet(
@@ -74,23 +74,14 @@ def train_and_eval():
         clusterer, 
         features_extracters, 
         labeler, labeler_properties,
-        #true_labeler=true_labeler, true_labeler_properties=true_labeler_properties,
+        **true_labeler_info,
         force_generation=False,
     )
 
-    # init models # TODO: the choice of which model train should be a parameter
-    models_descriptions_to_use = [
-        'kneighbors.py',
-        'maxabsscaler_catboostclassifier.py',
-        'normalizer_randomforest.py',
-        'standardscaler_randomforest.py',
-        #'standardscaler_svc.py',
-    ]
     models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
     # training & cross-validation evaluation
     trainer = ModelsTrainer(set, models)
-    train_on_all_data = False # TODO: this should be a parameter
     tr = trainer.train(train_on_all_data=train_on_all_data) 
 
     print('=================== Cross-validation results (averaged) ===================')
@@ -106,6 +97,7 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
     features_extracters = []
     for fe_name in fes_names:
         if fe_name != 'KiviatFeaturesExtracter':
+            assert any(fe_name2.__name__ == fe_name for fe_name2 in FEATURES_EXTRACTERS.values())
             fe_class = getattr(sys.modules[__name__], fe_name)
             features_extracters.append(fe_class.get_instance())
 
@@ -164,23 +156,96 @@ def get_recommendations_filename(timeseries_filename):
     return labels_filename
 
 
+# --------------------------------------------------------------------------------------------
+
+
+
 if __name__ == '__main__':
-    print(str(sys.argv))
-
-    CMD = 'USE' # TODO: this should be a parameter
-
-    if CMD == 'TRAIN': # TRAIN and EVALUATE W/ CROSS-VAL
-        tr, set, models = train_and_eval()
-        print(tr.id)
     
-    elif CMD == 'USE': # USE PRE-TRAINED MODELS
+    _models_list = [f.replace('.py', '') for f in os.listdir('Training/ModelsDescription') if f not in ['__pycache__', '_template.py']]
+    _valid_args = {
+        '-mode': ['train', 'use'],
+
+        # *train* args
+        '-lbl': LABELERS.keys(),
+        '-true_lbl': LABELERS.keys(),
+        '-fes': [*FEATURES_EXTRACTERS.keys(), 'all'],
+        '-models': [*_models_list, 'all'],
+        '-train_on_all_data': ['True', 'False'],
+
+        # *use* args
+        '-id': None,
+        '-model': _models_list,
+        '-ts': None,
+        '-use_prod_model': ['True', 'False'],
+    }
+
+    args = dict(zip(sys.argv[1::2], sys.argv[2::2]))
+    assert '-mode' in args and args['-mode'] in _valid_args['-mode'] # verify the -mode arg has been specified correctly
+    assert all(k in _valid_args.keys() for k in args.keys()) # verify that all args keys are valid
+    assert all(_valid_args[k] is None \
+           or (v in _valid_args[k] if not ',' in v else (v_ in _valid_args[k] for v_ in v.split(','))) \
+              for k, v in args.items()) # verify that all args values are valid
+    
+    if args['-mode'] == 'train':
+
+        NON_OPTIONAL_ARGS = ['-mode', '-lbl', '-fes', '-models']
+        assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
+        
+        # TRAIN and EVALUATE W/ CROSS-VAL
+        
+        # set up the labeler & true_labeler
+        labeler = LABELERS[args['-lbl']].get_instance()
+        labeler_properties = labeler.get_default_properties()
+
+        if '-true_lbl' in args:
+            true_labeler = LABELERS[args['-true_lbl']].get_instance()
+            true_labeler_properties = true_labeler.get_default_properties()
+            true_labeler_properties['type'] = labeler_properties['type']
+        else:
+            true_labeler = true_labeler_properties = None
+
+        # set up the features extracters
+        if args['-fes'] == 'all':
+            features_extracters = [fe.get_instance() for fe in FEATURES_EXTRACTERS.values()]
+        else:
+            features_extracters = []
+            for fe_name in args['-fes'].split(','):
+                features_extracters.append(FEATURES_EXTRACTERS[fe_name].get_instance())
+        
+        # set up the models' descriptions to load
+        if args['-models'] == 'all':
+            models_descriptions_to_use = [m + '.py' for m in _models_list]
+        else:
+            models_descriptions_to_use = []
+            for m_name in args['-models'].split(','):
+                models_descriptions_to_use.append(m_name + '.py')
+
+
+        tr, set, models = train_and_eval(
+            labeler, labeler_properties, 
+            true_labeler, true_labeler_properties, 
+            features_extracters, 
+            models_descriptions_to_use, 
+            args['-train_on_all_data'] == 'True' if '-train_on_all_data' in args else True
+        )
+        print(tr.id)
+
+
+    elif args['-mode'] == 'use':
+
+        NON_OPTIONAL_ARGS = ['-mode', '-id', '-model', '-ts']
+        assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
+
+        # USE PRE-TRAINED MODELS
+
         # load the model
-        id = '0411_1456_53480' # TODO: this should be a parameter
-        model_name = 'kneighbors' # TODO: this should be a parameter
+        id = args['-id']
+        model_name = args['-model']
         tr, model = load_models_from_tr(id, model_name)
 
         # load time series to label: z-normalized, 1 row = 1 ts, space separator, no header, no index
-        ts_filename = 'timeseries.csv' # TODO: this should be a parameter
+        ts_filename = args['-ts']
         full_ts_filename = normp(SYSTEM_INPUTS_DIR + '/' + ts_filename)
         timeseries = pd.read_csv(full_ts_filename, sep=' ', header=None, index_col=None)
 
@@ -188,8 +253,14 @@ if __name__ == '__main__':
         info_file = tr.get_info_file()
         fes_names = re.search('## Features extracters used:\n(- \w+\n)+', info_file).group(0).replace('- ', '').split('\n')[1:-1]
 
+        use_pipeline_prod = args['-use_prod_model'] == 'True' if '-use_prod_model' in args else False
+
+        print('!! id', id)
+        print('!! model_name', model_name)
+        print('!! ts_filename', ts_filename)
+        print('!! use_pipeline_prod', use_pipeline_prod)
+
         # get the recommendations
-        use_pipeline_prod = False # TODO: this should be a parameter
         labels = use(timeseries, model, model.features_name, fes_names, use_pipeline_prod=use_pipeline_prod)
 
         print('============================= Recommendations =============================')

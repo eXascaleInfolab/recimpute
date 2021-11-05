@@ -224,6 +224,9 @@ class RecommendationModel:
         Return: 
         Numpy array of recommendations
         """
+        if use_pipeline_prod and self.trained_pipeline_prod is None:
+            raise Exception('This model has not been trained on all data after its evaluation. The argument "use_prod_model" '\
+                            + 'cannot be set to True.')
         trained_pipeline = self.trained_pipeline_prod if use_pipeline_prod else self.trained_pipeline
         y = trained_pipeline.predict(X) # TODO implement a more complex recommendation method (top 3?)
         return y

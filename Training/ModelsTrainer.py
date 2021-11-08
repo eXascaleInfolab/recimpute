@@ -81,7 +81,7 @@ class ModelsTrainer:
         #warnings.filterwarnings('ignore', category=FitFailedWarning)
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
 
-        train_results = TrainResults(models_to_train)
+        train_results = TrainResults(models_to_train, self.training_set.get_labeler_properties()['type'])
         try:
             for split_id, yielded in enumerate(self.training_set.yield_splitted_train_val(training_set_params, 
                                                                                           ModelsTrainer.CONF['NB_CV_SPLITS'])):

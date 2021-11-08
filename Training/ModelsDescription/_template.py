@@ -15,7 +15,10 @@ model_info = {
     # MANDATORY FIELDS:
 
     # name of this model
-    'name': 'normalizer_randomforest',
+    'name': '', # CHANGE THIS
+
+    # type of this model
+    'type': '', # CHANGE THIS: possible values: 'classifier', 'regression'
 
     ## List of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they are chained, 
     ## with the last object an estimator. Transform should be a class (not an instance!). 

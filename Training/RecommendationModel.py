@@ -8,8 +8,10 @@ RecommendationModel.py
 
 import importlib.util
 from joblib import dump as j_dump, load as j_load
+import numpy as np
 import os
 from os.path import normpath as normp
+import pandas as pd
 from pickle import dump as p_dump, load as p_load
 from sklearn.metrics import accuracy_score, precision_score, recall_score, hamming_loss, f1_score
 from sklearn.pipeline import Pipeline
@@ -23,17 +25,21 @@ class RecommendationModel:
     """
 
     MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
+    METRICS_CLF_MONO = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Mean Reciprocal Rank']
+    METRICS_CLF_MULTI = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss']
+    METRICS_REGR = []
     _PROPS_TO_NOT_PICKLE = ['trained_pipeline', 'trained_pipeline_prod']
 
 
     # constructor
-    def __init__(self, name, steps, params_ranges, training_speed_factor, 
+    def __init__(self, name, type, steps, params_ranges, training_speed_factor, 
                  multiclass_strategy=None, bagging_strategy=None, description_filename=None):
         """
         Initializes a RecommendationModel object.
 
         Keyword arguments:
         name -- name of this model
+        type -- type of this model (classifier or regression model)
         steps -- list of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they 
                  are chained, with the last object an estimator
         params_ranges -- dict with keys being parameters' names and values being ranges of possible parameter value
@@ -43,11 +49,13 @@ class RecommendationModel:
         description_filename -- filename of this model's description file (default: None)
         """
         self.name = name
+        self.type = type
         self.steps_name, self.steps = zip(*steps)
         # for step in self.steps:
         #     assert hasattr(step, 'fit') and callable(getattr(step, 'fit'))
         #     assert hasattr(step, 'predict') and callable(getattr(step, 'predict'))
         #     assert hasattr(step, 'transform') and callable(getattr(step, 'transform'))
+        assert type in ['classifier', 'regression']
 
         self.params_ranges = params_ranges
         self.best_params = None
@@ -174,62 +182,105 @@ class RecommendationModel:
         end_time = time.time()
         
         # evaluate the model
-        scores, cm = self.eval(X_val, y_val, plot_cm)
+        model, y_pred = self.predict(X_val, compute_proba=self.labels_info['type']=='monolabels', use_pipeline_prod=False)
+        scores, cm = self.eval(y_val, y_pred, model.classes_, plot_cm=plot_cm)
 
         return scores, cm
     
-    def eval(self, X, y, plot_cm=False):
-        """
-        Evaluates the model on the given validation/test data. 
-        
-        Keyword arguments: 
-        X -- numpy array of validation/test entries
-        y -- numpy array of validation/test entries' labels
-        plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
-        
-        Return: 
-        1. dict of scores measured during the pipeline's evaluation
-        2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
-        """
-        # predict new data's labels
-        y_pred = self.trained_pipeline.predict(X)
-
-        are_multi_labels = self.labels_info['type'] == 'multilabels'
-        average_strat = 'samples' if are_multi_labels else 'weighted'
-
-        scores = {
-            'Accuracy': accuracy_score(y, y_pred, normalize=True, sample_weight=None), 
-            'F1-Score': f1_score(y_true=y, y_pred=y_pred, average=average_strat, zero_division=0),
-            'Precision': precision_score(y_true=y, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
-            'Recall': recall_score(y_true=y, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
-            'Hamming Loss': hamming_loss(y, y_pred),
-        }
-
-        if plot_cm:
-            fig, _, cm_val = Utils.plot_confusion_matrix(y, y_pred, are_multi_labels, 
-                                                         normalize=True, labels=self.labels_set, 
-                                                         verbose=0)
-
-        return scores, (fig, cm_val) if plot_cm else None
-
-    def predict(self, X, use_pipeline_prod=True):
+    def predict(self, X, compute_proba=False, use_pipeline_prod=True):
         """
         Uses a trained pipeline to predict the labels of the given time series.
         
         Keyword arguments: 
         X -- numpy array of entries to label
+        compute_proba -- True if the probability of the sample for each class in the model should be returned, False
+                         if only the label should be returned (default: False)
+        use_pipeline_prod -- True to use the production pipeline trained on all data, False to use the last pipeline
+                             trained during cross-validation (default: True)
+        
+        Return: 
+        1. Model which was used to get recommendations
+        2. Numpy array of labels
+        """
+        if use_pipeline_prod and self.trained_pipeline_prod is None:
+            raise Exception('This model has not been trained on all data after its evaluation. The argument "use_prod_model" '\
+                            + 'cannot be set to True.')
+        trained_pipeline = self.trained_pipeline_prod if use_pipeline_prod else self.trained_pipeline
+
+        if self.type == 'classifier' and compute_proba:
+            y_pred = self._custom_predict_proba(trained_pipeline)(X) # probability vector
+        else:
+            y_pred = trained_pipeline.predict(X)
+
+        return trained_pipeline, y_pred
+
+    def get_recommendations(self, X, use_pipeline_prod=True):
+        """
+        Uses a trained pipeline to get recommendations for the given time series.
+        
+        Keyword arguments: 
+        X -- numpy array of entries to get recommendations for
         use_pipeline_prod -- True to use the production pipeline trained on all data, False to use the last pipeline
                              trained during cross-validation (default: True)
         
         Return: 
         Numpy array of recommendations
         """
-        if use_pipeline_prod and self.trained_pipeline_prod is None:
-            raise Exception('This model has not been trained on all data after its evaluation. The argument "use_prod_model" '\
-                            + 'cannot be set to True.')
-        trained_pipeline = self.trained_pipeline_prod if use_pipeline_prod else self.trained_pipeline
-        y = trained_pipeline.predict(X) # TODO implement a more complex recommendation method (top 3?)
-        return y
+        model, y_pred = self.predict(X, compute_proba=True, use_pipeline_prod=use_pipeline_prod)
+
+        if self.type == 'classifier':
+            y_pred_proba = y_pred
+            # predict proba vector to dataframe
+            preds = pd.DataFrame(y_pred_proba, 
+                                 columns=model.classes_)
+            preds.index.name = 'Time Series ID'
+            return preds
+
+    def eval(self, y_true, y_pred, classes, plot_cm=False):
+        """
+        Evaluates the model on the given validation/test data. 
+        
+        Keyword arguments: 
+        y_true -- numpy array of true labels
+        y_pred -- numpy array of validation/test entries' labels
+        plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
+        
+        Return: 
+        1. dict of scores measured during the pipeline's evaluation
+        2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
+        """
+        if self.type == 'classifier':
+            are_multi_labels = self.labels_info['type'] == 'multilabels'
+
+            if not are_multi_labels:
+                y_pred_proba = y_pred
+                y_pred = [classes[np.argmax(probas)] for probas in y_pred_proba]
+
+            average_strat = 'samples' if are_multi_labels else 'weighted'
+
+            scores = {
+                'Accuracy': accuracy_score(y_true, y_pred, normalize=True, sample_weight=None), 
+                'F1-Score': f1_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0),
+                'Precision': precision_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
+                'Recall': recall_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
+                'Hamming Loss': hamming_loss(y_true, y_pred),
+            }
+            
+            if not are_multi_labels: # compute MRR only for mono labels classifiers
+                ranks = [list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys()).index(y_true_i) + 1 
+                         for y_true_i, probas in zip(y_true, y_pred_proba)] # rank at which each correct label is found
+
+                scores['Mean Reciprocal Rank'] = (1 / len(y_true)) * sum(1 / rank_i for rank_i in ranks)
+
+            if plot_cm:
+                fig, _, cm_val = Utils.plot_confusion_matrix(y_true, y_pred, are_multi_labels, 
+                                                            normalize=True, labels=self.labels_set, 
+                                                            verbose=0)
+
+        elif self.type == 'regression':
+            raise Exception('Regression models are not supported yet.')
+
+        return scores, (fig, cm_val) if plot_cm else None
 
     def save(self, results_dir):
         """
@@ -268,6 +319,29 @@ class RecommendationModel:
     def __getstate__(self):
         return {k: v for (k, v) in self.__dict__.items() if k not in RecommendationModel._PROPS_TO_NOT_PICKLE}
 
+    def _custom_predict_proba(self, _trained_pipeline):
+        """
+        Creates a custom predict proba function to support Scikit-Learn classifiers that do not implement a 
+        predict_proba function.
+
+        Keyword arguments: 
+        _trained_pipeline -- trained classifier pipeline to use to get predictions
+
+        Return:
+        Custom predict_proba function that returns the probability of the sample for each class in the model.
+        """
+        func = None
+        try:
+            func = _trained_pipeline.predict_proba # the classifier does implement a predict_proba method
+        except Exception as e: # the classifier does NOT implement a predict_proba method
+            # implement a custom predict_proba method
+            def _custom_predict_proba_internal(x):
+                prob_pos = _trained_pipeline.decision_function(x)
+                prob_pos = (prob_pos - prob_pos.min()) / (prob_pos.max() - prob_pos.min())
+                return prob_pos
+            func = _custom_predict_proba_internal
+        return func
+
 
     # static methods
     
@@ -297,6 +371,7 @@ class RecommendationModel:
             # init model
             model = RecommendationModel(
                 module.model_info['name'], 
+                module.model_info['type'], 
                 module.model_info['steps'], 
                 module.model_info['params_ranges'], 
                 module.model_info['training_speed_factor'], 

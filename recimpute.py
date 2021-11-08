@@ -19,7 +19,6 @@ import warnings
 from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Datasets.Dataset import Dataset
 from Datasets.TrainingSet import TrainingSet
-from Evaluation.ModelsEvaluater import ModelsEvaluater
 from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
 from FeaturesExtraction.TSFreshFeaturesExtracter import TSFreshFeaturesExtracter
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
@@ -85,7 +84,7 @@ def train_and_eval(labeler, labeler_properties, true_labeler, true_labeler_prope
     tr = trainer.train(train_on_all_data=train_on_all_data) 
 
     print('=================== Cross-validation results (averaged) ===================')
-    print(tr.results[['Accuracy', 'F1-Score', 'Precision', 'Recall']].to_markdown())
+    print(tr.results[tr.metrics_measured].to_markdown())
 
     return tr, set, models
 
@@ -133,9 +132,9 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
     # use the model to get recommendation(s) for each time series
     X = timeseries_features.to_numpy().astype('float32')
-    labels = model.predict(X, use_pipeline_prod=use_pipeline_prod)
+    recommendations = model.get_recommendations(X, use_pipeline_prod=use_pipeline_prod)
     
-    return labels
+    return recommendations
 
 def load_models_from_tr(id, model_names):
     tr = TrainResults.load(id)
@@ -255,18 +254,11 @@ if __name__ == '__main__':
 
         use_pipeline_prod = args['-use_prod_model'] == 'True' if '-use_prod_model' in args else False
 
-        print('!! id', id)
-        print('!! model_name', model_name)
-        print('!! ts_filename', ts_filename)
-        print('!! use_pipeline_prod', use_pipeline_prod)
-
         # get the recommendations
-        labels = use(timeseries, model, model.features_name, fes_names, use_pipeline_prod=use_pipeline_prod)
+        preds = use(timeseries, model, model.features_name, fes_names, use_pipeline_prod=use_pipeline_prod)
 
         print('============================= Recommendations =============================')
-        print(labels)
+        print(preds)
 
         # save the recommendations to disk
-        labels_df = pd.DataFrame(labels, columns=['Recommendations'])
-        labels_df.index.name = 'Time Series ID'
-        labels_df.to_csv(get_recommendations_filename(ts_filename), sep=' ', header=True, index=True)
+        preds.to_csv(get_recommendations_filename(ts_filename), sep=' ', header=True, index=True)

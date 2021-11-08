@@ -34,18 +34,27 @@ class TrainResults:
 
     # constructor
     
-    def __init__(self, models):
+    def __init__(self, models, labels_type):
         run_id = datetime.datetime.fromtimestamp(time.time()).strftime('%d%m_%H%M') 
         run_id = run_id + '_' + str(rdm.randint(0, sys.maxsize))[:5]
         self.id = run_id
 
         multiindex = pd.MultiIndex(names=['CV Split ID', 'Model'], levels=[[],[]], codes=[[],[]])
+
+        if models[0].type == 'regression':
+            self.metrics_measured = RecommendationModel.METRICS_REGR
+        elif models[0].type == 'classifier':
+            if labels_type == 'monolabels':
+                self.metrics_measured = RecommendationModel.METRICS_CLF_MONO
+            elif labels_type == 'multilabels':
+                self.metrics_measured = RecommendationModel.METRICS_CLF_MULTI
+
         columns = [
-            'Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss',
+            *self.metrics_measured,
             'Conf Matrix',
         ]
         self.results = pd.DataFrame(index=multiindex, columns=columns)
-        for col in 'Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss':
+        for col in self.metrics_measured:
             self.results[col] = self.results[col].astype(np.float64)
         self.models = models
 
@@ -68,15 +77,8 @@ class TrainResults:
         assert model in self.models
 
         key = (split_id, model)
-        values = {
-            'Accuracy': scores['Accuracy'],
-            'F1-Score': scores['F1-Score'],
-            'Precision': scores['Precision'],
-            'Recall': scores['Recall'],
-            'Hamming Loss': scores['Hamming Loss'],
-
-            'Conf Matrix': cm,
-        }
+        values = {metric: scores[metric] for metric in self.metrics_measured}
+        values['Conf Matrix'] = cm
         self.results.loc[key,:] = values
 
     def get_model_results(self, model):
@@ -101,7 +103,7 @@ class TrainResults:
 
         Return: 
         Pandas Series containing the average cross-validation results of the model. 
-        Columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss.
+        Example of columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss.
         """
         return self.get_model_results(model).loc[:, ~self.results.columns.isin(['Conf Matrix'])].mean()
 
@@ -115,7 +117,7 @@ class TrainResults:
 
         Return: 
         Pandas Series containing the average cross-validation results of the model. 
-        Columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix
+        Example of columns: Accuracy, F1-Score, Precision, Recall, Hamming Loss, Conf Matrix
         """
         return self.results.loc[(self.get_model_results(model)[metric].idxmax(), model), :]
 

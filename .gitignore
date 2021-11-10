@@ -9,6 +9,7 @@ Labeling/ImputationTechniques/labels
 Training/Results
 catboost_info
 results_tmp.txt
+_Notebooks_and_Tests/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,venv,virtualenv,visualstudiocode,python

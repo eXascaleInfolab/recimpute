@@ -8,6 +8,7 @@ TrainingSet.py
 
 from imblearn.over_sampling import SMOTE
 import numpy as np
+from os.path import normpath as normp
 import pandas as pd
 import random as rdm
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
@@ -22,6 +23,7 @@ class TrainingSet:
     """
 
     CONF = Utils.read_conf_file('trainingset')
+    TEST_SET_FILENAME = 'test_set.pkl'
 
 
     # constructor
@@ -80,14 +82,21 @@ class TrainingSet:
         1. string specifying the level at which data is reserved (clusters or datasets)
         2. list of ids to identify the data reserved for testing
         """
+        test_set = []
         if strategy == 'one_cluster_every_two_dataset':
             # reserve one cluster every two data sets for the test set
-            test_set = []
             for dataset in datasets[::2]:
                 for cid in dataset.cids:
                     test_set.append(cid)
                     break
             return 'clusters', test_set
+        elif strategy == 'clusters_percentage':
+            # reserve a fixed percentage of randomly selected clusters for the test set
+            all_cids = np.array([ds.cids for ds in datasets]).flatten()
+            nb_test_clusters = np.ceil(len(all_cids) * self.CONF['TEST_SIZE_PERCENTAGE'])
+            test_set = rdm.sample(all_cids, nb_test_clusters)
+            return 'clusters', test_set
+
         else:
             raise Exception('Test set reservation strategy not implemented: ', strategy)
 
@@ -116,9 +125,15 @@ class TrainingSet:
                 dataset = self.clusterer.cluster(dataset)
                 clusters_generated = True
             updated_datasets.append(dataset)
+
+        clusters_generated = True # TODO run
         if clusters_generated:
             # merge clusters with <5 time series to the most similar cluster from the same data set
-            updated_datasets = self.clusterer.merge_small_clusters(updated_datasets, min_nb_ts=self.clusterer.CONF['MIN_NB_TS_PER_CLUSTER'])
+            # and divide large clusters into smaller ones such that each has between 5 and 15 time series
+            updated_datasets = self.clusterer.apply_constraints(updated_datasets, 
+                                                                min_nb_ts=self.clusterer.CONF['MIN_NB_TS_PER_CLUSTER'],
+                                                                max_nb_ts=self.clusterer.CONF['MAX_NB_TS_PER_CLUSTER'])
+                                                                
         if clusters_generated or not self.clusterer.are_cids_unique(updated_datasets):
             # change all clusters' ID (for all datasets) such that there are no duplicates
             updated_datasets = self.clusterer.make_cids_unique(updated_datasets)
@@ -460,32 +475,52 @@ class TrainingSet:
         2. List containing validation indices (Time Series ID).
         3. List containing the indices of the clusters used for training.
         """
-        cids_value_counts = all_data_info['Cluster ID'].value_counts()
-    
-        train = {'cids': [], 'nb_timeseries': []}
-        test = {'cids': [], 'nb_timeseries': []}
+        def _get_ts_ids_from_cids(all_data_info, train_cids, test_cids):
+            train_indices, test_indices = [], []
+            for tid, row in all_data_info.iterrows():
+                if row['Cluster ID'] in train_cids:
+                    train_indices.append(tid)
+                elif row['Cluster ID'] in test_cids:
+                    test_indices.append(tid)
+                else: 
+                    raise Exception('Cluster ID is neither in the train nor in the validation/test set.')
+            return train_indices, test_indices
         
-        # select random cluster (based on the given distribution) and add all its time series to the training set
-        for cluster_id in np.random.choice(sorted(all_data_info['Cluster ID'].unique(), key=int), 
-                                           all_data_info['Cluster ID'].nunique(), 
-                                           replace=False,
-                                           p=probability_distribution):
-            if (sum(train['nb_timeseries']) / len(all_data_info)) < (1 - val_size - (0.25 * val_size)):
-                train['cids'].append(cluster_id)
-                train['nb_timeseries'].append(cids_value_counts[cluster_id])
-            else:
-                test['cids'].append(cluster_id)
-                test['nb_timeseries'].append(cids_value_counts[cluster_id])
-                
-        train_indices, test_indices = [], []
+        if self.CONF['USE_CUSTOM_SPLIT_METHOD']:
+            cids_value_counts = all_data_info['Cluster ID'].value_counts()
         
-        for tid, row in all_data_info.iterrows():
-            if row['Cluster ID'] in train['cids']:
-                train_indices.append(tid)
-            else:
-                test_indices.append(tid)
-        
-        return rdm.sample(train_indices, len(train_indices)), rdm.sample(test_indices, len(test_indices)), train['cids']
+            train = {'cids': [], 'nb_timeseries': []}
+            test = {'cids': [], 'nb_timeseries': []}
+            
+            # select random cluster (based on the given distribution) and add all its time series to the training set
+            for cluster_id in np.random.choice(sorted(all_data_info['Cluster ID'].unique(), key=int), 
+                                            all_data_info['Cluster ID'].nunique(), 
+                                            replace=False,
+                                            p=probability_distribution):
+                if (sum(train['nb_timeseries']) / len(all_data_info)) < (1 - val_size - (0.25 * val_size)):
+                    train['cids'].append(cluster_id)
+                    train['nb_timeseries'].append(cids_value_counts[cluster_id])
+                else:
+                    test['cids'].append(cluster_id)
+                    test['nb_timeseries'].append(cids_value_counts[cluster_id])
+
+            train_indices, test_indices = _get_ts_ids_from_cids(all_data_info, train['cids'], test['cids'])
+            return rdm.sample(train_indices, len(train_indices)), rdm.sample(test_indices, len(test_indices)), train['cids']
+
+        else:
+            # split at cluster level: X% for training and Y% for testing
+            unique_cids = all_data_info['Cluster ID'].unique()
+            clusters_label = [all_data_info[all_data_info['Cluster ID'] == cid].iloc[0]['Label'] for cid in unique_cids]
+            train_cids, test_cids, _, _ = sklearn_train_test_split(
+                unique_cids, 
+                clusters_label, 
+                test_size=val_size, 
+                shuffle=True,
+                stratify=clusters_label
+            )
+            # transform clusters IDs to time series IDs
+            train_indices, test_indices = _get_ts_ids_from_cids(all_data_info, train_cids, test_cids)
+            return train_indices, test_indices, train_cids
 
     def _update_prob_distrib(self, all_data_info, probability_distribution, train_ids):
         """
@@ -545,3 +580,18 @@ class TrainingSet:
             return X_augmented, y_augmented
 
         return X, y
+
+    def save_test_set_to_disk(self, dir):
+        """
+        Saves the test set to disk.
+        
+        Keyword arguments: 
+        dir -- directory path pointing where the file should be saved.
+        
+        Return:
+        Filename of the pickle file.
+        """
+        all_test_data_info, _ = self._load('test')
+        test_set_filename = normp(dir + '/' + TrainingSet.TEST_SET_FILENAME)
+        all_test_data_info.to_pickle(test_set_filename)
+        return test_set_filename

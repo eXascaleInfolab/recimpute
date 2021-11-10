@@ -47,9 +47,9 @@ Utils.create_dirs_if_not_exist([SYSTEM_INPUTS_DIR])
 Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
 
-def train_and_eval(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extracters, models_descriptions_to_use, train_on_all_data):
+def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extracters, models_descriptions_to_use, train_on_all_data):
 
-    print('#########  RecImpute - train & eval  #########')
+    print('#########  RecImpute - train  #########')
 
     # init data sets
     datasets = Dataset.instantiate_from_dir()
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                 models_descriptions_to_use.append(m_name + '.py')
 
 
-        tr, set, models = train_and_eval(
+        tr, set, models = train(
             labeler, labeler_properties, 
             true_labeler, true_labeler_properties, 
             features_extracters, 
@@ -249,7 +249,7 @@ if __name__ == '__main__':
         timeseries = pd.read_csv(full_ts_filename, sep=' ', header=None, index_col=None)
 
         # read the _info.txt and get the values under "## Features extracters used:"
-        info_file = tr.get_info_file()
+        info_file = tr.load_info_file_from_archive()
         fes_names = re.search('## Features extracters used:\n(- \w+\n)+', info_file).group(0).replace('- ', '').split('\n')[1:-1]
 
         use_pipeline_prod = args['-use_prod_model'] == 'True' if '-use_prod_model' in args else False

@@ -12,6 +12,7 @@ import json
 from kshape.core import kshape, zscore, _ncc_c
 from multiprocessing import Pool
 import numpy as np
+import numpy.core.numeric as _nx
 import operator
 import os
 from os.path import normpath as normp
@@ -72,7 +73,10 @@ class ShapeBasedClustering:
         datasets = self._run_final_clustering(datasets, nb_clusters_per_ds)
 
         # merge clusters with <5 time series to the most similar cluster from the same data set
-        self.merge_small_clusters(datasets, min_nb_ts=ShapeBasedClustering.CONF['MIN_NB_TS_PER_CLUSTER'])
+        # and divide large clusters into smaller ones such that each has between 5 and 15 time series
+        datasets = self.apply_constraints(datasets, 
+                                          min_nb_ts=self.CONF['MIN_NB_TS_PER_CLUSTER'],
+                                          max_nb_ts=self.CONF['MAX_NB_TS_PER_CLUSTER'])
 
         # change all clusters' ID (for all datasets) such that there are no duplicates
         datasets = self.make_cids_unique(datasets)
@@ -130,57 +134,25 @@ class ShapeBasedClustering:
             updated_datasets.append(dataset)
         return updated_datasets
 
-    def merge_small_clusters(self, datasets, min_nb_ts):
+    def apply_constraints(self, datasets, min_nb_ts, max_nb_ts):
         """
-        For each data set, merges the clusters having less than "min_nb_ts" time series to the most similar 
-        cluster from the same data set.
+        Applies clusters' constraints. Each should have between 5 and 15 (variables defined in config file) time series.
         Updates the clusters assignment csv files.
         
         Keyword arguments:
         datasets -- list of Dataset objects containing the time series to cluster.
         min_nb_ts -- minimum number of time series a cluster can have without requiring a merge.
+        max_nb_ts -- maximum number of time series a cluster can have.
         
         Return: 
         List of updated Dataset objects.
         """
-        all_avg_ncc = {}
+        # merge clusters with <5 time series to the most similar cluster from the same data set
+        updated_datasets = self._merge_small_clusters(datasets, min_nb_ts)
 
-        # compute avg ncc score of each cluster
-        for dataset, _, cluster, cluster_id in Dataset.yield_each_datasets_cluster(datasets):
-            all_avg_ncc[f'{dataset.name}_{cluster_id}'] = np.mean(self._get_dataset_ncc_scores(cluster))
+        # constrain clusters: each should have btw 5-15 ts
+        updated_datasets = self._explode_large_clusters(datasets, max_nb_ts)
 
-        # merging phase
-        updated_datasets = []
-        for dataset, timeseries, cluster, cluster_id in Dataset.yield_each_datasets_cluster(datasets):
-            clusters_assignment = dataset.load_cassignment()
-            if cluster.shape[0] < min_nb_ts: # merge if not enough time series
-                ncc_diffs = {}
-
-                # compute average NCC score of each cluster
-                for other_clusters_id in clusters_assignment['Cluster ID'].unique():
-                    if cluster_id != other_clusters_id: # for all the other clusters from this data set
-                        other_cluster = dataset.get_cluster_by_id(timeseries, other_clusters_id, clusters_assignment)
-
-                        merged_cluster = pd.concat([other_cluster, cluster]) # merge the two clusters
-
-                        if merged_cluster.shape[0] >= min_nb_ts:
-                            # compute the avg ncc score difference (score with merge - score without merge)
-                            other_cluster_avg_ncc = all_avg_ncc[f'{dataset.name}_{other_clusters_id}']
-                            merged_cluster_avg_ncc = np.mean(self._get_dataset_ncc_scores(merged_cluster))
-                            ncc_diffs[other_clusters_id] = merged_cluster_avg_ncc - other_cluster_avg_ncc
-
-                # merge with the cluster that returned the largest positive diff
-                ranked_ncc_diffs = sorted(ncc_diffs.items(), key=operator.itemgetter(1), reverse=True)
-                selected_cluster_id = ranked_ncc_diffs[0][0]
-                clusters_assignment['Cluster ID'].replace(cluster_id, selected_cluster_id, inplace=True)
-
-                # update the avg ncc score of the merged cluster
-                new_cluster = dataset.get_cluster_by_id(timeseries, selected_cluster_id, clusters_assignment)
-                all_avg_ncc[f'{dataset.name}_{selected_cluster_id}'] = np.mean(self._get_dataset_ncc_scores(new_cluster))
-
-            # save modified assignments to csv
-            dataset.save_cassignment(clusters_assignment)
-            updated_datasets.append(dataset)
         return updated_datasets
 
     def are_cids_unique(self, datasets):
@@ -631,6 +603,98 @@ class ShapeBasedClustering:
             return nb_runs_dict['medium']
         print('small')
         return nb_runs_dict['small']
+
+    def _merge_small_clusters(self, datasets, min_nb_ts):
+        """
+        For each data set, merges the clusters having less than "min_nb_ts" time series to the most similar 
+        cluster from the same data set.
+        Updates the clusters assignment csv files.
+        
+        Keyword arguments:
+        datasets -- list of Dataset objects containing the time series to cluster.
+        min_nb_ts -- minimum number of time series a cluster can have without requiring a merge.
+        
+        Return: 
+        List of updated Dataset objects.
+        """
+        all_avg_ncc = {}
+
+        # compute avg ncc score of each cluster
+        for dataset, _, cluster, cluster_id in Dataset.yield_each_datasets_cluster(datasets):
+            all_avg_ncc[f'{dataset.name}_{cluster_id}'] = np.mean(self._get_dataset_ncc_scores(cluster))
+
+        # merging phase
+        updated_datasets = []
+        for dataset, timeseries, cluster, cluster_id in Dataset.yield_each_datasets_cluster(datasets):
+            clusters_assignment = dataset.load_cassignment()
+            if cluster.shape[0] < min_nb_ts: # merge if not enough time series
+                ncc_diffs = {}
+
+                # compute average NCC score of each cluster
+                for other_clusters_id in clusters_assignment['Cluster ID'].unique():
+                    if cluster_id != other_clusters_id: # for all the other clusters from this data set
+                        other_cluster = dataset.get_cluster_by_id(timeseries, other_clusters_id, clusters_assignment)
+
+                        merged_cluster = pd.concat([other_cluster, cluster]) # merge the two clusters
+
+                        if merged_cluster.shape[0] >= min_nb_ts:
+                            # compute the avg ncc score difference (score with merge - score without merge)
+                            other_cluster_avg_ncc = all_avg_ncc[f'{dataset.name}_{other_clusters_id}']
+                            merged_cluster_avg_ncc = np.mean(self._get_dataset_ncc_scores(merged_cluster))
+                            ncc_diffs[other_clusters_id] = merged_cluster_avg_ncc - other_cluster_avg_ncc
+
+                # merge with the cluster that returned the largest positive diff
+                ranked_ncc_diffs = sorted(ncc_diffs.items(), key=operator.itemgetter(1), reverse=True)
+                selected_cluster_id = ranked_ncc_diffs[0][0]
+                clusters_assignment['Cluster ID'].replace(cluster_id, selected_cluster_id, inplace=True)
+
+                # update the avg ncc score of the merged cluster
+                new_cluster = dataset.get_cluster_by_id(timeseries, selected_cluster_id, clusters_assignment)
+                all_avg_ncc[f'{dataset.name}_{selected_cluster_id}'] = np.mean(self._get_dataset_ncc_scores(new_cluster))
+
+            # save modified assignments to csv
+            dataset.save_cassignment(clusters_assignment)
+            updated_datasets.append(dataset)
+        return updated_datasets
+
+    def _explode_large_clusters(self, datasets, max_nb_ts):
+        """
+        Explodes large clusters into multiple smaller ones.
+        Updates the clusters assignment csv files.
+        
+        Keyword arguments:
+        datasets -- list of Dataset objects containing the time series to cluster.
+        max_nb_ts -- maximum number of time series a cluster can have without requiring to be exploded.
+        
+        Return: 
+        List of updated Dataset objects.
+        """
+        updated_datasets = []
+        for dataset, timeseries, cluster, cluster_id in Dataset.yield_each_datasets_cluster(datasets):
+            clusters_assignment = dataset.load_cassignment()
+            if cluster.shape[0] > max_nb_ts: # explode if too many time series
+
+                # select all rows of this cluster
+                rows = clusters_assignment.loc[clusters_assignment['Cluster ID'] == cluster_id]
+                
+                Ntotal = rows.shape[0]
+                Nsections = int(np.ceil(Ntotal / max_nb_ts))
+                # code taken from numpy "array_split" method
+                # source (last consulted 09.11.2021): https://numpy.org/doc/stable/reference/generated/numpy.array_split.html
+                Neach_section, extras = divmod(Ntotal, Nsections)
+                section_sizes = ([0] + extras * [Neach_section+1] + (Nsections-extras) * [Neach_section])
+                div_points = _nx.array(section_sizes, dtype=_nx.intp).cumsum()
+
+                # change the cid of each chunk of rows originally assigned to cluster_id's cluster
+                for i in range(Nsections):
+                    st = div_points[i]
+                    end = div_points[i + 1]
+                    clusters_assignment.at[rows[st:end].index.values, 'Cluster ID'] = cluster_id * 1000000 + i 
+                
+            # save modified assignments to csv
+            dataset.save_cassignment(clusters_assignment)
+            updated_datasets.append(dataset)
+        return updated_datasets
 
     def _get_gs_scores_filename(self):
         """

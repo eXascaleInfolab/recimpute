@@ -18,6 +18,7 @@ import time
 import warnings
 import zipfile
 
+from Datasets.TrainingSet import TrainingSet
 from Training.RecommendationModel import RecommendationModel
 from Utils.Utils import Utils
 
@@ -186,11 +187,16 @@ class TrainResults:
                 if not any(s in filepath for s in ['_template.py', '__pycache__']):
                     f_out.write(filepath, self.id + '_' + filepath, compress_type=zipfile.ZIP_DEFLATED)
 
+            # save the test set to the archive
+            test_set_filename = training_set.save_test_set_to_disk(TrainResults.RESULTS_DIR)
+            f_out.write(test_set_filename, os.path.split(test_set_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+
         # clean up
         os.remove(pickle_filename)
         os.remove(info_filename)
+        os.remove(test_set_filename)
 
-    def get_info_file(self):
+    def load_info_file_from_archive(self):
         """
         Reads and returns the info file's content of this TrainResults' instance.
 
@@ -204,6 +210,20 @@ class TrainResults:
             with archive.open(os.path.split(info_filename)[-1], 'r') as f:
                 return f.read().decode("utf-8")
 
+    def load_test_set_from_archive(self):
+        """
+        Reads and returns the test set reserved for the models of this TrainResults' instance.
+
+        Keyword arguments: -
+
+        Return: 
+        Pandas DataFrame containing the test set reserved for the models of this TrainResults' instance.
+        Columns: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        """
+        archive_filename, _, _ = TrainResults._get_filenames(self.id)
+        with zipfile.ZipFile(archive_filename, 'r') as archive:
+            with archive.open(TrainingSet.TEST_SET_FILENAME, 'r') as f:
+                return pd.read_pickle(f)
 
     # private methods
     

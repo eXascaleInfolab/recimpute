@@ -48,3 +48,6 @@ CLUSTERING_NB_RUNS:
 
 # Minimum number of time series a cluster can contain
 MIN_NB_TS_PER_CLUSTER: 5
+
+# Maximum number of time series a cluster can contain
+MAX_NB_TS_PER_CLUSTER: 15

@@ -18,6 +18,7 @@ from sklearn.pipeline import Pipeline
 import time
 
 from Utils.Utils import Utils
+from recimpute import train
 
 class RecommendationModel:
     """
@@ -27,8 +28,12 @@ class RecommendationModel:
     MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
     METRICS_CLF_MONO = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Mean Reciprocal Rank']
     METRICS_CLF_MULTI = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss']
-    METRICS_REGR = []
-    _PROPS_TO_NOT_PICKLE = ['trained_pipeline', 'trained_pipeline_prod']
+    METRICS_REGR = ['Mean Squared Error']
+    METRIC_FOR_SCORING = {
+        'classifier': {'metric': 'F1-Score', 'best_score_is': 'higher'},
+        'regression': {'metric': 'Mean Squared Error', 'best_score_is': 'lower'},
+    }
+    _PROPS_TO_NOT_PICKLE = ['best_cv_trained_pipeline', 'trained_pipeline_prod']
 
 
     # constructor
@@ -64,11 +69,12 @@ class RecommendationModel:
         self.bagging_strategy = bagging_strategy
         self.description_filename = description_filename
 
-        self.trained_pipeline = None # TODO do we still need to store this since we god the trained_pipeline_prod ?
+        self.best_cv_trained_pipeline = None
         self.trained_pipeline_prod = None
         self.features_name = None
         self.labels_info = None
         self.labels_set = None
+        self.best_training_score = -np.inf if self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'higher' else np.inf
         self.are_params_set = False
     
 
@@ -178,16 +184,31 @@ class RecommendationModel:
 
         # train model
         start_time = time.time()
-        self.trained_pipeline = self.get_pipeline().fit(X_train, y_train)
+        trained_pipeline = self.get_pipeline().fit(X_train, y_train)
         end_time = time.time()
         
         # evaluate the model
-        model, y_pred = self.predict(X_val, compute_proba=self.labels_info['type']=='monolabels', use_pipeline_prod=False)
+        model, y_pred = self.predict(X_val, compute_proba=self.labels_info['type']=='monolabels', pipeline=trained_pipeline)
         scores, cm = self.eval(y_val, y_pred, model.classes_, plot_cm=plot_cm)
 
+        # measure the best training score & save the trained_pipeline if this new score is the best
+        current_score = scores[self.METRIC_FOR_SCORING[self.type]['metric']]
+        if self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'higher':
+            if self.best_training_score < current_score:
+                self.best_training_score = current_score
+                self.best_trained_pipeline = trained_pipeline
+        elif self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'lower':
+            if self.best_training_score > current_score:
+                self.best_training_score = current_score
+                self.best_trained_pipeline = trained_pipeline
+        else: 
+            raise Exception('Invalid value for variable: RecommendationModel.METRIC_FOR_SCORING["..."]["best_score_is"]: ' + 
+                            self.METRIC_FOR_SCORING[self.type]['best_score_is'])
+
         return scores, cm
+        
     
-    def predict(self, X, compute_proba=False, use_pipeline_prod=True):
+    def predict(self, X, compute_proba=False, pipeline=None, use_pipeline_prod=True):
         """
         Uses a trained pipeline to predict the labels of the given time series.
         
@@ -195,6 +216,8 @@ class RecommendationModel:
         X -- numpy array of entries to label
         compute_proba -- True if the probability of the sample for each class in the model should be returned, False
                          if only the label should be returned (default: False)
+        pipeline -- trained pipeline to use to get predictions. If None, uses either the "production" pipeline or the
+                    best pipeline from the cross-validation training (default: None). 
         use_pipeline_prod -- True to use the production pipeline trained on all data, False to use the last pipeline
                              trained during cross-validation (default: True)
         
@@ -202,10 +225,16 @@ class RecommendationModel:
         1. Model which was used to get recommendations
         2. Numpy array of labels
         """
-        if use_pipeline_prod and self.trained_pipeline_prod is None:
+        if pipeline is None and use_pipeline_prod and self.trained_pipeline_prod is None:
             raise Exception('This model has not been trained on all data after its evaluation. The argument "use_prod_model" '\
                             + 'cannot be set to True.')
-        trained_pipeline = self.trained_pipeline_prod if use_pipeline_prod else self.trained_pipeline
+
+        if pipeline is not None:
+            trained_pipeline = pipeline
+        elif use_pipeline_prod:
+            trained_pipeline = self.trained_pipeline_prod
+        else:
+            trained_pipeline = self.best_cv_trained_pipeline
 
         if self.type == 'classifier' and compute_proba:
             y_pred = self._custom_predict_proba(trained_pipeline)(X) # probability vector
@@ -299,9 +328,9 @@ class RecommendationModel:
         with open(model_filename, 'wb') as model_f_out:
             p_dump(self, model_f_out)
 
-        # serialize the model's trained_pipeline (using joblib)
+        # serialize the model's best_cv_trained_pipeline (using joblib)
         with open(model_tp_filename, 'wb') as model_f_out:
-            j_dump(self.trained_pipeline, model_f_out)
+            j_dump(self.best_cv_trained_pipeline, model_f_out)
 
         # serialize the model's trained_pipeline_prod (using joblib)
         if self.trained_pipeline_prod is not None:
@@ -400,12 +429,12 @@ class RecommendationModel:
         with archive.open(os.path.split(model_filename)[-1], 'r') as model_file:
             model = p_load(model_file)
 
-        # load its trained_pipeline (using joblib)
+        # load its best_cv_trained_pipeline (using joblib)
         with archive.open(os.path.split(model_tp_filename)[-1], 'r') as model_tp_file:
             model_tp = j_load(model_tp_file)
-        model.trained_pipeline = model_tp
+        model.best_cv_trained_pipeline = model_tp
 
-        # load its trained_pipeline (using joblib)
+        # load its trained_pipeline_prod (using joblib)
         try:
             with archive.open(os.path.split(model_tpp_filename)[-1], 'r') as model_tpp_file:
                 model_tpp = j_load(model_tpp_file)

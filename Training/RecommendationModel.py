@@ -18,7 +18,6 @@ from sklearn.pipeline import Pipeline
 import time
 
 from Utils.Utils import Utils
-from recimpute import train
 
 class RecommendationModel:
     """
@@ -26,7 +25,7 @@ class RecommendationModel:
     """
 
     MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
-    METRICS_CLF_MONO = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Mean Reciprocal Rank']
+    METRICS_CLF_MONO = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Mean Reciprocal Rank', 'Precision@3', 'Recall@3']
     METRICS_CLF_MULTI = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss']
     METRICS_REGR = ['Mean Squared Error']
     METRIC_FOR_SCORING = {
@@ -300,6 +299,8 @@ class RecommendationModel:
                          for y_true_i, probas in zip(y_true, y_pred_proba)] # rank at which each correct label is found
 
                 scores['Mean Reciprocal Rank'] = (1 / len(y_true)) * sum(1 / rank_i for rank_i in ranks)
+                scores['Precision@3'] = sum(int(rank_i <= 3) for rank_i in ranks) / (len(y_true) * 3)
+                scores['Recall@3'] = sum(int(rank_i <= 3) for rank_i in ranks) / len(y_true)
 
             if plot_cm:
                 fig, _, cm_val = Utils.plot_confusion_matrix(y_true, y_pred, are_multi_labels, 

@@ -7,6 +7,7 @@ TrainingSet.py
 """
 
 from imblearn.over_sampling import SMOTE
+from itertools import chain
 import numpy as np
 from os.path import normpath as normp
 import pandas as pd
@@ -92,8 +93,8 @@ class TrainingSet:
             return 'clusters', test_set
         elif strategy == 'clusters_percentage':
             # reserve a fixed percentage of randomly selected clusters for the test set
-            all_cids = np.array([ds.cids for ds in datasets]).flatten()
-            nb_test_clusters = np.ceil(len(all_cids) * self.CONF['TEST_SIZE_PERCENTAGE'])
+            all_cids = list(chain.from_iterable([ds.cids for ds in datasets]))
+            nb_test_clusters = int(np.ceil(len(all_cids) * self.CONF['TEST_SIZE_PERCENTAGE']))
             test_set = rdm.sample(all_cids, nb_test_clusters)
             return 'clusters', test_set
 
@@ -126,7 +127,6 @@ class TrainingSet:
                 clusters_generated = True
             updated_datasets.append(dataset)
 
-        clusters_generated = True # TODO run
         if clusters_generated:
             # merge clusters with <5 time series to the most similar cluster from the same data set
             # and divide large clusters into smaller ones such that each has between 5 and 15 time series

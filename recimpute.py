@@ -49,7 +49,7 @@ Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
 def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extracters, models_descriptions_to_use, train_on_all_data):
 
-    print('#########  RecImpute - train  #########')
+    print('#########  RecImpute - training  #########')
 
     # init data sets
     datasets = Dataset.instantiate_from_dir()
@@ -87,6 +87,10 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     print(tr.results[tr.metrics_measured].to_markdown())
 
     return tr, set, models
+
+def eval(models, test_set): # TODO
+    
+    print('#########  RecImpute - evaluation  #########')
 
 def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
@@ -172,6 +176,9 @@ if __name__ == '__main__':
         '-models': [*_models_list, 'all'],
         '-train_on_all_data': ['True', 'False'],
 
+        # *eval* args
+        # TODO
+
         # *use* args
         '-id': None,
         '-model': _models_list,
@@ -230,6 +237,10 @@ if __name__ == '__main__':
         )
         print(tr.id)
 
+
+    elif args['-mode'] == 'eval': # TODO
+        # eval(models, test_set)
+        pass
 
     elif args['-mode'] == 'use':
 

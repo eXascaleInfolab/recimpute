@@ -205,7 +205,6 @@ class RecommendationModel:
                             self.METRIC_FOR_SCORING[self.type]['best_score_is'])
 
         return scores, cm
-        
     
     def predict(self, X, compute_proba=False, pipeline=None, use_pipeline_prod=True):
         """

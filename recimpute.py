@@ -8,10 +8,12 @@ recimpute.py
 
 #!/usr/bin/env python
 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 from os.path import normpath as normp
 import pandas as pd
+from pprint import pprint
 import re
 import sys
 import warnings
@@ -88,9 +90,21 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     return tr, set, models
 
-def eval(models, test_set): # TODO
+def eval(models, all_test_data_info):
     
     print('#########  RecImpute - evaluation  #########')
+
+    X_test = all_test_data_info.iloc[:, ~all_test_data_info.columns.isin(['Cluster ID', 'Label'])]
+    y_test = all_test_data_info['Label']
+
+    for model in models:
+        used_tp, y_pred = model.predict(X_test, compute_proba=model.labels_info['type']=='monolabels', use_pipeline_prod=False)
+        scores, cm = model.eval(y_test, y_pred, used_tp.classes_, plot_cm=True)
+
+        print('# %s' % model.name)
+        pprint(scores, width=1)
+        print(np.array_str(cm[1], precision=3, suppress_small=False))
+        cm[0].plot()
 
 def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
@@ -148,9 +162,9 @@ def load_models_from_tr(id, model_names):
         model_names = [model_names]
     selected_models = []
     for model in tr.models:
-        if model.name in model_names:
+        if model.name in model_names or model_names is None:
             selected_models.append(model)
-    assert len(model_names) == len(selected_models)
+    assert len(model_names) == len(selected_models) or model_names is None
     return tr, selected_models[0] if single_model else selected_models
 
 def get_recommendations_filename(timeseries_filename):
@@ -177,7 +191,7 @@ if __name__ == '__main__':
         '-train_on_all_data': ['True', 'False'],
 
         # *eval* args
-        # TODO
+        '-id': None,
 
         # *use* args
         '-id': None,
@@ -238,9 +252,18 @@ if __name__ == '__main__':
         print(tr.id)
 
 
-    elif args['-mode'] == 'eval': # TODO
-        # eval(models, test_set)
-        pass
+    elif args['-mode'] == 'eval':
+
+        NON_OPTIONAL_ARGS = ['-id']
+        assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
+
+        # load the models & test set
+        id = args['-id']
+        tr, models = load_models_from_tr(id, model_name)
+        all_test_data_info = tr.load_test_set_from_archive()
+        
+        eval(models, all_test_data_info)
+
 
     elif args['-mode'] == 'use':
 

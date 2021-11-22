@@ -34,11 +34,13 @@ ___
 
 ### Arguments
 
-- *-mode*: Specifies the program's execution mode. Either train and evaluate one or mulitple models, or use a pre-trained model to get recommendations for new time series. Expected: *train* or *use*.
+- *-mode*: Specifies the program's execution mode. There exists two modes:
+    - `train`: Train and evaluate one or mulitple models, or
+    - `use`: Use a pre-trained model to get recommendations for new time series.
 
 Note: many parameters and strategies can be set from the configuration files stored in the Config/ repository.
 
-#### In *train* mode:
+#### *train* mode:
 
  | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | -models<sup> (\*)</sup> | 
  | ----------- | ----------- | ------- | ---------------------------------- |
@@ -57,11 +59,11 @@ Note: many parameters and strategies can be set from the configuration files sto
 - *-models*: Name of the models' descriptions files (without their .py extension) to instantiate, train and evaluate (files from the Training/ModelsDescription/ folder). Expected: one or multiple values separated by commas.
 - *-train_on_all_data* (optional): Whether or not train the models on ALL data after their evaluation is complete. If not specified, trains on all data after evaluation. Expected: *True* or *False*.
 
-#### In *eval* mode:
+#### *eval* mode:
 
 - *-id*: Identifier of the save containing the models to evaluate. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected: one identifier. Example: *0211_1723_53480*.
 
-#### In *use* mode:
+#### *use* mode:
 
 - *-id*: Identifier of the save containing the model to use. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected: one identifier. Example: *0211_1723_53480*.
 - *-model*: Name of the model to load and use. A model's name is the same as its description file. Expected: one model name. Example: *maxabsscaler_catboostclassifier*.

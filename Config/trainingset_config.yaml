@@ -13,11 +13,23 @@ RDM_SEED: 23
 # DATA_PROPERTIES: All properties that can be used to specify data transformations and manipulations 
 DATA_PROPERTIES:
   # balance: Specifies if the data should be balanced. Value can be one of: clusters, labels, null.
-  - balance: null
+  - balance: labels
   # usable_data_perc: Percentage of data to use for training (used mainly for T-Daub). Value must be within range ]0.0; 1.0].
   - usable_data_perc: 1.0
   # augment: Specifies if the data should be augmented. Value can be one of: True, False.
   - augment: False
+
+# BALANCING_STRATEGY: Name of the balancing strategy. Value can be one of: all_same, rmv_min_reduce_max.
+BALANCING_STRATEGY: rmv_min_reduce_max
+
+# BALANCING_STRAT2_MIN_THRESHOLD: Used only for balancing strategy n°2 (rmv_min_reduce_max). Minimum percentage of class 
+# attribution to keep the class.
+BALANCING_STRAT2_MIN_THRESHOLD: 0.05
+
+# BALANCING_STRAT2_MAX_THRESHOLD: Used only for balancing strategy n°2 (rmv_min_reduce_max). Maximum percentage of class 
+# attribution to not downsize the class.
+BALANCING_STRAT2_MAX_THRESHOLD: 0.20
+
 
 # Test & validation sets config: ------------------------------------------------------------------------
 

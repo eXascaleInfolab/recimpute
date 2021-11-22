@@ -57,7 +57,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     datasets = Dataset.instantiate_from_dir()
     print('Loaded data sets:', ''.join(['\n- %s' % d for d in datasets]))
 
-    # clustering
+    # init tools
     clusterer = ShapeBasedClustering()
 
     if any(isinstance(fe, KiviatFeaturesExtracter) for fe in features_extracters):
@@ -85,7 +85,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     trainer = ModelsTrainer(set, models)
     tr = trainer.train(train_on_all_data=train_on_all_data) 
 
-    print('=================== Cross-validation results (averaged) ===================')
+    print('\n\n=================== Cross-validation results (averaged) ===================')
     print(tr.results[tr.metrics_measured].to_markdown())
 
     return tr, set, models
@@ -98,13 +98,19 @@ def eval(models, all_test_data_info):
     y_test = all_test_data_info['Label']
 
     for model in models:
+        print(model)
+        print(type(model))
         used_tp, y_pred = model.predict(X_test, compute_proba=model.labels_info['type']=='monolabels', use_pipeline_prod=False)
         scores, cm = model.eval(y_test, y_pred, used_tp.classes_, plot_cm=True)
 
-        print('# %s' % model.name)
+        print('\n# %s' % model.name)
         pprint(scores, width=1)
         print(np.array_str(cm[1], precision=3, suppress_small=False))
-        cm[0].plot()
+
+        fig = cm[0]
+        fig.canvas.draw()
+        renderer = fig.canvas.renderer
+        fig.draw(renderer)
 
 def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
@@ -154,7 +160,9 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
     
     return recommendations
 
-def load_models_from_tr(id, model_names):
+def load_models_from_tr(id, model_names=None):
+    # loads all models if model_names is None
+    # otherwise loads the models which name is listed in model_names
     tr = TrainResults.load(id)
     single_model = False
     if type(model_names) == str:
@@ -162,9 +170,9 @@ def load_models_from_tr(id, model_names):
         model_names = [model_names]
     selected_models = []
     for model in tr.models:
-        if model.name in model_names or model_names is None:
+        if model_names is None or model.name in model_names:
             selected_models.append(model)
-    assert len(model_names) == len(selected_models) or model_names is None
+    assert model_names is None or len(model_names) == len(selected_models)
     return tr, selected_models[0] if single_model else selected_models
 
 def get_recommendations_filename(timeseries_filename):
@@ -181,7 +189,7 @@ if __name__ == '__main__':
     
     _models_list = [f.replace('.py', '') for f in os.listdir('Training/ModelsDescription') if f not in ['__pycache__', '_template.py']]
     _valid_args = {
-        '-mode': ['train', 'use'],
+        '-mode': ['train', 'eval', 'use'],
 
         # *train* args
         '-lbl': LABELERS.keys(),
@@ -259,7 +267,7 @@ if __name__ == '__main__':
 
         # load the models & test set
         id = args['-id']
-        tr, models = load_models_from_tr(id, model_name)
+        tr, models = load_models_from_tr(id)
         all_test_data_info = tr.load_test_set_from_archive()
         
         eval(models, all_test_data_info)

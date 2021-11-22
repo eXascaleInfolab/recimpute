@@ -32,7 +32,7 @@ class RecommendationModel:
         'classifier': {'metric': 'F1-Score', 'best_score_is': 'higher'},
         'regression': {'metric': 'Mean Squared Error', 'best_score_is': 'lower'},
     }
-    _PROPS_TO_NOT_PICKLE = ['best_cv_trained_pipeline', 'trained_pipeline_prod']
+    _PROPS_TO_NOT_PICKLE = ['best_cv_trained_pipeline', 'trained_pipeline_prod'] # these are handled separately
 
 
     # constructor
@@ -195,11 +195,11 @@ class RecommendationModel:
         if self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'higher':
             if self.best_training_score < current_score:
                 self.best_training_score = current_score
-                self.best_trained_pipeline = trained_pipeline
+                self.best_cv_trained_pipeline = trained_pipeline
         elif self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'lower':
             if self.best_training_score > current_score:
                 self.best_training_score = current_score
-                self.best_trained_pipeline = trained_pipeline
+                self.best_cv_trained_pipeline = trained_pipeline
         else: 
             raise Exception('Invalid value for variable: RecommendationModel.METRIC_FOR_SCORING["..."]["best_score_is"]: ' + 
                             self.METRIC_FOR_SCORING[self.type]['best_score_is'])
@@ -432,7 +432,8 @@ class RecommendationModel:
         # load its best_cv_trained_pipeline (using joblib)
         with archive.open(os.path.split(model_tp_filename)[-1], 'r') as model_tp_file:
             model_tp = j_load(model_tp_file)
-        model.best_cv_trained_pipeline = model_tp
+            model.best_cv_trained_pipeline = model_tp
+            assert model.best_cv_trained_pipeline is not None
 
         # load its trained_pipeline_prod (using joblib)
         try:

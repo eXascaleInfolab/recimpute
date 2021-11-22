@@ -78,7 +78,6 @@ class ModelsTrainer:
         Return:
         A TrainResults' instance containing the training results
         """
-        #warnings.filterwarnings('ignore', category=FitFailedWarning)
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
 
         train_results = TrainResults(models_to_train, self.training_set.get_labeler_properties()['type'])
@@ -88,8 +87,7 @@ class ModelsTrainer:
                 print('\nCross-validation split n°%i' % split_id)
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
-                print(X_train.dtype, X_val.dtype, y_train.dtype, y_val.dtype) # TODO tmp
-                print(X_train.shape, X_val.shape, y_train.shape, y_val.shape) # TODO tmp
+                print('X_train shape:', X_train.shape, ', X_val shape:', X_val.shape) # TODO tmp
                 print(np.unique(y_train), np.unique(y_val)) # TODO tmp
 
                 for model in models_to_train:
@@ -97,19 +95,21 @@ class ModelsTrainer:
                     # run gridsearch if necessary
                     if not model.are_params_set:
                         print('Starting gridsearch for model: %s.' % model)
-                        gs = RandomizedSearchCV(model.get_pipeline(),
-                                                model.get_params_ranges(),
-                                                cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
-                                                n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
-                                                scoring='f1_macro')
-                        gs.fit(all_data.to_numpy().astype('float32'), all_labels.to_numpy().astype('str'))
-                        model.set_params(gs.best_params_)
-                        print('Gridsearch done.')
+                        with Utils.catchtime('Gridsearch for model %s' % model):
+                            gs = RandomizedSearchCV(model.get_pipeline(),
+                                                    model.get_params_ranges(),
+                                                    cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
+                                                    n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
+                                                    scoring='f1_macro')
+                            gs.fit(all_data.to_numpy().astype('float32'), all_labels.to_numpy().astype('str'))
+                            model.set_params(gs.best_params_)
 
                     # training
-                    scores, cm = model.train_and_eval(X_train, y_train, X_val, y_val, 
-                                                      all_data.columns, self.training_set.get_labeler_properties(), labels_set,
-                                                      plot_cm=True)
+                    print('Training %s.' % model)
+                    with Utils.catchtime('Training model %s @ split %i' % (model, split_id)):
+                        scores, cm = model.train_and_eval(X_train, y_train, X_val, y_val, 
+                                                          all_data.columns, self.training_set.get_labeler_properties(), labels_set,
+                                                          plot_cm=True)
 
                     cm[0].savefig('Training/Results/Plots/%s: %i' % (model, split_id)) # TODO tmp
 
@@ -122,7 +122,8 @@ class ModelsTrainer:
                 # Warning this model should not be used for any kind of evaluation but only for production use
                 _, X_all, y_all = self.training_set.get_all_data(training_set_params)
                 for model in models_to_train:
-                    model.trained_pipeline_prod = model.get_pipeline().fit(X_all, y_all)
+                    with Utils.catchtime('Training model %s on all data' % model):
+                        model.trained_pipeline_prod = model.get_pipeline().fit(X_all, y_all)
 
         finally:
             # save results to disk

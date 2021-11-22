@@ -16,6 +16,7 @@ import os
 from os.path import normpath as normp
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix, ConfusionMatrixDisplay
 from sklearn.utils.multiclass import unique_labels
+from time import perf_counter
 import warnings
 import yaml
 
@@ -152,3 +153,25 @@ class Utils:
         if verbose >= 2:
             plt.show()
         return fig, axes, cm
+
+    class catchtime(object):
+        def __init__(self, title):
+            self.title = title
+
+        def __enter__(self):
+            self.start = perf_counter()
+            return self
+
+        def __exit__(self, type, value, traceback):
+            time = {'seconds': perf_counter() - self.start, 'minutes': None, 'hours': None, 'days': None}
+            if time['seconds'] > 60 * 10:
+                time['minutes'] = time['seconds'] / 60
+                if time['minutes'] > 60 * 10:
+                    time['hours'] = time['minutes'] / 60
+                    if time['hours'] > 24 * 3:
+                        time['days'] = time['hours'] / 24
+            for k, v in list(time.items())[::-1]:
+                if v is not None:
+                    display = v, k
+                    break
+            print('%s: %.2f %s' % (self.title, *display))

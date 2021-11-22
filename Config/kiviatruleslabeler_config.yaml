@@ -11,8 +11,7 @@
 LBL_PROPERTIES:
   # type: Specifies if the labels are mono or multi labels. Value can be one of: monolabels (multilabels are not 
   # supported yet with Kiviat rules labeler)
-  - type:
-    - monolabels
+  - type: monolabels
 
 ALGORITHMS_LIST:
   - cdrec

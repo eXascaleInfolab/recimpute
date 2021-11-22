@@ -13,6 +13,7 @@ from os.path import normpath as normp
 import pandas as pd
 import random as rdm
 from sklearn.model_selection import train_test_split as sklearn_train_test_split
+import time
 import warnings
 
 from Datasets.Dataset import Dataset
@@ -58,17 +59,20 @@ class TrainingSet:
         
         # make sure clustering has been done (and do it otherwise)
         print('Running clustering (if not done already).')
-        updated_datasets, clusters_created = self.__init_clustering(datasets, force_generation)
-        print('Clustering done.')
+        with Utils.catchtime('Clustering'):
+            updated_datasets, clusters_created = self.__init_clustering(datasets, force_generation)
 
         # reserve some data for testing
-        self.test_set_level, self.test_set_ids = self.__init_test_set(datasets, 
-                                                                      TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
+        with Utils.catchtime('Reserving a test set'):
+            self.test_set_level, self.test_set_ids = self.__init_test_set(
+                datasets, 
+                TrainingSet.CONF['TEST_SET_RESERVATION_STRAT']
+            )
 
         # make sure labeling & features extraction has been done (and do it otherwise)
         print('Running labeling & features extraction (if not done already).')
-        updated_datasets = self.__init_labeling_and_fe(updated_datasets, force_generation | clusters_created)
-        print('Labeling & features extraction done.')
+        with Utils.catchtime('Labeling & features extraction'):
+            updated_datasets = self.__init_labeling_and_fe(updated_datasets, force_generation | clusters_created)
         self.datasets = updated_datasets
 
     def __init_test_set(self, datasets, strategy):
@@ -174,22 +178,6 @@ class TrainingSet:
 
     # public methods
 
-    def get_test_set(self):
-        """
-        Returns the test set.
-
-        Keyword arguments: -
-        
-        Return:
-        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: Time Series ID.
-        2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
-        3. list of all unique labels
-        """
-        all_data_info, labels_set = self._load(data_to_load='test')
-        data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
-        labels = all_data_info['Label']
-        return data, labels, labels_set
-
     def yield_splitted_train_val(self, data_properties, nb_cv_splits):
         """
         Yields splitted train and validation sets.
@@ -207,10 +195,15 @@ class TrainingSet:
         6. Numpy array of validation entries
         7. Numpy array of validation entries' labels
         """
-        all_data_info, labels_set = self._load(data_to_load='train')
+        with Utils.catchtime('Loading train data'):
+            all_data_info, labels_set = self._load(data_to_load='train')
         # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         
-        all_data_info = self._prepare_data_set(all_data_info, data_properties)
+        with Utils.catchtime('Preparing train data'):
+            all_data_info = self._prepare_data_set(all_data_info, data_properties)
+
+        print('Info about all data:')
+        all_data_info.info()
 
         # init probability distribution for data splitting
         probability_distribution = np.full(all_data_info['Cluster ID'].nunique(), 1 / all_data_info['Cluster ID'].nunique())
@@ -224,6 +217,8 @@ class TrainingSet:
             labels = all_data_info['Label']
 
             # split train/val sets
+            assert all_data_info.shape[0] == data.shape[0] == data.loc[train_indices, :][:].shape[0] + data.loc[test_indices, :][:].shape[0]
+
             X_train = data.loc[train_indices, :][:].to_numpy().astype('float32')
             y_train = labels.loc[train_indices].to_numpy().astype('str')
             X_val = data.loc[test_indices, :][:].to_numpy().astype('float32')
@@ -264,6 +259,20 @@ class TrainingSet:
 
         return labels_set, X_all, y_all
 
+    def save_test_set_to_disk(self, dir):
+        """
+        Saves the test set to disk.
+        
+        Keyword arguments: 
+        dir -- directory path pointing where the file should be saved.
+        
+        Return:
+        Filename of the pickle file.
+        """
+        all_test_data_info, _ = self._get_test_set()
+        test_set_filename = normp(dir + '/' + TrainingSet.TEST_SET_FILENAME)
+        all_test_data_info.to_pickle(test_set_filename)
+        return test_set_filename
 
     def is_in_test_set(self, dataset):
         """
@@ -324,6 +333,7 @@ class TrainingSet:
         labels_set = None
         all_complete_datasets = []
         all_train_test_complete_datasets = []
+
         for dataset in self.datasets:
 
             # load labels - dataset_labels: df w/ 2 cols: Time Series ID and Label
@@ -385,6 +395,8 @@ class TrainingSet:
         
         assert labels_set is not None
         df_to_return = all_train_test_complete_datasets_df if data_to_load == 'all' else all_complete_datasets_df
+        df_to_return.index = list(range(0, df_to_return.shape[0]))
+        df_to_return.index.name = 'New Time Series ID'
         return df_to_return, labels_set
 
     def _prepare_data_set(self, all_data_info, data_properties):
@@ -406,11 +418,29 @@ class TrainingSet:
 
         # balance the data set if required
         if data_properties['balance'] is not None:
-            all_data_info = self._balance_data_set(all_data_info, data_properties['balance'])
+            all_data_info = self._balance_data_set(all_data_info, self.CONF['BALANCING_STRATEGY'], data_properties['balance'])
 
         return all_data_info
+
+    def _get_test_set(self):
+        """
+        Returns the test set.
+
+        Keyword arguments: -
+        
+        Return:
+        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: Time Series ID.
+        2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
+        3. list of all unique labels
+        """
+        all_data_info, labels_set = self._load(data_to_load='test')
+        if self.CONF['DATA_PROPERTIES']['balance'] is not None:
+            all_data_info = self._balance_data_set(all_data_info, 
+                                                   self.CONF['BALANCING_STRATEGY'], 
+                                                   self.CONF['DATA_PROPERTIES']['balance'])
+        return all_data_info, labels_set
     
-    def _balance_data_set(self, all_data_info, according_to):
+    def _balance_data_set(self, all_data_info, strategy, according_to):
         """
         Balances the data set according to the specified column values (clusters or labels).
 
@@ -418,11 +448,14 @@ class TrainingSet:
         all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
                          time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
                          Feature 1's name, Feature 2's name, ...
+        strategy -- name of the balancing strategy. Value can be one of: all_same, rmv_min_reduce_max. If 'all_same': all 
+                    classes have the same number of elements. If 'rmv_min_reduce_max': the less-populated classes are removed
+                    and the most-populated classes are downsized.
         according_to -- string identifying the column according to which the data set should be balanced
         
         Return:
         Balanced Pandas DataFrame. Columns: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
-        """    
+        """
         column_name = None
         if according_to == 'clusters':
             column_name = 'Cluster ID'
@@ -430,15 +463,37 @@ class TrainingSet:
             column_name = 'Label'
         else:
             raise Exception('Invalid argument "according_to" for balancing data set: ', according_to)
+        print('Before balancing the training/validation set:\n', all_data_info[column_name].value_counts())
 
         balanced_df = pd.DataFrame(columns=all_data_info.columns)
-        # get number of time series in smallest cluster or less-attributed class (depending on attr. "according_to")
-        n = all_data_info[column_name].value_counts().min()
-        # for each id in the reference column
-        for col_id in all_data_info[column_name].unique():
-            # sample n random time series with this id
-            rows = all_data_info[all_data_info[column_name] == col_id].sample(n)
-            balanced_df = balanced_df.append(rows)
+        if strategy == 'all_same':
+            # get number of time series in smallest cluster or less-attributed class (depending on attr. "according_to")
+            n = all_data_info[column_name].value_counts().min()
+            # for each id in the reference column
+            for col_id in all_data_info[column_name].unique():
+                # sample n random time series with this id
+                rows = all_data_info[all_data_info[column_name] == col_id].sample(n)
+                balanced_df = balanced_df.append(rows)
+        elif strategy == 'rmv_min_reduce_max':
+            value_counts = all_data_info[column_name].value_counts()
+            norm_value_counts = value_counts / sum(value_counts)
+            # identify classes to remove & reduce/downsize
+            elems_to_rmv = norm_value_counts.index[norm_value_counts < self.CONF['BALANCING_STRAT2_MIN_THRESHOLD']].tolist()
+            elems_to_reduce = norm_value_counts.index[norm_value_counts > self.CONF['BALANCING_STRAT2_MAX_THRESHOLD']].tolist()
+            # get maximum number of time series a class can contain
+            max_nb_ts = sorted(value_counts.loc[~value_counts.index.isin(elems_to_rmv + elems_to_reduce)])[-1]
+            # for each id in the reference column
+            for col_id in all_data_info[column_name].unique():
+                if col_id in elems_to_rmv: # ignore classes listed in elems_to_rmv
+                    continue
+                # select the rows of this class
+                rows = all_data_info[all_data_info[column_name] == col_id]
+                if col_id in elems_to_reduce: # sample from this class to only keep the max number of elements a class can contain
+                    rows = rows.sample(max_nb_ts)
+                balanced_df = balanced_df.append(rows)
+        else:
+            raise Exception('Invalid balancing strategy.')
+        print('After balancing the training/validation set:\n', balanced_df[column_name].value_counts())
         return balanced_df
 
     def _reduce_data_set(self, all_data_info, usable_data_perc):
@@ -476,14 +531,9 @@ class TrainingSet:
         3. List containing the indices of the clusters used for training.
         """
         def _get_ts_ids_from_cids(all_data_info, train_cids, test_cids):
-            train_indices, test_indices = [], []
-            for tid, row in all_data_info.iterrows():
-                if row['Cluster ID'] in train_cids:
-                    train_indices.append(tid)
-                elif row['Cluster ID'] in test_cids:
-                    test_indices.append(tid)
-                else: 
-                    raise Exception('Cluster ID is neither in the train nor in the validation/test set.')
+            is_in_train_mask = all_data_info['Cluster ID'].isin(train_cids)
+            train_indices = all_data_info.loc[is_in_train_mask].index.tolist()
+            test_indices = all_data_info.loc[~is_in_train_mask].index.tolist()
             return train_indices, test_indices
         
         if self.CONF['USE_CUSTOM_SPLIT_METHOD']:
@@ -519,7 +569,11 @@ class TrainingSet:
                 stratify=clusters_label
             )
             # transform clusters IDs to time series IDs
+            assert len(np.unique(np.array(all_data_info.index))) == all_data_info.shape[0] # time series IDs are unique
+            assert len(list(set(train_cids) & set(test_cids))) == 0 # intersection of train/test cids is empty
             train_indices, test_indices = _get_ts_ids_from_cids(all_data_info, train_cids, test_cids)
+            assert len(list(set(train_indices) & set(test_indices))) == 0 # intersection of train/test tids is empty
+            assert all_data_info.shape[0] == len(train_indices) + len(test_indices) # each time series has been assigned
             return train_indices, test_indices, train_cids
 
     def _update_prob_distrib(self, all_data_info, probability_distribution, train_ids):
@@ -580,18 +634,3 @@ class TrainingSet:
             return X_augmented, y_augmented
 
         return X, y
-
-    def save_test_set_to_disk(self, dir):
-        """
-        Saves the test set to disk.
-        
-        Keyword arguments: 
-        dir -- directory path pointing where the file should be saved.
-        
-        Return:
-        Filename of the pickle file.
-        """
-        all_test_data_info, _ = self._load('test')
-        test_set_filename = normp(dir + '/' + TrainingSet.TEST_SET_FILENAME)
-        all_test_data_info.to_pickle(test_set_filename)
-        return test_set_filename

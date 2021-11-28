@@ -60,7 +60,7 @@ USE_LIST:
   - drift10.zip                                                                                        # 100x1000
   - Earthquakes.zip                                                                                    # 461x512
   - ECG200.zip                                                                                         # 200x96
-  # - ECG5000.zip                                                                                        # 5000x140
+  - ECG5000.zip                                                                                        # 5000x140
   - ECGFiveDays.zip                                                                                    # 884x136
   - electricity.zip                                                                                    # 20x5000
   - EOGHorizontalSignal.zip                                                                            # 724x1250
@@ -103,7 +103,7 @@ USE_LIST:
   - MixedShapesSmallTrain.zip                                                                          # 2525x1024
   - MoteStrain.zip                                                                                     # 1272x84
   - NonInvasiveFetalECGThorax1.zip                                                                     # 3765x750
-  # - NonInvasiveFetalECGThorax2.zip                                                                     # 3765x750
+  - NonInvasiveFetalECGThorax2.zip                                                                     # 3765x750
   - OliveOil.zip                                                                                       # 60x570
   - OSULeaf.zip                                                                                        # 442x427
   - parking.zip                                                                                        # 12x1312

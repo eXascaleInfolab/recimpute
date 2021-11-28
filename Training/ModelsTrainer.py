@@ -58,13 +58,13 @@ class ModelsTrainer:
         nb_best_models = ModelsTrainer.CONF['TDAUB_NB_BEST_MODELS']
         models_to_train = self._t_daub(t_daub_nb_runs, nb_best_models) if t_daub_nb_runs > 0 else self.models
         
-        train_results = self._train(models_to_train, train_on_all_data=train_on_all_data)
+        train_results = self._train(models_to_train, train_on_all_data=train_on_all_data, gridsearch=self.CONF['USE_GRIDSEARCH'])
         return train_results
         
     
     # private methods
 
-    def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True):
+    def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True, gridsearch=True):
         """
         Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
 
@@ -74,6 +74,8 @@ class ModelsTrainer:
                              otherwise (default: False)
         training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
         save_results -- True if the results should be saved to disk, False otherwise (default: True)
+        gridsearch -- True if gridsearch should be used to find optimal classifiers' parameter values, 
+                      False if default parameter values should be used (default: True)
 
         Return:
         A TrainResults' instance containing the training results
@@ -84,16 +86,17 @@ class ModelsTrainer:
         try:
             for split_id, yielded in enumerate(self.training_set.yield_splitted_train_val(training_set_params, 
                                                                                           ModelsTrainer.CONF['NB_CV_SPLITS'])):
-                print('\nCross-validation split n°%i' % split_id)
+                print('\nCross-validation split n°%i' % (split_id+1))
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
                 print('X_train shape:', X_train.shape, ', X_val shape:', X_val.shape) # TODO tmp
-                print(np.unique(y_train), np.unique(y_val)) # TODO tmp
+                print(np.asarray(np.unique(y_train, return_counts=True)).T) # TODO tmp
+                print(np.asarray(np.unique(y_val, return_counts=True)).T) # TODO tmp
 
                 for model in models_to_train:
 
                     # run gridsearch if necessary
-                    if not model.are_params_set:
+                    if not model.are_params_set and gridsearch:
                         print('Starting gridsearch for model: %s.' % model)
                         with Utils.catchtime('Gridsearch for model %s' % model):
                             gs = RandomizedSearchCV(model.get_pipeline(),

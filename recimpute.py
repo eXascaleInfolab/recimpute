@@ -70,7 +70,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
                         if true_labeler is not None else {}
 
     # create a training set
-    set = TrainingSet(
+    training_set = TrainingSet(
         datasets, 
         clusterer, 
         features_extracters, 
@@ -82,13 +82,13 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
 
     # training & cross-validation evaluation
-    trainer = ModelsTrainer(set, models)
+    trainer = ModelsTrainer(training_set, models)
     tr = trainer.train(train_on_all_data=train_on_all_data) 
 
     print('\n\n=================== Cross-validation results (averaged) ===================')
     print(tr.results[tr.metrics_measured].to_markdown())
 
-    return tr, set, models
+    return tr, training_set, models
 
 def eval(models, all_test_data_info):
     
@@ -99,7 +99,6 @@ def eval(models, all_test_data_info):
 
     for model in models:
         print(model)
-        print(type(model))
         used_tp, y_pred = model.predict(X_test, compute_proba=model.labels_info['type']=='monolabels', use_pipeline_prod=False)
         scores, cm = model.eval(y_test, y_pred, used_tp.classes_, plot_cm=True)
 

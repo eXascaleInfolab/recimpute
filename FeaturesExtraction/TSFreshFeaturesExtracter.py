@@ -7,6 +7,7 @@ TSFreshFeaturesExtracter.py
 """
 
 import itertools
+import numpy as np
 import os
 from os.path import normpath as normp
 import pandas as pd
@@ -49,6 +50,7 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         """
         timeseries = dataset.load_timeseries(transpose=False) # /!\ transpose False
 
+        print('Running TSFresh on dataset %s.' % dataset.name)
         features_df = self.extract_from_timeseries(timeseries, dataset.nb_timeseries, dataset.timeseries_length)
         
         # save features as CSV
@@ -79,7 +81,7 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         tsfresh_df['Time Series ID'] = list(itertools.chain.from_iterable(timeseries_ids))
         times = [timeseries.index.tolist() for _ in range(nb_timeseries)]
         tsfresh_df['Time'] = list(itertools.chain.from_iterable(times))
-        tsfresh_df['Values'] = timeseries.stack().sort_values().tolist()
+        tsfresh_df['Values'] = np.array([timeseries[col].tolist() for col in timeseries.columns]).flatten()
         
         # extract features for the data set's time series
         features_df = extract_features(tsfresh_df, 

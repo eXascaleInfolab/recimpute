@@ -53,6 +53,8 @@ class TrainingSet:
         self.true_labeler = true_labeler
         self.true_labeler_properties = true_labeler_properties
         self.features_extracters = features_extracters # list
+        
+        self.labels_set = None
 
         rdm.seed(TrainingSet.CONF['RDM_SEED'])
         np.random.seed(TrainingSet.CONF['RDM_SEED'])
@@ -197,6 +199,8 @@ class TrainingSet:
         """
         with Utils.catchtime('Loading train data'):
             all_data_info, labels_set = self._load(data_to_load='train')
+        
+        self.labels_set = labels_set
         # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         
         with Utils.catchtime('Preparing train data'):
@@ -228,7 +232,7 @@ class TrainingSet:
             if data_properties['augment']:
                 X_train, y_train = self._augment_data(X_train, y_train)
 
-            yield data, labels, labels_set, X_train, y_train, X_val, y_val
+            yield data, labels, self.labels_set, X_train, y_train, X_val, y_val
 
     def get_all_data(self, data_properties):
         """
@@ -243,6 +247,7 @@ class TrainingSet:
         3. Numpy array of entries' labels
         """
         all_data_info, labels_set = self._load(data_to_load='all')
+        self.labels_set = labels_set
         # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         
         all_data_info = self._prepare_data_set(all_data_info, data_properties)
@@ -257,7 +262,7 @@ class TrainingSet:
         if data_properties['augment']:
             X_all, y_all = self._augment_data(X_all, y_all)
 
-        return labels_set, X_all, y_all
+        return self.labels_set, X_all, y_all
 
     def save_test_set_to_disk(self, dir):
         """
@@ -374,7 +379,8 @@ class TrainingSet:
                     else:
                         continue # the whole data set is in the test set but we want the train & val sets: skip this data set
                 else:
-                    raise Exception('Test set reservation strategy not implemented: ', TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
+                    raise Exception('Test set reservation strategy not implemented: ', 
+                                    TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
 
             all_complete_datasets.append(complete_dataset) # this list contains either train & val sets or test set
         
@@ -388,13 +394,16 @@ class TrainingSet:
         all_train_test_complete_datasets_df = all_train_test_complete_datasets_df.dropna(axis=1)
         nb_dropped_cols = all_train_test_complete_datasets_df.shape[1] - nb_cols
         if nb_dropped_cols > nb_cols / 10:
-            warnings.warn("Warning: %i/%i feature columns were dropped because they contained NaN values!" % (nb_dropped_cols, nb_cols))
+            warnings.warn("Warning: %i/%i feature columns were dropped because they contained NaN values!" % (nb_dropped_cols, 
+                                                                                                              nb_cols))
         
         # only keep the columns with no NaN in either train, val & test sets
         all_complete_datasets_df = all_complete_datasets_df[all_train_test_complete_datasets_df.columns]
         
         assert labels_set is not None
         df_to_return = all_train_test_complete_datasets_df if data_to_load == 'all' else all_complete_datasets_df
+
+        # create new time series ID (tid must be unique across ALL data sets)
         df_to_return.index = list(range(0, df_to_return.shape[0]))
         df_to_return.index.name = 'New Time Series ID'
         return df_to_return, labels_set
@@ -429,15 +438,16 @@ class TrainingSet:
         Keyword arguments: -
         
         Return:
-        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: Time Series ID.
-        2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
-        3. list of all unique labels
+        1. Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
+           time series (each row is for one time series) in the test set. Columns: Time Series ID (index), Cluster ID, Label, 
+           Feature 1's name, Feature 2's name, ...
+        2. list of all unique labels
         """
-        all_data_info, labels_set = self._load(data_to_load='test')
-        if self.CONF['DATA_PROPERTIES']['balance'] is not None:
-            all_data_info = self._balance_data_set(all_data_info, 
-                                                   self.CONF['BALANCING_STRATEGY'], 
-                                                   self.CONF['DATA_PROPERTIES']['balance'])
+        tmp_all_data_info, test_labels_set = self._load(data_to_load='test')
+        # keep entries labeled by classes that were present in the training set
+        # this is necessary since some classes may have been removed by some balancing strategies
+        labels_set = self.labels_set if self.labels_set is not None else test_labels_set
+        all_data_info = tmp_all_data_info.loc[tmp_all_data_info['Label'].isin(labels_set)]
         return all_data_info, labels_set
     
     def _balance_data_set(self, all_data_info, strategy, according_to):
@@ -491,6 +501,7 @@ class TrainingSet:
                 if col_id in elems_to_reduce: # sample from this class to only keep the max number of elements a class can contain
                     rows = rows.sample(max_nb_ts)
                 balanced_df = balanced_df.append(rows)
+            self.labels_set = list(set(self.labels_set) - set(elems_to_rmv))
         else:
             raise Exception('Invalid balancing strategy.')
         print('After balancing the training/validation set:\n', balanced_df[column_name].value_counts())

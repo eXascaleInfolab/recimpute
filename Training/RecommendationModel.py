@@ -183,7 +183,7 @@ class RecommendationModel:
 
         # train model
         start_time = time.time()
-        trained_pipeline = self.get_pipeline().fit(X_train, y_train)
+        trained_pipeline = self.get_pipeline(use_best_params_if_set=self.are_params_set).fit(X_train, y_train)
         end_time = time.time()
         
         # evaluate the model

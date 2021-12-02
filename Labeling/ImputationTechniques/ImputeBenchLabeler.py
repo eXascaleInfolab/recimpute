@@ -294,7 +294,7 @@ class ImputeBenchLabeler(AbstractLabeler):
             try:
                 is_on_windows = os.name == 'nt'
                 command = [('wsl ' if is_on_windows else '') + 'mono', 'TestingFramework.exe', 
-                           alg_algx_cmd, '-d', dataset_name, '-scen', scenario, 
+                           *alg_algx_cmd, '-d', dataset_name, '-scen', scenario, 
                            '-nort']
                 if not plots:
                     command.append('-novis')

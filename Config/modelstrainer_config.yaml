@@ -13,7 +13,7 @@ NB_CV_SPLITS: 3
 # GridSearch config: ------------------------------------------------------------------------
 
 # USE_GRIDSEARCH: Whether or not use gridsearch to find optimal classifiers' parameters values or use the default values.
-USE_GRIDSEARCH: False # TODO
+USE_GRIDSEARCH: True # TODO
 
 # GS_NB_CV_SPLITS: Number of gridsearch cross-validation splits to perform while training
 GS_NB_CV_SPLITS: 3

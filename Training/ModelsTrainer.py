@@ -103,7 +103,8 @@ class ModelsTrainer:
                                                     model.get_params_ranges(),
                                                     cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
                                                     n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
-                                                    scoring='f1_macro')
+                                                    scoring='f1_macro',
+                                                    verbose=1)
                             gs.fit(all_data.to_numpy().astype('float32'), all_labels.to_numpy().astype('str'))
                             model.set_params(gs.best_params_)
 

@@ -35,6 +35,10 @@ model_info = {
         'None': None, # CHANGE THIS
     },
 
+    ## Dictionary of the default parameter names mapped to their values. Can be set to None if the default parameters should be
+    ## the model's default parameters (e.g. those accessed in Scikit-Learn's models with the get_params() method).
+    'default_params': None,
+
     # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model. The slowest, the less
     # gridsearch iterations will be done.
     'training_speed_factor': None, # CHANGE THIS

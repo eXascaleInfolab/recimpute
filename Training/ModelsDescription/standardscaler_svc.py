@@ -38,6 +38,10 @@ model_info = {
         'SVC__tol': [1e-4, 1e-3],
     },
 
+    ## Dictionary of the default parameter names mapped to their values. Can be set to None if the default parameters should be
+    ## the model's default parameters.
+    'default_params': None,
+
     # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model.
     'training_speed_factor': 3,
 

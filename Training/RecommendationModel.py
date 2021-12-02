@@ -37,7 +37,7 @@ class RecommendationModel:
 
     # constructor
     def __init__(self, name, type, steps, params_ranges, training_speed_factor, 
-                 multiclass_strategy=None, bagging_strategy=None, description_filename=None):
+                 multiclass_strategy=None, bagging_strategy=None, description_filename=None, default_params=None):
         """
         Initializes a RecommendationModel object.
 
@@ -51,6 +51,8 @@ class RecommendationModel:
         multiclass_strategy -- Class of a multiclass strategy (default: None)
         bagging_strategy -- Class of a bagging strategy (default: None)
         description_filename -- filename of this model's description file (default: None)
+        default_params -- dict of default parameter names mapped to their values. If None and default parameters should be used, the 
+                          model's default parameters will be used (default: None)
         """
         self.name = name
         self.type = type
@@ -67,6 +69,7 @@ class RecommendationModel:
         self.multiclass_strategy = multiclass_strategy
         self.bagging_strategy = bagging_strategy
         self.description_filename = description_filename
+        self.default_params = default_params
 
         self.best_cv_trained_pipeline = None
         self.trained_pipeline_prod = None
@@ -102,6 +105,8 @@ class RecommendationModel:
             
         if self.are_params_set and use_best_params_if_set:
             pipeline.set_params(**self.best_params)
+        elif self.default_params is not None:
+            pipeline.set_params(**self.default_params)
 
         return pipeline
 
@@ -399,14 +404,16 @@ class RecommendationModel:
 
             # init model
             model = RecommendationModel(
-                module.model_info['name'], 
-                module.model_info['type'], 
-                module.model_info['steps'], 
-                module.model_info['params_ranges'], 
-                module.model_info['training_speed_factor'], 
-                module.model_info['multiclass_strategy'], 
-                module.model_info['bagging_strategy'],
-                model_description_fname,
+                name = module.model_info['name'], 
+                type = module.model_info['type'], 
+                steps = module.model_info['steps'], 
+                params_ranges = module.model_info['params_ranges'], 
+                training_speed_factor = module.model_info['training_speed_factor'], 
+
+                multiclass_strategy = module.model_info['multiclass_strategy'], 
+                bagging_strategy = module.model_info['bagging_strategy'],
+                description_filename = model_description_fname,
+                default_params = module.model_info['default_params'],
             )
             
             models.append(model)

@@ -138,6 +138,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         clusters_labels_dict = clusters_labels_df.set_index('Cluster ID').to_dict()['Label']
         # propagate clusters' label to their time series
         timeseries_labels = []
+
         for _, row in dataset.load_cassignment().iterrows():
             tid = row['Time Series ID']
             cid = row['Cluster ID']
@@ -226,8 +227,9 @@ class ImputeBenchLabeler(AbstractLabeler):
                            else pd.concat([cluster.iloc[0].to_frame(), all_timeseries])
 
         # call benchmark on the cluster's time series
+        alg_algx_cmd = self._get_benchmark_alg_cmd(ImputeBenchLabeler.CONF['ALGORITHMS_LIST'])
         benchmark_results, _ = self._run_benchmark(sequences_to_use.T, 
-                                                   algorithms=ImputeBenchLabeler.CONF['ALGORITHMS_LIST'],
+                                                   alg_algx_cmd=alg_algx_cmd,
                                                    scenario=ImputeBenchLabeler.CONF['BENCHMARK_SCENARIO'], 
                                                    errors=ImputeBenchLabeler.CONF['BENCHMARK_ERRORS'],
                                                    id=cluster_id,
@@ -236,15 +238,31 @@ class ImputeBenchLabeler(AbstractLabeler):
 
         return benchmark_results.to_dict()
 
-    def _run_benchmark(self, timeseries, algorithms, scenario, errors, id, plots=False, delete_results=True):
+    def _get_benchmark_alg_cmd(self, algorithms):
         """
-        Runs the ImputeBench benchmark on given time series with specified algorithms and scenario. 
+        Returns a string containing -alg followed by the algorithms names in the right format to be included as is in
+        the command to run the benchmark.
+        
+        Keyword arguments:
+        algorithms -- string of the algorithm's name to run (or "all" to run all algorithms) or list of strings
+                      to specify multiple algorithms' names to run
+
+        Return:
+        String containing -alg followed by the algorithms names.
+        """
+        # transform arguments to command line compatible arguments
+        if isinstance(algorithms, list):
+            algorithms = ','.join(algorithms)
+        return '-alg %s' % algorithms
+
+    def _run_benchmark(self, timeseries, alg_algx_cmd, scenario, errors, id, plots=False, delete_results=True):
+        """
+        Runs the ImputeBench benchmark on given time series and scenario. 
         If on Windows, wsl must be installed.
         
         Keyword arguments:
         timeseries -- DataFrame containing the time series (each column is a time series)
-        algorithms -- string of the algorithm's name to run (or "all" to run all algorithms) or list of strings
-                      to specify multiple algorithms' names to run
+        alg_algx_cmd -- string containing -alg or -algx and its values (e.g. "-algx svdimp 4", or "-alg all")
         scenario -- string of the scenario's name to run - ONLY "miss_perc" can be used as of now
         errors -- list of string for the errors' names to get in the returned DataFrame
         id -- custom id to incorporate in the temporary files/folders names
@@ -254,10 +272,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         Return:
         1. DataFrame containing the different scores. Multi index: "algorithms" & "scenario".
         2. Temporary file/folders name used for the benchmark
-        """    
-        # transform arguments to command line compatible arguments
-        if isinstance(algorithms, list):
-            algorithms = ','.join(algorithms)
+        """ 
             
         if ',' in scenario:
             raise Exception('Only one scenario can be used at a time.')
@@ -279,7 +294,7 @@ class ImputeBenchLabeler(AbstractLabeler):
             try:
                 is_on_windows = os.name == 'nt'
                 command = [('wsl ' if is_on_windows else '') + 'mono', 'TestingFramework.exe', 
-                           '-alg', algorithms, '-d', dataset_name, '-scen', scenario, 
+                           alg_algx_cmd, '-d', dataset_name, '-scen', scenario, 
                            '-nort']
                 if not plots:
                     command.append('-novis')
@@ -459,12 +474,12 @@ class ImputeBenchLabeler(AbstractLabeler):
 
     def _get_highest_bench_score(self, scores, score_to_measure, algos_to_exclude):
         """
-        Returns the best algorithm name and its error (score) from the benchmark results.
+        Returns the best algorithm name and its error from the benchmark results.
         
         Keyword arguments:
         scores -- Pandas DataFrame containing the benchmark's scores
         score_to_measure -- name of the score to measure
-        algos_to_exclude -- list of algorithms names that shouldn't be returned (default [])
+        algos_to_exclude -- list of algorithms names that shouldn't be returned
         
         Return:
         1. name of the algorithm that gave the lowest error on the benchmark

@@ -34,8 +34,12 @@ model_info = {
         'RandomForestClassifier__max_depth': [5, 8, 15, None],
         'RandomForestClassifier__min_samples_split': [2, 5, 10, 15],
         'RandomForestClassifier__min_samples_leaf': [1, 2, 5, 10],
-        'RandomForestClassifier__n_jobs': [-1],
+        'RandomForestClassifier__n_jobs': [2],
     },
+
+    ## Dictionary of the default parameter names mapped to their values. Can be set to None if the default parameters should be
+    ## the model's default parameters.
+    'default_params': None,
 
     # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model.
     'training_speed_factor': 2,

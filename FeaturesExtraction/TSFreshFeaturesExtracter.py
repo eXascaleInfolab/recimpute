@@ -87,12 +87,9 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         features_df = extract_features(tsfresh_df, 
                                        column_id='Time Series ID', 
                                        column_sort='Time', n_jobs=os.cpu_count())
-
-        # remove columns that only have 0s
-        features_df = features_df.T[features_df.any()].T
         
         # tsfresh imputation: remove NaNs, impute some missing values
-        features_df = impute(features_df)
+        # features_df = impute(features_df) # this seems to hurt the performances
         
         features_df['Time Series ID'] = list(range(0, nb_timeseries))
         return features_df
@@ -125,6 +122,10 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         # load clusters features
         features_filename = self._get_features_filename(dataset.name)
         features_df = pd.read_csv(features_filename)
+
+        # remove columns that only have 0s
+        # features_df = features_df.T[features_df.any()].T # probably not needed (and possibly not a good idea)
+
         return features_df
 
     

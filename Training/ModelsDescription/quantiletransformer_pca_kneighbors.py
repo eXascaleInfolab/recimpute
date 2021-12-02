@@ -2,53 +2,46 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-normalizer_randomforest.py
+kneighbors.py
 @author: @chacungu
 """
 
 # Please see the ./_template.py file if you wish to add your own model description.
 
-# Description of a model made of a Scikit-Learn' Normalizer and a Scikit-Learn' Random Forest.
+# Description of a model made of a Scikit-Learn' k-Neighbors classifier.
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import Normalizer
+from sklearn.decomposition import PCA
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import QuantileTransformer
 
 model_info = {
     
     # ---------------------------------------------------------------
     # MANDATORY FIELDS:
 
-    'name': 'normalizer_randomforest',
+    'name': 'quantiletransformer_pca_kneighbors',
     'type': 'classifier',
 
     ## List of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they are chained, 
     ## with the last object an estimator. Transform should be a class (not an instance!). 
     'steps': [
-        ('Normalizer', Normalizer),
-        ('RandomForestClassifier', RandomForestClassifier),
+        ('QuantileTransformer', QuantileTransformer),
+        #('PCA', PCA),
+        ('KNeighborsClassifier', KNeighborsClassifier),
     ],
 
     ## Dictionary defining the ranges of possible values of each step's parameters.
     'params_ranges': {
-        'Normalizer__norm': ['l1', 'l2'],
+        #'PCA__n_components': ['mle'],
 
-        'RandomForestClassifier__n_estimators': [10, 50, 200, 500, 1000],
-        'RandomForestClassifier__max_depth': [5, 8, 15, None],
-        'RandomForestClassifier__min_samples_split': [2, 5, 10, 15],
-        'RandomForestClassifier__min_samples_leaf': [1, 2, 5, 10],
-        'RandomForestClassifier__n_jobs': [2],
+        'KNeighborsClassifier__n_neighbors': [1, 3, 5, 10],
+        'KNeighborsClassifier__weights': ['uniform', 'distance'],
+        'KNeighborsClassifier__n_jobs': [-1],
     },
 
     ## Dictionary of the default parameter names mapped to their values. Can be set to None if the default parameters should be
     ## the model's default parameters.
-    'default_params': {
-        'Normalizer__norm': 'l2',
-        'RandomForestClassifier__n_estimators': 1000,
-        'RandomForestClassifier__max_depth': 8,
-        'RandomForestClassifier__min_samples_split': 5,
-        'RandomForestClassifier__min_samples_leaf': 1,
-        'RandomForestClassifier__n_jobs': 2,
-    },
+    'default_params': None,
 
     # Integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model.
     'training_speed_factor': 2,

@@ -136,6 +136,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         # create labels from benchmark_results
         clusters_labels_df, algorithms_list = self._get_labels_from_bench_res(clusters_labels, properties)
         clusters_labels_dict = clusters_labels_df.set_index('Cluster ID').to_dict()['Label']
+
         # propagate clusters' label to their time series
         timeseries_labels = []
 
@@ -165,9 +166,10 @@ class ImputeBenchLabeler(AbstractLabeler):
         score_matrix = pd.DataFrame()
         for i, benchmark_results_dict in enumerate(all_benchmark_results['Benchmark Results']):
             # convert bench_res to DataFrame
-            benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
-            benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
-            benchmark_results = benchmark_results.groupby('algorithm').mean()[score_to_measure]
+            benchmark_results = self._convert_and_aggregate_bench_res(
+                benchmark_results_dict,
+                aggregation_strat=ImputeBenchLabeler.CONF['BENCH_RES_AGGREGATION_STRATEGY']
+            )[score_to_measure]
 
             # identify possible missing algos
             missing_algos = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in benchmark_results.index]
@@ -240,20 +242,20 @@ class ImputeBenchLabeler(AbstractLabeler):
 
     def _get_benchmark_alg_cmd(self, algorithms):
         """
-        Returns a string containing -alg followed by the algorithms names in the right format to be included as is in
+        Returns a tuple containing first '-alg' and followed by the algorithms names in the right format to be included as is in
         the command to run the benchmark.
         
         Keyword arguments:
-        algorithms -- string of the algorithm's name to run (or "all" to run all algorithms) or list of strings
-                      to specify multiple algorithms' names to run
+        algorithms -- tuple containing first '-alg' and followed by the argument's value(s) 
+                      as strings (e.g. ('-alg', 'all') or ('-alg', 'cdrec,stmvl') )
 
         Return:
-        String containing -alg followed by the algorithms names.
+        tuple containing first '-alg' and followed by the algorithms names
         """
         # transform arguments to command line compatible arguments
         if isinstance(algorithms, list):
             algorithms = ','.join(algorithms)
-        return '-alg %s' % algorithms
+        return '-alg', algorithms
 
     def _run_benchmark(self, timeseries, alg_algx_cmd, scenario, errors, id, plots=False, delete_results=True):
         """
@@ -262,7 +264,8 @@ class ImputeBenchLabeler(AbstractLabeler):
         
         Keyword arguments:
         timeseries -- DataFrame containing the time series (each column is a time series)
-        alg_algx_cmd -- string containing -alg or -algx and its values (e.g. "-algx svdimp 4", or "-alg all")
+        alg_algx_cmd -- tuple containing first either '-alg' or '-algx' and followed by the argument's value(s)
+                        as strings (e.g. ('-algx', 'svdimp' ,'4'), or ('-alg', 'all') )
         scenario -- string of the scenario's name to run - ONLY "miss_perc" can be used as of now
         errors -- list of string for the errors' names to get in the returned DataFrame
         id -- custom id to incorporate in the temporary files/folders names
@@ -350,6 +353,39 @@ class ImputeBenchLabeler(AbstractLabeler):
             ImputeBenchLabeler.LABELS_DIR + \
             f'/{dataset_name}{ImputeBenchLabeler.LABELS_FILENAMES_ID}{AbstractLabeler.LABELS_APPENDIX}')
 
+    def _convert_and_aggregate_bench_res(self, benchmark_results_dict, aggregation_strat):
+        """
+        Converts the benchmark results to a Pandas DataFrame and aggregates results using the specified aggregation strategy.
+        
+        Keyword arguments: 
+        benchmark_results_dict -- dict containing the ImputeBench benchmark results
+        aggregation_strat -- strategy to use to aggregate the benchmark results
+        
+        Return:
+        Aggregated Pandas DataFrame containing the score of each algorithm from the ImputeBench benchmark.
+        """
+        benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
+        benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
+
+        aggregated_benchmark_results = None
+        if aggregation_strat == 'avg_error_all_missperc':
+            # average of errors over all miss_perc values
+            aggregated_benchmark_results = benchmark_results.groupby('algorithm').mean()
+        elif aggregation_strat == 'avg_error_half_missperc':
+            # average of errors over the smaller miss_perc values
+            aggregated_benchmark_results = benchmark_results\
+                .loc[(slice(None), sorted(benchmark_results.index.levels[1].tolist())[:len(benchmark_results.index.levels[1])//2]), :]\
+                .groupby('algorithm')\
+                .mean()
+        elif aggregation_strat == 'error_smallest_missperc':
+            # error for smallest miss_perc value
+            aggregated_benchmark_results = benchmark_results\
+                .loc[(slice(None), min(benchmark_results.index.levels[1].tolist())), :]\
+                .droplevel('miss_perc')
+        else:
+            raise Exception('Invalid ImputeBench results\' aggregation strategy.')
+        return aggregated_benchmark_results
+
     def _get_labels_from_bench_res(self, all_benchmark_results, properties):
         """
         Uses the ImputeBench benchmark results to generate clusters' labels.
@@ -371,8 +407,10 @@ class ImputeBenchLabeler(AbstractLabeler):
         clusters_labels = []
         for cid, bench_res in all_benchmark_results.iterrows():
             # convert bench_res to DataFrame
-            benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(bench_res.values[0]))
-            benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
+            aggregated_benchmark_results = self._convert_and_aggregate_bench_res(
+                bench_res.values[0], 
+                aggregation_strat=ImputeBenchLabeler.CONF['BENCH_RES_AGGREGATION_STRATEGY']
+            )
             
             # create label from benchmark results
             if properties['type'] == 'regression':
@@ -380,11 +418,11 @@ class ImputeBenchLabeler(AbstractLabeler):
                 raise Exception('Regression not implemented yet')
             elif properties['type'] == 'multilabels':
                 top_n = properties['multi_labels_nb_rel']
-                label = self._get_multilabels_vector(benchmark_results, 
+                label = self._get_multilabels_vector(aggregated_benchmark_results, 
                                                      top_n, ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'],
                                                      algos_to_exclude)
             else: # monolabels
-                label = self._get_best_algo(benchmark_results, 
+                label = self._get_best_algo(aggregated_benchmark_results, 
                                             ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'], algos_to_exclude)
                                       
             clusters_labels.append((cid, label))
@@ -422,13 +460,13 @@ class ImputeBenchLabeler(AbstractLabeler):
         algos_to_exclude = list(used_perc.index)
         return algos_to_exclude
 
-    def _get_multilabels_vector(self, benchmark_results, top_n, score_to_measure, algos_to_exclude): 
+    def _get_multilabels_vector(self, aggregated_benchmark_results, top_n, score_to_measure, algos_to_exclude): 
         """
         Creates and returns a multi-labels vector from the ImputeBench benchmark.
         
         Keyword arguments: 
-        benchmark_results -- Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
-                             Multi index: "algorithms" & "scenario".
+        aggregated_benchmark_results -- Aggregated Pandas DataFrame containing the score of each algorithm from the 
+                                        ImputeBench benchmark.
         top_n -- top N algorithms to consider relevant in a multi-labels vector
         score_to_measure -- error to minimize when selecting relevant algorithms
         algos_to_exclude -- list of algorithms to exclude
@@ -439,10 +477,9 @@ class ImputeBenchLabeler(AbstractLabeler):
         algorithms_list = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in algos_to_exclude]
         vec = np.zeros(len(algorithms_list))
         
-        benchmark_results = benchmark_results.groupby('algorithm').mean()
-        # drop the intersection btw algos_to_exclude & algos listed in benchmark_results
-        algos_to_exclude = list(set(algos_to_exclude) & set(benchmark_results.index))
-        benchmark_results_reduced = benchmark_results.drop(benchmark_results.loc[algos_to_exclude].index)
+        # drop the intersection btw algos_to_exclude & algos listed in aggregated_benchmark_results
+        algos_to_exclude = list(set(algos_to_exclude) & set(aggregated_benchmark_results.index))
+        benchmark_results_reduced = aggregated_benchmark_results.drop(aggregated_benchmark_results.loc[algos_to_exclude].index)
         # keep top-n rows
         top_n_benchmark_results = benchmark_results_reduced.nsmallest(top_n, score_to_measure, keep='all')
         
@@ -452,13 +489,13 @@ class ImputeBenchLabeler(AbstractLabeler):
         
         return vec
 
-    def _get_best_algo(self, benchmark_results, score_to_measure, algos_to_exclude):
+    def _get_best_algo(self, aggregated_benchmark_results, score_to_measure, algos_to_exclude):
         """
         Returns the best algorithm's name from the ImputeBench benchmark.
         
         Keyword arguments: 
-        benchmark_results -- Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
-                             Multi index: "algorithms" & "scenario".
+        aggregated_benchmark_results -- Aggregated Pandas DataFrame containing the score of each algorithm from the 
+                                        ImputeBench benchmark.
         score_to_measure -- error to minimize when selecting relevant algorithms
         algos_to_exclude -- list of algorithms to exclude
         
@@ -466,31 +503,30 @@ class ImputeBenchLabeler(AbstractLabeler):
         Best algorithm's name from the ImputeBench benchmark.
         """
         # analyze results of benchmark
-        best_algo, _ = self._get_highest_bench_score(benchmark_results, score_to_measure, algos_to_exclude)
+        best_algo, _ = self._get_highest_bench_score(aggregated_benchmark_results, score_to_measure, algos_to_exclude)
 
         if 'cdrec_' in best_algo:
             best_algo = 'cdrec'
         return best_algo
 
-    def _get_highest_bench_score(self, scores, score_to_measure, algos_to_exclude):
+    def _get_highest_bench_score(self, aggregated_benchmark_results, score_to_measure, algos_to_exclude):
         """
         Returns the best algorithm name and its error from the benchmark results.
         
         Keyword arguments:
-        scores -- Pandas DataFrame containing the benchmark's scores
+        aggregated_benchmark_results -- Aggregated Pandas DataFrame containing the score of each algorithm from the 
+                                        ImputeBench benchmark.
         score_to_measure -- name of the score to measure
         algos_to_exclude -- list of algorithms names that shouldn't be returned
         
         Return:
         1. name of the algorithm that gave the lowest error on the benchmark
         2. lowest error
-        """
-        mean_scores = scores.groupby('algorithm').mean()
+        """        
+        algos_to_exclude = list(set(algos_to_exclude) & set(aggregated_benchmark_results.index))
+        aggregated_benchmark_results = aggregated_benchmark_results.drop(aggregated_benchmark_results.loc[algos_to_exclude].index)
         
-        algos_to_exclude = list(set(algos_to_exclude) & set(mean_scores.index))
-        mean_scores = mean_scores.drop(mean_scores.loc[algos_to_exclude].index)
-        
-        return mean_scores[score_to_measure].idxmin(), mean_scores[score_to_measure].min()
+        return aggregated_benchmark_results[score_to_measure].idxmin(), aggregated_benchmark_results[score_to_measure].min()
 
 
     # static methods

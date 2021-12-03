@@ -52,5 +52,9 @@ BENCHMARK_ERRORS:
 # BENCHMARK_ERROR_TO_MINIMIZE: error to minimize when labeling the time series (algo with lowest error is used as label)
 BENCHMARK_ERROR_TO_MINIMIZE: 'rmse'
 
+# BENCH_RES_AGGREGATION_STRATEGY: aggregation strategies for the benchmark results. Value can be one of: avg_error_all_missperc, 
+# avg_error_half_missperc, error_smallest_missperc
+BENCH_RES_AGGREGATION_STRATEGY: 'avg_error_all_missperc'
+
 # BENCHMARK_PATH: path to the Debug folder of the ImputeBench benchmark
 BENCHMARK_PATH: /home/guillaume/bench-vldb20/TestingFramework/bin/Debug

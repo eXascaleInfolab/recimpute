@@ -162,6 +162,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
         Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
         """
+        raise Exception('Old code. Method should be updated.') # TODO
         # create scores data frame
         score_matrix = pd.DataFrame()
         for i, benchmark_results_dict in enumerate(all_benchmark_results['Benchmark Results']):
@@ -353,38 +354,111 @@ class ImputeBenchLabeler(AbstractLabeler):
             ImputeBenchLabeler.LABELS_DIR + \
             f'/{dataset_name}{ImputeBenchLabeler.LABELS_FILENAMES_ID}{AbstractLabeler.LABELS_APPENDIX}')
 
-    def _convert_and_aggregate_bench_res(self, benchmark_results_dict, aggregation_strat):
+    def _convert_bench_res_to_df(self, benchmark_results_dict):
         """
-        Converts the benchmark results to a Pandas DataFrame and aggregates results using the specified aggregation strategy.
+        Converts the benchmark results dict to a Pandas DataFrame.
         
         Keyword arguments: 
         benchmark_results_dict -- dict containing the ImputeBench benchmark results
-        aggregation_strat -- strategy to use to aggregate the benchmark results
         
         Return:
-        Aggregated Pandas DataFrame containing the score of each algorithm from the ImputeBench benchmark.
+        Benchmark results dict converted to a Pandas DataFrame. Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
+        Multi index: "algorithms" & "scenario".
         """
         benchmark_results = pd.DataFrame.from_dict(ast.literal_eval(benchmark_results_dict))
         benchmark_results = benchmark_results.rename_axis(index=['algorithm', 'miss_perc'])
+        return benchmark_results
 
-        aggregated_benchmark_results = None
-        if aggregation_strat == 'avg_error_all_missperc':
-            # average of errors over all miss_perc values
-            aggregated_benchmark_results = benchmark_results.groupby('algorithm').mean()
-        elif aggregation_strat == 'avg_error_half_missperc':
-            # average of errors over the smaller miss_perc values
-            aggregated_benchmark_results = benchmark_results\
-                .loc[(slice(None), sorted(benchmark_results.index.levels[1].tolist())[:len(benchmark_results.index.levels[1])//2]), :]\
-                .groupby('algorithm')\
-                .mean()
-        elif aggregation_strat == 'error_smallest_missperc':
-            # error for smallest miss_perc value
-            aggregated_benchmark_results = benchmark_results\
-                .loc[(slice(None), min(benchmark_results.index.levels[1].tolist())), :]\
-                .droplevel('miss_perc')
+    def _aggregate_bench_res(self, benchmark_results, index_to_agg, agg_strat):
+        """
+        Aggregates the benchmark results using the specified aggregation strategy.
+        
+        Keyword arguments: 
+        benchmark_results -- Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
+                             Multi index: "algorithms" & "scenario".
+        index_to_agg -- benchmark results' indices (e.g. [0,1,2]) to aggregate (level 1: i.e. index of missing percentages)
+        agg_strat -- aggregation strategy for the benchmark results
+        
+        Return:
+        Aggregated benchmark results. Index: 'algorithm', Columns: errors.
+        """
+        assert isinstance(index_to_agg, list) and len(index_to_agg) >= 0 and max(index_to_agg) < len(benchmark_results.index.levels[1].tolist())
+        real_index_to_agg = pd.Series(benchmark_results.index.levels[1].tolist())[index_to_agg].tolist()
+
+        if len(index_to_agg) == 1:
+            return benchmark_results.loc[(slice(None), real_index_to_agg[0]), :].droplevel('miss_perc')
+
+        df_groupby = benchmark_results.loc[(slice(None), real_index_to_agg), :].groupby('algorithm')
+        if agg_strat == 'mean':
+            return df_groupby.mean()
+        elif agg_strat == 'median':
+            return df_groupby.median()
+        elif agg_strat == 'sum':
+            return df_groupby.sum()
+        elif agg_strat == 'min':
+            return df_groupby.min()
+        elif agg_strat == 'max':
+            return df_groupby.max()
         else:
-            raise Exception('Invalid ImputeBench results\' aggregation strategy.')
-        return aggregated_benchmark_results
+            raise Exception('Invalid ImputeBench results\' aggregatin strategy.')
+
+    def _get_ranking_from_bench_res(self, benchmark_results, ranking_strat, ranking_strat_params, error_to_minimize, algos_to_exclude):
+        """
+        Aggregates the benchmark results using the specified aggregation strategy and then ranks the algorithms (classes).
+        
+        Keyword arguments: 
+        benchmark_results -- Pandas DataFrame containing the different scores from the ImputeBench benchmark. 
+                             Multi index: "algorithms" & "scenario".
+        ranking_strat -- aggregation and ranking strategy to use to get from the ImputeBench benchmark results to a list 
+                         of algorithms (ordered from best to worse)
+        ranking_strat_params -- dictionary of parameters for the ranking_strat
+        error_to_minimize -- error to minimize when selecting relevant algorithms
+        algos_to_exclude -- list of algorithms to exclude from the returned list
+        
+        Return:
+        Ranked (from best to worse) list of algorithms (classes).
+        """
+        
+        ranked_algos = None
+        if ranking_strat == 'simple':
+            # one aggregation gives the final list
+            agg_bench_res = self._aggregate_bench_res(benchmark_results, 
+                                                      index_to_agg=ranking_strat_params['index_to_agg'], 
+                                                      agg_strat=ranking_strat_params['agg_strat'])
+            ranked_algos = agg_bench_res.sort_values(error_to_minimize, ascending=True).index.tolist()
+        elif ranking_strat == 'voting':
+            # multiple aggregations -> majority voting to get the final list
+            algos_scores = {}
+            for params in ranking_strat_params.values():
+                agg_bench_res = self._aggregate_bench_res(benchmark_results, 
+                                                          index_to_agg=params['index_to_agg'], 
+                                                          agg_strat=params['agg_strat'])
+                ranked_algos_tmp = agg_bench_res.sort_values(error_to_minimize, ascending=True).index.tolist()
+
+                for i, algo in enumerate(ranked_algos_tmp):
+                    try:
+                        algos_scores[algo] += i
+                    except:
+                        algos_scores[algo] = i
+            # the algorithm the most often at the beginning of the lists is the best
+            ranked_algos = list(dict(sorted(algos_scores.items(), key=lambda item: item[1])).keys())
+        else:
+            raise Exception('Invalid ranking strategy.')
+        
+        # remove algorithms listed in algos_to_exclude
+        ranked_algos = [algo for algo in ranked_algos if algo not in algos_to_exclude]
+            
+        # replace cdrec_k2 and _k3 by cdrec
+        if 'cdrec_k2' in ranked_algos and 'cdrec_k3' in ranked_algos:
+            idx1 = ranked_algos.index('cdrec_k2')
+            idx2 = ranked_algos.index('cdrec_k3')
+            ranked_algos[min(idx1, idx2)] = 'cdrec' # keep the best of the 2
+            del ranked_algos[max(idx1, idx2)] # remove the worse of the 2
+        elif 'cdrec_k2' in ranked_algos or 'cdrec_k3' in ranked_algos:
+            idx = ranked_algos.index('cdrec_k3') if 'cdrec_k3' in ranked_algos else ranked_algos.index('cdrec_k2')
+            ranked_algos[idx] = 'cdrec'
+
+        return ranked_algos
 
     def _get_labels_from_bench_res(self, all_benchmark_results, properties):
         """
@@ -407,9 +481,15 @@ class ImputeBenchLabeler(AbstractLabeler):
         clusters_labels = []
         for cid, bench_res in all_benchmark_results.iterrows():
             # convert bench_res to DataFrame
-            aggregated_benchmark_results = self._convert_and_aggregate_bench_res(
-                bench_res.values[0], 
-                aggregation_strat=ImputeBenchLabeler.CONF['BENCH_RES_AGGREGATION_STRATEGY']
+            benchmark_results = self._convert_bench_res_to_df(bench_res.values[0])
+            # get a ranked list of algorithms for this cluster (from best to worse)
+            ranking_strat = ImputeBenchLabeler.CONF['BENCH_RES_AGG_AND_RANK_STRATEGY']
+            ranked_algos_for_cid = self._get_ranking_from_bench_res(
+                benchmark_results,
+                ranking_strat=ranking_strat,
+                ranking_strat_params=ImputeBenchLabeler.CONF['BENCH_RES_AGG_AND_RANK_STRATEGY_PARAMS'][ranking_strat],
+                error_to_minimize=ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'],
+                algos_to_exclude=algos_to_exclude
             )
             
             # create label from benchmark results
@@ -418,12 +498,9 @@ class ImputeBenchLabeler(AbstractLabeler):
                 raise Exception('Regression not implemented yet')
             elif properties['type'] == 'multilabels':
                 top_n = properties['multi_labels_nb_rel']
-                label = self._get_multilabels_vector(aggregated_benchmark_results, 
-                                                     top_n, ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'],
-                                                     algos_to_exclude)
+                label = self._get_multilabels_vector(ranked_algos_for_cid, top_n)
             else: # monolabels
-                label = self._get_best_algo(aggregated_benchmark_results, 
-                                            ImputeBenchLabeler.CONF['BENCHMARK_ERROR_TO_MINIMIZE'], algos_to_exclude)
+                label = ranked_algos_for_cid[0] # take the best
                                       
             clusters_labels.append((cid, label))
 
@@ -460,16 +537,13 @@ class ImputeBenchLabeler(AbstractLabeler):
         algos_to_exclude = list(used_perc.index)
         return algos_to_exclude
 
-    def _get_multilabels_vector(self, aggregated_benchmark_results, top_n, score_to_measure, algos_to_exclude): 
+    def _get_multilabels_vector(self, ranked_algos_for_cid, top_n):
         """
         Creates and returns a multi-labels vector from the ImputeBench benchmark.
         
         Keyword arguments: 
-        aggregated_benchmark_results -- Aggregated Pandas DataFrame containing the score of each algorithm from the 
-                                        ImputeBench benchmark.
+        ranked_algos_for_cid -- ranked (from best to worse) list of algorithms (classes).
         top_n -- top N algorithms to consider relevant in a multi-labels vector
-        score_to_measure -- error to minimize when selecting relevant algorithms
-        algos_to_exclude -- list of algorithms to exclude
         
         Return:
         Multi-labels vector where relevant algorithm's bit is set to 1
@@ -477,13 +551,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         algorithms_list = [algo for algo in ImputeBenchLabeler.CONF['ALGORITHMS_LIST'] if algo not in algos_to_exclude]
         vec = np.zeros(len(algorithms_list))
         
-        # drop the intersection btw algos_to_exclude & algos listed in aggregated_benchmark_results
-        algos_to_exclude = list(set(algos_to_exclude) & set(aggregated_benchmark_results.index))
-        benchmark_results_reduced = aggregated_benchmark_results.drop(aggregated_benchmark_results.loc[algos_to_exclude].index)
-        # keep top-n rows
-        top_n_benchmark_results = benchmark_results_reduced.nsmallest(top_n, score_to_measure, keep='all')
-        
-        for label in top_n_benchmark_results.index:
+        for label in ranked_algos_for_cid[:top_n]:
             label_idx = algorithms_list.index(label)
             vec[label_idx] = 1
         

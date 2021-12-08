@@ -45,9 +45,12 @@ class Utils:
 
                 # merge params' values loaded as list of dicts into a single dict
                 is_param_nested_dict = lambda param_val: isinstance(param_val, list) and all(isinstance(sub_val, dict) for sub_val in param_val)
-                for param, value in conf.items():
-                    if is_param_nested_dict(value):
-                        conf[param] = dict(ChainMap(*value))
+                def list_to_dict(parent_dict):
+                    for param, value in parent_dict.items():
+                        if is_param_nested_dict(value):
+                            parent_dict[param] = dict(ChainMap(*value))
+                            list_to_dict(parent_dict[param])
+                list_to_dict(conf)
                         
                 return conf
         except FileNotFoundError:

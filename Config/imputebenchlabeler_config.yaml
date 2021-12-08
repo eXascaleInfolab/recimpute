@@ -50,11 +50,32 @@ BENCHMARK_ERRORS:
   - rmse
 
 # BENCHMARK_ERROR_TO_MINIMIZE: error to minimize when labeling the time series (algo with lowest error is used as label)
-BENCHMARK_ERROR_TO_MINIMIZE: 'rmse'
+BENCHMARK_ERROR_TO_MINIMIZE: rmse
 
-# BENCH_RES_AGGREGATION_STRATEGY: aggregation strategies for the benchmark results. Value can be one of: avg_error_all_missperc, 
-# avg_error_half_missperc, error_smallest_missperc
-BENCH_RES_AGGREGATION_STRATEGY: 'avg_error_all_missperc'
+# BENCH_RES_AGG_AND_RANK_STRATEGY: aggregation and ranking strategy to use to get from the ImputeBench benchmark results to a list
+# of algorithms (ordered from best to worse). Value can be one of: simple, voting.
+BENCH_RES_AGG_AND_RANK_STRATEGY: voting
+
+# BENCH_RES_AGG_AND_RANK_STRATEGY_PARAMS: Dictionary of parameters for each BENCH_RES_AGG_AND_RANK_STRATEGY.
+BENCH_RES_AGG_AND_RANK_STRATEGY_PARAMS: 
+  - simple:
+      - index_to_agg: [0,1,2,3,4,5,6,7] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+      - agg_strat: mean # can be one of: mean, median, sum, min, max
+  - voting:
+      # list as much rankings you wish for, a majority voting strategy will be applied to the ensemble of resulting lists
+      - ranking1: 
+        - index_to_agg: [0] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - agg_strat: mean # can be one of: mean, median, sum, min, max
+      - ranking2: 
+        - index_to_agg: [0,1,2,3] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - agg_strat: mean # can be one of: mean, median, sum, min, max
+      - ranking3: 
+        - index_to_agg: [0,1,2,3,4,5] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - agg_strat: mean # can be one of: mean, median, sum, min, max
+      - ranking4: 
+        - index_to_agg: [0,1,2,3,4,5,6,7] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - agg_strat: mean # can be one of: mean, median, sum, min, max
+
 
 # BENCHMARK_PATH: path to the Debug folder of the ImputeBench benchmark
 BENCHMARK_PATH: /home/guillaume/bench-vldb20/TestingFramework/bin/Debug

@@ -143,6 +143,7 @@ class TrainingSet:
         if clusters_generated or not self.clusterer.are_cids_unique(updated_datasets):
             # change all clusters' ID (for all datasets) such that there are no duplicates
             updated_datasets = self.clusterer.make_cids_unique(updated_datasets)
+            clusters_generated = True
 
         return updated_datasets, clusters_generated
 
@@ -338,7 +339,7 @@ class TrainingSet:
         labels_set = None
         all_complete_datasets = []
         all_train_test_complete_datasets = []
-
+        
         for dataset in self.datasets:
 
             # load labels - dataset_labels: df w/ 2 cols: Time Series ID and Label

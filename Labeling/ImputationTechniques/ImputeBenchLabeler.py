@@ -266,7 +266,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         Keyword arguments:
         timeseries -- DataFrame containing the time series (each column is a time series)
         alg_algx_cmd -- tuple containing first either '-alg' or '-algx' and followed by the argument's value(s)
-                        as strings (e.g. ('-algx', 'svdimp' ,'4'), or ('-alg', 'all') )
+                        as strings (e.g. ('-algx', 'svdimp', '4'), or ('-alg', 'all') )
         scenario -- string of the scenario's name to run - ONLY "miss_perc" can be used as of now
         errors -- list of string for the errors' names to get in the returned DataFrame
         id -- custom id to incorporate in the temporary files/folders names

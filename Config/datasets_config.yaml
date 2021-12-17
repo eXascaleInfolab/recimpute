@@ -8,12 +8,10 @@
 # ------------------------------------
 
 USE_ALL: False
-# if USE_ALL is False, loads only data sets which are listed below:
+# if USE_ALL is False, loads only data sets which are listed below:                                    # nb_ts x ts length
 USE_LIST: 
   - ACSF1.zip                                                                                          # 200x1460
-  - Adiac.zip                                                                                          # 781x176
   - airq.zip                                                                                           # 10x1000
-  - ArrowHead.zip                                                                                      # 211x251
   - bafu_1.zip                                                                                         # 10x6250
   - bafu_2.zip                                                                                         # 10x6250
   - bafu_3.zip                                                                                         # 10x6250
@@ -25,20 +23,14 @@ USE_LIST:
   - Beef.zip                                                                                           # 60x470
   - BeetleFly.zip                                                                                      # 40x512
   - BirdChicken.zip                                                                                    # 40x512
-  - BME.zip                                                                                            # 180x128
   - Car.zip                                                                                            # 120x577
-  - CBF.zip                                                                                            # 930x128
-  - Chinatown.zip                                                                                      # 363x24
   - chlorine.zip                                                                                       # 50x1000
   - ChlorineConcentration.zip                                                                          # 4307x166
-  - CinCECGTorso.zip                                                                                   # 1420x1639
   - climate_CH4.zip                                                                                    # 125x156
   - climate_CLD.zip                                                                                    # 125x156
   - climate_CO.zip                                                                                     # 125x156
   - climate_CO2.zip                                                                                    # 125x156
   - climate_DTR.zip                                                                                    # 125x156
-  - climate_ETR.zip                                                                                    # 125x156
-  - climate_ETRN.zip                                                                                   # 125x156
   - climate_FRS.zip                                                                                    # 125x156
   - climate_GLO.zip                                                                                    # 125x156
   - climate_H2.zip                                                                                     # 125x156
@@ -48,33 +40,20 @@ USE_LIST:
   - climate_TMX.zip                                                                                    # 125x156
   - climate_VAP.zip                                                                                    # 125x156
   - climate_WET.zip                                                                                    # 125x156
-  - Coffee.zip                                                                                         # 56x286
   - Computers.zip                                                                                      # 500x720
   - CricketX.zip                                                                                       # 780x300
   - CricketY.zip                                                                                       # 780x300
   - CricketZ.zip                                                                                       # 780x300
-  - DiatomSizeReduction.zip                                                                            # 322x345
-  - DistalPhalanxOutlineAgeGroup.zip                                                                   # 539x80
-  - DistalPhalanxOutlineCorrect.zip                                                                    # 876x80
-  - DistalPhalanxTW.zip                                                                                # 539x80
   - drift10.zip                                                                                        # 100x1000
   - Earthquakes.zip                                                                                    # 461x512
-  - ECG200.zip                                                                                         # 200x96
-  - ECG5000.zip                                                                                        # 5000x140
-  - ECGFiveDays.zip                                                                                    # 884x136
   - electricity.zip                                                                                    # 20x5000
   - EOGHorizontalSignal.zip                                                                            # 724x1250
-  - EthanolLevel.zip                                                                                   # 1004x1751
   - FaceAll.zip                                                                                        # 2250x131
   - FaceFour.zip                                                                                       # 112x350
   - FacesUCR.zip                                                                                       # 2250x131
   - FiftyWords.zip                                                                                     # 905x270
-  - Fish.zip                                                                                           # 350x463
   - FordA.zip                                                                                          # 4921x500
   - FordB.zip                                                                                          # 4446x500
-  - FreezerRegularTrain.zip                                                                            # 3000x301
-  - FreezerSmallTrain.zip                                                                              # 2878x301
-  - Fungi.zip                                                                                          # 204x201
   - GunPoint.zip                                                                                       # 200x150
   - GunPointAgeSpan.zip                                                                                # 451x150
   - GunPointMaleVersusFemale.zip                                                                       # 451x150
@@ -88,7 +67,6 @@ USE_LIST:
   - InsectEPGRegularTrain.zip                                                                          # 311x601
   - InsectEPGSmallTrain.zip                                                                            # 266x601
   - InsectWingbeatSound.zip                                                                            # 2200x256
-  - ItalyPowerDemand.zip                                                                               # 1096x24
   - LargeKitchenAppliances.zip                                                                         # 750x720
   - Lightning2.zip                                                                                     # 121x637
   - Lightning7.zip                                                                                     # 143x319
@@ -138,14 +116,38 @@ USE_LIST:
   - ToeSegmentation1.zip                                                                               # 268x277
   - ToeSegmentation2.zip                                                                               # 166x343
   - Trace.zip                                                                                          # 200x275
-  - TwoLeadECG.zip                                                                                     # 1162x82
   - TwoPatterns.zip                                                                                    # 5000x128
-  - UMD.zip                                                                                            # 180x150
   - UWaveGestureLibraryAll.zip                                                                         # 4478x945
   - UWaveGestureLibraryX.zip                                                                           # 4478x315
   - UWaveGestureLibraryY.zip                                                                           # 4478x315
-  - Wine.zip                                                                                           # 111x234
   - WordSynonyms.zip                                                                                   # 905x270
   - Worms.zip                                                                                          # 258x900
   - WormsTwoClass.zip                                                                                  # 258x900
   - Yoga.zip                                                                                           # 3300x426
+
+# Discarded data sets:
+  # - Adiac.zip                                                                                          # 781x176
+  # - ArrowHead.zip                                                                                      # 211x251
+  # - BME.zip                                                                                            # 180x128
+  # - CBF.zip                                                                                            # 930x128
+  # - Chinatown.zip                                                                                      # 363x24
+  # - CinCECGTorso.zip                                                                                   # 1420x1639
+  # - climate_ETR.zip                                                                                    # 125x156
+  # - climate_ETRN.zip                                                                                   # 125x156
+  # - Coffee.zip                                                                                         # 56x286
+  # - DiatomSizeReduction.zip                                                                            # 322x345
+  # - DistalPhalanxOutlineAgeGroup.zip                                                                   # 539x80
+  # - DistalPhalanxOutlineCorrect.zip                                                                    # 876x80
+  # - DistalPhalanxTW.zip                                                                                # 539x80
+  # - ECG200.zip                                                                                         # 200x96
+  # - ECG5000.zip                                                                                        # 5000x140
+  # - ECGFiveDays.zip                                                                                    # 884x136
+  # - EthanolLevel.zip                                                                                   # 1004x1751
+  # - Fish.zip                                                                                           # 350x463
+  # - FreezerRegularTrain.zip                                                                            # 3000x301
+  # - FreezerSmallTrain.zip                                                                              # 2878x301
+  # - Fungi.zip                                                                                          # 204x201
+  # - ItalyPowerDemand.zip                                                                               # 1096x24
+  # - TwoLeadECG.zip                                                                                     # 1162x82
+  # - UMD.zip                                                                                            # 180x150
+  # - Wine.zip                                                                                           # 111x234

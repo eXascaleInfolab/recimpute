@@ -122,7 +122,7 @@ class TrainingSet:
         clusters_generated = False
         updated_datasets = []
         for dataset in datasets:
-            if not dataset.are_clusters_created():
+            if not self.clusterer.are_clusters_created(dataset.name):
                 # create clusters if they have not been yet created for this data set
                 if not clusters_generated:
                     warnings.warn('Some data set\'s time series have not been clustered yet. \
@@ -133,12 +133,12 @@ class TrainingSet:
                 clusters_generated = True
             updated_datasets.append(dataset)
 
-        if clusters_generated:
-            # merge clusters with <5 time series to the most similar cluster from the same data set
-            # and divide large clusters into smaller ones such that each has between 5 and 15 time series
-            updated_datasets = self.clusterer.apply_constraints(updated_datasets, 
-                                                                min_nb_ts=self.clusterer.CONF['MIN_NB_TS_PER_CLUSTER'],
-                                                                max_nb_ts=self.clusterer.CONF['MAX_NB_TS_PER_CLUSTER'])
+        # if clusters_generated:
+        #     # merge clusters with <5 time series to the most similar cluster from the same data set
+        #     # and divide large clusters into smaller ones such that each has between 5 and 15 time series
+        #     updated_datasets = self.clusterer.apply_constraints(updated_datasets, 
+        #                                                         min_nb_ts=self.clusterer.CONF['MIN_NB_TS_PER_CLUSTER'],
+        #                                                         max_nb_ts=self.clusterer.CONF['MAX_NB_TS_PER_CLUSTER'])
                                                                 
         if clusters_generated or not self.clusterer.are_cids_unique(updated_datasets):
             # change all clusters' ID (for all datasets) such that there are no duplicates
@@ -358,7 +358,7 @@ class TrainingSet:
 
             # load cassignment if the column is not there already
             if 'Cluster ID' not in dataset_features.columns:
-                dataset_cassignment = dataset.load_cassignment()
+                dataset_cassignment = dataset.load_cassignment(self.clusterer)
                 dataset_cassignment.set_index('Time Series ID', inplace=True)
                 to_concat.append(dataset_cassignment)
 

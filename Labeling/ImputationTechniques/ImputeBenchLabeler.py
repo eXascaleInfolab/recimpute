@@ -140,7 +140,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         # propagate clusters' label to their time series
         timeseries_labels = []
 
-        for _, row in dataset.load_cassignment().iterrows():
+        for _, row in dataset.load_cassignment(dataset.clusterer).iterrows():
             tid = row['Time Series ID']
             cid = row['Cluster ID']
             label = clusters_labels_dict[cid]

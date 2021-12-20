@@ -53,12 +53,12 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     print('#########  RecImpute - training  #########')
 
-    # init data sets
-    datasets = Dataset.instantiate_from_dir()
-    print('Loaded data sets:', ''.join(['\n- %s' % d for d in datasets]))
-
-    # init tools
+    # init clusterer
     clusterer = ShapeBasedClustering()
+
+    # init data sets
+    datasets = Dataset.instantiate_from_dir(clusterer)
+    print('Loaded data sets:', ''.join(['\n- %s' % d for d in datasets]))
 
     if any(isinstance(fe, KiviatFeaturesExtracter) for fe in features_extracters):
         warnings.warn('You are using a KiviatFeaturesExtracter. This features extracter can only compute features for clusters' \
@@ -185,7 +185,7 @@ def get_recommendations_filename(timeseries_filename):
 
 
 if __name__ == '__main__':
-    
+
     _models_list = [f.replace('.py', '') for f in os.listdir('Training/ModelsDescription') if f not in ['__pycache__', '_template.py']]
     _valid_args = {
         '-mode': ['train', 'eval', 'use'],

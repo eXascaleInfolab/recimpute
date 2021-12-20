@@ -111,7 +111,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         
         # propagate cluster features to time series
         timeseries_features = []
-        for _, row in dataset.load_cassignment().iterrows():
+        for _, row in dataset.load_cassignment(dataset.clusterer).iterrows():
             tid = row['Time Series ID']
             cid = row['Cluster ID']
             cluster_features = all_clusters_features.loc[[cid]]

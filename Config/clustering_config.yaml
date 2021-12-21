@@ -13,17 +13,17 @@ NCC_MIN_THRESHOLD: 0.95
 # GS_MAX_TESTS: used to define max number of clusters to evaluate during gridsearch based on the data set's complexity
 # if complexity of data set < *key*: then max #clusters to try = *value*
 GS_MAX_TESTS: 
-  - 50000: 17
-  - 100000: 14
-  - 150000: 11
+  - 50000: 20
+  - 100000: 16
+  - 150000: 13
   - 200000: 9
   - .inf: 6
 
 # GS_NB_RUNS: number of gridsearch runs to perform for each cluster to evaluate for a given data set and considering its complexity
 GS_NB_RUNS: 
-  - small: 12
-  - medium: 6
-  - large: 6
+  - small: 6
+  - medium: 4
+  - large: 3
 
 # GS_MAX_RETRIES: maximum number of tries before skipping the evaluation of a cluster during gridsearch
 # retries occur if a generated cluster does not has at least 2 time series

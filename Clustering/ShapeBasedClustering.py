@@ -359,7 +359,7 @@ class ShapeBasedClustering(AbstractClustering):
 
         print('Clustering gridsearch of following data sets started at %s:\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         for ds in datasets:
-            print('- %s\n' % ds.name)
+            print('- %s' % ds.name)
         print('\n')
 
         exception = None
@@ -508,7 +508,7 @@ class ShapeBasedClustering(AbstractClustering):
         # else: compute the range dynamically
         complexity = dataset.get_space_complexity() # get complexity score of dataset
         # retrieve max number of tests (= max nb clusters to test) depending on the dataset's complexity
-        for max_complexity, nb_tests in ShapeBasedClustering.CONF['GS_MAX_TESTS'].items():
+        for max_complexity, nb_tests in sorted(ShapeBasedClustering.CONF['GS_MAX_TESTS'].items()):
             if complexity < max_complexity:
                 max_tests = nb_tests
                 break

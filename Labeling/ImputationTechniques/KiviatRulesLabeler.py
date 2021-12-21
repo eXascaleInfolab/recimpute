@@ -58,7 +58,7 @@ class KiviatRulesLabeler(AbstractLabeler):
 
     # public methods
 
-    def label_all_datasets(datasets):
+    def label_all_datasets(self, datasets):
         """
         Labels each cluster from the given list of data sets using the Kiviat rules.
         

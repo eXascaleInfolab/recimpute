@@ -48,7 +48,7 @@ class ImputeBenchLabeler(AbstractLabeler):
 
     # public methods
 
-    def label_all_datasets(datasets):
+    def label_all_datasets(self, datasets):
         """
         Labels each cluster from the given list of data sets using the ImputeBench benchmark.
         
@@ -219,15 +219,39 @@ class ImputeBenchLabeler(AbstractLabeler):
         
         Keyword arguments:
         all_timeseries -- DataFrame containing all the time series of the cluster's data set (each row is a time series)
-        cluster -- DataFrame containing only the time series of a cluster (each row is a time series)
+        cluster -- DataFrame containing only the time series of the cluster (each row is a time series)
         cluster_id -- cluster ID
         
         Return:
         Dict containing the ImputeBench benchmark results
         """   
         # select the sequences to give to the benchmark (either the whole cluster or the whole data set)
-        sequences_to_use = cluster if not ImputeBenchLabeler.CONF['USE_BCHMK_ON_DATASET'] \
-                           else pd.concat([cluster.iloc[0].to_frame(), all_timeseries])
+        if ImputeBenchLabeler.CONF['TS_SELECTION_FOR_BCHMK'] == 'DATASET':
+            sequences_to_use = pd.concat([
+                cluster.iloc[0].to_frame(), # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
+                all_timeseries # all time series in the data set
+            ])
+        elif ImputeBenchLabeler.CONF['TS_SELECTION_FOR_BCHMK'] == 'CLUSTER':
+            sequences_to_use = cluster
+        elif ImputeBenchLabeler.CONF['TS_SELECTION_FOR_BCHMK'] == 'RDM_FROM_DATASET':
+            # select all data set's sequences except the ones from the cluster we want to label
+            available_timeseries = pd.concat([all_timeseries, cluster]).drop_duplicates(keep=False)
+            # number of time series to fed to the benchmark in addition to the sequence we want to label and a second sequence from its cluster
+            N_to_sample = min(ImputeBenchLabeler.CONF['NB_TS_FOR_BCHMK'], available_timeseries.shape[0])
+
+            if cluster.shape[0] > 1: # if cluster has at least 2 time series: label 1st, use the 2nd and N other series from the same data set
+                sequences_to_use = pd.concat([
+                    cluster.iloc[0].to_frame(), # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
+                    cluster.iloc[1].to_frame(), # 2nd seq of cluster we want to label (to ensure benchmark has at least 1 highly correlated seq in the set)
+                    available_timeseries.sample(N_to_sample, replace=False)
+                ])
+            else:
+                sequences_to_use = pd.concat([
+                    cluster.iloc[0].to_frame(), # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
+                    available_timeseries.sample(N_to_sample, replace=False)
+                ])
+        else:
+            raise Exception('Invalid strategy for time series selection for benchmark.')
 
         # call benchmark on the cluster's time series
         alg_algx_cmd = self._get_benchmark_alg_cmd(ImputeBenchLabeler.CONF['ALGORITHMS_LIST'])

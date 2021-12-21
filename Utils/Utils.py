@@ -50,6 +50,8 @@ class Utils:
                         if is_param_nested_dict(value):
                             parent_dict[param] = dict(ChainMap(*value))
                             list_to_dict(parent_dict[param])
+                        elif isinstance(value, dict):
+                            list_to_dict(value)
                 list_to_dict(conf)
                         
                 return conf

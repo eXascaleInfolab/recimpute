@@ -518,7 +518,7 @@ class ImputeBenchLabeler(AbstractLabeler):
             
             # create label from benchmark results
             if properties['type'] == 'regression':
-                # TODO
+                # TODO implement regression
                 raise Exception('Regression not implemented yet')
             elif properties['type'] == 'multilabels':
                 top_n = properties['multi_labels_nb_rel']

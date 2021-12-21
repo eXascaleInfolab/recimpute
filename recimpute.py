@@ -94,7 +94,7 @@ def eval(models, all_test_data_info):
     
     print('#########  RecImpute - evaluation  #########')
 
-    X_test = all_test_data_info.iloc[:, ~all_test_data_info.columns.isin(['Cluster ID', 'Label'])]
+    X_test = all_test_data_info.iloc[:, ~all_test_data_info.columns.isin(['Data Set Name', 'Cluster ID', 'Label'])]
     y_test = all_test_data_info['Label']
 
     for model in models:

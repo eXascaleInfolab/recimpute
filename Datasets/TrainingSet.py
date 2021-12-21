@@ -103,6 +103,11 @@ class TrainingSet:
             nb_test_clusters = int(np.ceil(len(all_cids) * self.CONF['TEST_SIZE_PERCENTAGE']))
             test_set = rdm.sample(all_cids, nb_test_clusters)
             return 'clusters', test_set
+        elif strategy == 'ts_percentage':
+            all_ts_ids = list(range(0, sum(ds.nb_timeseries for ds in datasets)))
+            nb_test_sequences = int(np.ceil(len(all_ts_ids) * self.CONF['TEST_SIZE_PERCENTAGE']))
+            test_set = rdm.sample(all_ts_ids, nb_test_sequences) # TODO smarter selection? maybe use sklearn's train_test_split?
+            return 'timeseries', test_set
 
         else:
             raise Exception('Test set reservation strategy not implemented: ', strategy)
@@ -190,8 +195,8 @@ class TrainingSet:
         nb_cv_splits -- number of cross-validation splits to perform
         
         Return:
-        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: Time Series ID.
-        2. Pandas DataFrame containing all time series' labels. Index: Time Series ID.
+        1. Pandas DataFrame containing all time series' features (one feature vector per row). Index: New Time Series ID.
+        2. Pandas DataFrame containing all time series' labels. Index: New Time Series ID.
         3. list of all unique labels
         4. Numpy array of train entries
         5. Numpy array of train entries' labels
@@ -202,7 +207,7 @@ class TrainingSet:
             all_data_info, labels_set = self._load(data_to_load='train')
         
         self.labels_set = labels_set
-        # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        # all_data_info: df w/ cols: New Time Series ID (index), Data Set Name, Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         
         with Utils.catchtime('Preparing train data'):
             all_data_info = self._prepare_data_set(all_data_info, data_properties)
@@ -216,9 +221,10 @@ class TrainingSet:
         for cv_split_id in range(nb_cv_splits):
             train_indices, test_indices, train_cids = self._split_train_test_sets(all_data_info, probability_distribution, 
                                                                                   TrainingSet.CONF['VALIDATION_SIZE_PERCENTAGE'])
-            probability_distribution = self._update_prob_distrib(all_data_info, probability_distribution, train_cids)
+            if TrainingSet.CONF['VALIDATION_SET_RESERVATION_STRAT'] == 'old':
+                probability_distribution = self._update_prob_distrib(all_data_info, probability_distribution, train_cids)
 
-            data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
+            data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Data Set Name', 'Cluster ID', 'Label'])]
             labels = all_data_info['Label']
 
             # split train/val sets
@@ -249,11 +255,11 @@ class TrainingSet:
         """
         all_data_info, labels_set = self._load(data_to_load='all')
         self.labels_set = labels_set
-        # all_data_info: df w/ cols: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        # all_data_info: df w/ cols: New Time Series ID (index), Data Set Name, Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         
         all_data_info = self._prepare_data_set(all_data_info, data_properties)
 
-        data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Cluster ID', 'Label'])]
+        data = all_data_info.iloc[:, ~all_data_info.columns.isin(['Data Set Name', 'Cluster ID', 'Label'])]
         labels = all_data_info['Label']
 
         X_all = data.to_numpy().astype('float32')
@@ -294,6 +300,9 @@ class TrainingSet:
             return any(cid in self.test_set_ids for cid in dataset.cids)
         elif self.test_set_level == 'datasets':
             return dataset.name in self.test_set_ids
+        elif self.test_set_level == 'timeseries':
+            return True
+
         else:
             raise Exception('Test set reservation strategy not implemented: ', TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
 
@@ -331,14 +340,13 @@ class TrainingSet:
         
         Return:
         1. Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
-           time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
+           time series (each row is for one time series). Columns: New Time Series ID (index), Data Set Name, Cluster ID, Label, 
            Feature 1's name, Feature 2's name, ...
         2. list of all unique labels
         """
         assert data_to_load in ['train', 'test', 'all']
         labels_set = None
         all_complete_datasets = []
-        all_train_test_complete_datasets = []
         
         for dataset in self.datasets:
 
@@ -365,48 +373,42 @@ class TrainingSet:
             # concat data set's labels, features and cassignment
             complete_dataset = pd.concat(to_concat, axis=1)
 
-            all_train_test_complete_datasets.append(complete_dataset) # this list contains train, val & test sets
-            
-            # only keep either the test set or the training and validation sets
-            if data_to_load != 'all':
-                if self.test_set_level == 'clusters':
-                    if data_to_load == 'test':
-                        complete_dataset = complete_dataset.loc[complete_dataset['Cluster ID'].isin(self.test_set_ids)]
-                    else:
-                        complete_dataset = complete_dataset.loc[~complete_dataset['Cluster ID'].isin(self.test_set_ids)]
-                elif self.test_set_level == 'datasets':
-                    if data_to_load == 'test' and dataset.name in self.test_set_ids:
-                        pass
-                    else:
-                        continue # the whole data set is in the test set but we want the train & val sets: skip this data set
-                else:
-                    raise Exception('Test set reservation strategy not implemented: ', 
-                                    TrainingSet.CONF['TEST_SET_RESERVATION_STRAT'])
+            complete_dataset['Data Set Name'] = dataset.name
 
-            all_complete_datasets.append(complete_dataset) # this list contains either train & val sets or test set
+            all_complete_datasets.append(complete_dataset) # this list contains train, val & test sets
         
         # merge the complete data sets (each row is a time serie's info)
-        all_train_test_complete_datasets_df = pd.concat(all_train_test_complete_datasets, axis=0)
         all_complete_datasets_df = pd.concat(all_complete_datasets, axis=0)
 
         # drop columns that contain NaN values (feature columns that not all data sets can have)
         # do this on the df that contains ALL data (train, val & test sets)
-        nb_cols = all_train_test_complete_datasets_df.shape[1]
-        all_train_test_complete_datasets_df = all_train_test_complete_datasets_df.dropna(axis=1)
-        nb_dropped_cols = all_train_test_complete_datasets_df.shape[1] - nb_cols
+        nb_cols = all_complete_datasets_df.shape[1]
+        all_complete_datasets_df = all_complete_datasets_df.dropna(axis=1)
+        nb_dropped_cols = all_complete_datasets_df.shape[1] - nb_cols
         if nb_dropped_cols > nb_cols / 10:
             warnings.warn("Warning: %i/%i feature columns were dropped because they contained NaN values!" % (nb_dropped_cols, 
                                                                                                               nb_cols))
-        
-        # only keep the columns with no NaN in either train, val & test sets
-        all_complete_datasets_df = all_complete_datasets_df[all_train_test_complete_datasets_df.columns]
-        
-        assert labels_set is not None
-        df_to_return = all_train_test_complete_datasets_df if data_to_load == 'all' else all_complete_datasets_df
 
         # create new time series ID (tid must be unique across ALL data sets)
-        df_to_return.index = list(range(0, df_to_return.shape[0]))
-        df_to_return.index.name = 'New Time Series ID'
+        all_complete_datasets_df.index = list(range(0, all_complete_datasets_df.shape[0]))
+        all_complete_datasets_df.index.name = 'New Time Series ID'
+
+        df_to_return = None
+        if data_to_load != 'all':
+            # only keep either the test set or both the training and validation sets
+            if self.test_set_level == 'clusters':
+                mask = all_complete_datasets_df['Cluster ID'].isin(self.test_set_ids) # series that are in the test set
+            elif self.test_set_level == 'datasets':
+                mask = all_complete_datasets_df['Data Set Name'].isin(self.test_set_ids) # series that are in the test set
+            elif self.test_set_level == 'timeseries':
+                mask = all_complete_datasets_df['New Time Series ID'].isin(self.test_set_ids) # series that are in the test set
+            mask = mask if data_to_load == 'test' else ~mask
+            df_to_return = all_complete_datasets_df.loc[mask]
+        else:
+            # keep all data
+            df_to_return = all_complete_datasets_df
+
+        assert df_to_return is not None and labels_set is not None
         return df_to_return, labels_set
 
     def _prepare_data_set(self, all_data_info, data_properties):
@@ -415,8 +417,8 @@ class TrainingSet:
 
         Keyword arguments:
         all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
-                         time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
-                         Feature 1's name, Feature 2's name, ...
+                         time series (each row is for one time series). Columns: New Time Series ID (index), Data Set Name, Cluster ID, 
+                         Label, Feature 1's name, Feature 2's name, ...
         data_properties -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.)
         
         Return:
@@ -440,8 +442,8 @@ class TrainingSet:
         
         Return:
         1. Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
-           time series (each row is for one time series) in the test set. Columns: Time Series ID (index), Cluster ID, Label, 
-           Feature 1's name, Feature 2's name, ...
+           time series (each row is for one time series) in the test set. Columns: New Time Series ID (index), Data Set Name, Cluster ID, 
+           Label, Feature 1's name, Feature 2's name, ...
         2. list of all unique labels
         """
         tmp_all_data_info, test_labels_set = self._load(data_to_load='test')
@@ -457,15 +459,15 @@ class TrainingSet:
 
         Keyword arguments:
         all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
-                         time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
-                         Feature 1's name, Feature 2's name, ...
+                         time series (each row is for one time series). Columns: New Time Series ID (index), Data Set Name, Cluster ID, 
+                         Label, Feature 1's name, Feature 2's name, ...
         strategy -- name of the balancing strategy. Value can be one of: all_same, rmv_min_reduce_max. If 'all_same': all 
                     classes have the same number of elements. If 'rmv_min_reduce_max': the less-populated classes are removed
                     and the most-populated classes are downsized.
         according_to -- string identifying the column according to which the data set should be balanced
         
         Return:
-        Balanced Pandas DataFrame. Columns: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        Balanced Pandas DataFrame. Columns: Time Series ID (index), Data Set Name, Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         """
         column_name = None
         if according_to == 'clusters':
@@ -515,12 +517,12 @@ class TrainingSet:
 
         Keyword arguments:
         all_data_info -- Pandas DataFrame containing the loaded labels, features, and clusters' assignment of each data set's 
-                         time series (each row is for one time series). Columns: Time Series ID (index), Cluster ID, Label, 
-                         Feature 1's name, Feature 2's name, ...
+                         time series (each row is for one time series). Columns: New Time Series ID (index), Data Set Name, Cluster ID, 
+                         Label, Feature 1's name, Feature 2's name, ...
         usable_data_perc -- percentage of time series to keep
         
         Return:
-        Reduced Pandas DataFrame. Columns: Time Series ID (index), Cluster ID, Label, Feature 1's name, Feature 2's name, ...
+        Reduced Pandas DataFrame. Columns: New Time Series ID (index), Data Set Name, Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         """    
         reduced_train_val_df, _, _, _ = sklearn_train_test_split(all_data_info, 
                                                                  all_data_info['Label'], 
@@ -548,7 +550,7 @@ class TrainingSet:
             test_indices = all_data_info.loc[~is_in_train_mask].index.tolist()
             return train_indices, test_indices
         
-        if self.CONF['USE_CUSTOM_SPLIT_METHOD']:
+        if self.CONF['VALIDATION_SET_RESERVATION_STRAT'] == 'old':
             cids_value_counts = all_data_info['Cluster ID'].value_counts()
         
             train = {'cids': [], 'nb_timeseries': []}
@@ -556,9 +558,9 @@ class TrainingSet:
             
             # select random cluster (based on the given distribution) and add all its time series to the training set
             for cluster_id in np.random.choice(sorted(all_data_info['Cluster ID'].unique(), key=int), 
-                                            all_data_info['Cluster ID'].nunique(), 
-                                            replace=False,
-                                            p=probability_distribution):
+                                               all_data_info['Cluster ID'].nunique(), 
+                                               replace=False,
+                                               p=probability_distribution):
                 if (sum(train['nb_timeseries']) / len(all_data_info)) < (1 - val_size - (0.25 * val_size)):
                     train['cids'].append(cluster_id)
                     train['nb_timeseries'].append(cids_value_counts[cluster_id])
@@ -569,7 +571,7 @@ class TrainingSet:
             train_indices, test_indices = _get_ts_ids_from_cids(all_data_info, train['cids'], test['cids'])
             return rdm.sample(train_indices, len(train_indices)), rdm.sample(test_indices, len(test_indices)), train['cids']
 
-        else:
+        elif self.CONF['VALIDATION_SET_RESERVATION_STRAT'] == 'clusters_percentage':
             # split at cluster level: X% for training and Y% for testing
             unique_cids = all_data_info['Cluster ID'].unique()
             clusters_label = [all_data_info[all_data_info['Cluster ID'] == cid].iloc[0]['Label'] for cid in unique_cids]
@@ -587,6 +589,16 @@ class TrainingSet:
             assert len(list(set(train_indices) & set(test_indices))) == 0 # intersection of train/test tids is empty
             assert all_data_info.shape[0] == len(train_indices) + len(test_indices) # each time series has been assigned
             return train_indices, test_indices, train_cids
+
+        elif self.CONF['VALIDATION_SET_RESERVATION_STRAT'] == 'ts_percentage':
+            train_indices, test_indices, _, _ = sklearn_train_test_split(
+                all_data_info, 
+                all_data_info['Label'], 
+                test_size=val_size, 
+                shuffle=True,
+                stratify=all_data_info['Label']
+            )
+            return train_indices, test_indices, None
 
     def _update_prob_distrib(self, all_data_info, probability_distribution, train_ids):
         """

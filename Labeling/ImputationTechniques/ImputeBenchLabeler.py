@@ -241,17 +241,19 @@ class ImputeBenchLabeler(AbstractLabeler):
 
             if cluster.shape[0] > 1: # if cluster has at least 2 time series: label 1st, use the 2nd and N other series from the same data set
                 sequences_to_use = pd.concat([
-                    cluster.iloc[0].to_frame(), # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
-                    cluster.iloc[1].to_frame(), # 2nd seq of cluster we want to label (to ensure benchmark has at least 1 highly correlated seq in the set)
-                    available_timeseries.sample(N_to_sample, replace=False)
+                    cluster.iloc[0].to_frame().T, # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
+                    cluster.iloc[1].to_frame().T, # 2nd seq of cluster we want to label (to ensure benchmark has at least 1 highly correlated seq in the set)
+                    available_timeseries.sample(N_to_sample, replace=False) # N sequences from the same data set but not the same cluster
                 ])
             else:
                 sequences_to_use = pd.concat([
-                    cluster.iloc[0].to_frame(), # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
-                    available_timeseries.sample(N_to_sample, replace=False)
+                    cluster.iloc[0].to_frame().T, # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
+                    available_timeseries.sample(N_to_sample, replace=False) # N sequences from the same data set but not the same cluster
                 ])
-        else:
-            raise Exception('Invalid strategy for time series selection for benchmark.')
+
+            print(all_timeseries.shape, cluster.shape, sequences_to_use.shape) # TODO tmp print
+
+        else: raise Exception('Invalid strategy for time series selection for benchmark.')
 
         # call benchmark on the cluster's time series
         alg_algx_cmd = self._get_benchmark_alg_cmd(ImputeBenchLabeler.CONF['ALGORITHMS_LIST'])

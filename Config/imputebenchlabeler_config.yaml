@@ -63,21 +63,21 @@ BENCH_RES_AGG_AND_RANK_STRATEGY: voting
 # BENCH_RES_AGG_AND_RANK_STRATEGY_PARAMS: Dictionary of parameters for each BENCH_RES_AGG_AND_RANK_STRATEGY.
 BENCH_RES_AGG_AND_RANK_STRATEGY_PARAMS: 
   - simple:
-      - index_to_agg: [0,1,2,3,4,5,6,7] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+      - index_to_agg: [0,1,2,3,4,5,6,7] # for miss_perc, indices are: 0:10%, 1:20%, 2:30%, 3:40%, 4:50%, 5:60%, 6:70%, 7:80%
       - agg_strat: mean # can be one of: mean, median, sum, min, max
   - voting:
       # list as much rankings you wish for, a majority voting strategy will be applied to the ensemble of resulting lists
       - ranking1: 
-        - index_to_agg: [0] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - index_to_agg: [0] # for miss_perc, indices are: 0:10%, 1:20%, 2:30%, 3:40%, 4:50%, 5:60%, 6:70%, 7:80%
         - agg_strat: mean # can be one of: mean, median, sum, min, max
       - ranking2: 
-        - index_to_agg: [0,1,2,3] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - index_to_agg: [0,1,2,3] # for miss_perc, indices are: 0:10%, 1:20%, 2:30%, 3:40%, 4:50%, 5:60%, 6:70%, 7:80%
         - agg_strat: mean # can be one of: mean, median, sum, min, max
       - ranking3: 
-        - index_to_agg: [0,1,2,3,4,5] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - index_to_agg: [0,1,2,3,4,5] # for miss_perc, indices are: 0:10%, 1:20%, 2:30%, 3:40%, 4:50%, 5:60%, 6:70%, 7:80%
         - agg_strat: mean # can be one of: mean, median, sum, min, max
       - ranking4: 
-        - index_to_agg: [0,1,2,3,4,5,6,7] # for miss_perc, indices are: 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%
+        - index_to_agg: [0,1,2,3,4,5,6,7] # for miss_perc, indices are: 0:10%, 1:20%, 2:30%, 3:40%, 4:50%, 5:60%, 6:70%, 7:80%
         - agg_strat: mean # can be one of: mean, median, sum, min, max
 
 

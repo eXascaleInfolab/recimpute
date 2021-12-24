@@ -185,7 +185,7 @@ def get_recommendations_filename(timeseries_filename):
 
 
 if __name__ == '__main__':
-    
+
     _models_list = [f.replace('.py', '') for f in os.listdir('Training/ModelsDescription') if f not in ['__pycache__', '_template.py']]
     _valid_args = {
         '-mode': ['train', 'eval', 'use'],

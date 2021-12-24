@@ -89,9 +89,9 @@ class ModelsTrainer:
                 print('\nCross-validation split n°%i' % (split_id+1))
                 all_data, all_labels, labels_set, X_train, y_train, X_val, y_val = yielded
 
-                print('X_train shape:', X_train.shape, ', X_val shape:', X_val.shape) # TODO tmp
-                print(np.asarray(np.unique(y_train, return_counts=True)).T) # TODO tmp
-                print(np.asarray(np.unique(y_val, return_counts=True)).T) # TODO tmp
+                print('X_train shape:', X_train.shape, ', X_val shape:', X_val.shape) # TODO tmp print
+                print(np.asarray(np.unique(y_train, return_counts=True)).T) # TODO tmp print
+                print(np.asarray(np.unique(y_val, return_counts=True)).T) # TODO tmp print
 
                 for model in models_to_train:
 
@@ -115,7 +115,7 @@ class ModelsTrainer:
                                                           all_data.columns, self.training_set.get_labeler_properties(), labels_set,
                                                           plot_cm=True)
 
-                    cm[0].savefig('Training/Results/Plots/%s: %i' % (model, split_id)) # TODO tmp
+                    cm[0].savefig('Training/Results/Plots/%s: %i' % (model, split_id)) # TODO tmp print
 
                     # save results
                     # TrainResults contain a dict grouping the results of each trained model

@@ -477,7 +477,7 @@ class ShapeBasedClustering(AbstractClustering):
         """
         print('Clustering of following data sets started at %s:\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         for dataset in datasets:
-            print('- %s\n' % dataset.name)
+            print('- %s' % dataset.name)
         print('\n')
             
         updated_datasets = []

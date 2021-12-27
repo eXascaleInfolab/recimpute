@@ -401,7 +401,7 @@ class TrainingSet:
             elif self.test_set_level == 'datasets':
                 mask = all_complete_datasets_df['Data Set Name'].isin(self.test_set_ids) # series that are in the test set
             elif self.test_set_level == 'timeseries':
-                mask = all_complete_datasets_df['New Time Series ID'].isin(self.test_set_ids) # series that are in the test set
+                mask = all_complete_datasets_df.index.isin(self.test_set_ids) # series that are in the test set
             mask = mask if data_to_load == 'test' else ~mask
             df_to_return = all_complete_datasets_df.loc[mask]
         else:

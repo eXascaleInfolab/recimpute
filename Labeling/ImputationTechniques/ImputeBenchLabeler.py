@@ -239,17 +239,22 @@ class ImputeBenchLabeler(AbstractLabeler):
             # number of time series to fed to the benchmark in addition to the sequence we want to label and a second sequence from its cluster
             N_to_sample = min(ImputeBenchLabeler.CONF['NB_TS_FOR_BCHMK'], available_timeseries.shape[0])
 
-            if cluster.shape[0] > 1: # if cluster has at least 2 time series: label 1st, use the 2nd and N other series from the same data set
-                sequences_to_use = pd.concat([
-                    cluster.iloc[0].to_frame().T, # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
-                    cluster.iloc[1].to_frame().T, # 2nd seq of cluster we want to label (to ensure benchmark has at least 1 highly correlated seq in the set)
-                    available_timeseries.sample(N_to_sample, replace=False) # N sequences from the same data set but not the same cluster
-                ])
-            else:
-                sequences_to_use = pd.concat([
-                    cluster.iloc[0].to_frame().T, # 1st seq of cluster we want to label (benchmark will try to reconstruct this one)
-                    available_timeseries.sample(N_to_sample, replace=False) # N sequences from the same data set but not the same cluster
-                ])
+            sequences_to_use = pd.concat([
+                # 1st (and 2nd if cluster has at least 2 series) seq of cluster we want to label (benchmark will try to reconstruct this one)
+                *[cluster.iloc[i].to_frame().T for i in range(0, int(cluster.shape[0] > 1)+1)],
+                # N sequences from the same data set but not the same cluster
+                available_timeseries.sample(N_to_sample, replace=False) 
+            ])
+
+            if sequences_to_use.shape[0] < 5:
+                nb_seq_to_add = 5 - sequences_to_use.shape[0]
+                if cluster.shape[0] - 2 >= nb_seq_to_add:
+                    sequences_to_use = pd.concat([
+                        sequences_to_use,
+                        *[cluster.iloc[-i-1].to_frame().T for i in range(nb_seq_to_add)]
+                    ])
+                else: raise Exception('The data set does not have enough time series for the ImputeBench benchmark to run properly.')
+
 
             print(all_timeseries.shape, cluster.shape, sequences_to_use.shape) # TODO tmp print
 

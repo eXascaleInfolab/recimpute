@@ -433,7 +433,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         else:
             raise Exception('Invalid ImputeBench results\' aggregatin strategy.')
 
-    def _get_ranking_from_bench_res(self, benchmark_results, ranking_strat, ranking_strat_params, error_to_minimize, algos_to_exclude):
+    def _get_ranking_from_bench_res(self, benchmark_results, ranking_strat, ranking_strat_params, error_to_minimize, algos_to_exclude, return_scores=False):
         """
         Aggregates the benchmark results using the specified aggregation strategy and then ranks the algorithms (classes).
         
@@ -445,9 +445,12 @@ class ImputeBenchLabeler(AbstractLabeler):
         ranking_strat_params -- dictionary of parameters for the ranking_strat
         error_to_minimize -- error to minimize when selecting relevant algorithms
         algos_to_exclude -- list of algorithms to exclude from the returned list
+        return_scores -- True if a second list of scores should be returned in addition to the ranked algorithms, False otherwise (default False)
         
         Return:
-        Ranked (from best to worse) list of algorithms (classes).
+        If return_scores is set to False (default): ranked (from best to worse) list of algorithms (classes).
+        If return_scores is set to True: pandas DataFrame with ranked (from best to worse) list of algorithms (classes) as index
+          and columns that give information about those algorithms (columns depend on the ranking_strat).
         """
         
         ranked_algos = None
@@ -456,40 +459,57 @@ class ImputeBenchLabeler(AbstractLabeler):
             agg_bench_res = self._aggregate_bench_res(benchmark_results, 
                                                       index_to_agg=ranking_strat_params['index_to_agg'], 
                                                       agg_strat=ranking_strat_params['agg_strat'])
-            ranked_algos = agg_bench_res.sort_values(error_to_minimize, ascending=True).index.tolist()
+            sorted_bench_scores = agg_bench_res.sort_values(error_to_minimize, ascending=True)
+            ranked_algos = sorted_bench_scores.loc[:, [error_to_minimize]]
         elif ranking_strat == 'voting':
             # multiple aggregations -> majority voting to get the final list
-            algos_scores = {}
+            algos_cstm_scores = {}
+            algos_list = benchmark_results.index.levels[0].tolist()
+            algos_rmse = {algo: ([], []) for algo in algos_list}
             for params in ranking_strat_params.values():
                 agg_bench_res = self._aggregate_bench_res(benchmark_results, 
                                                           index_to_agg=params['index_to_agg'], 
                                                           agg_strat=params['agg_strat'])
-                ranked_algos_tmp = agg_bench_res.sort_values(error_to_minimize, ascending=True).index.tolist()
+                sorted_bench_scores_tmp = agg_bench_res.sort_values(error_to_minimize, ascending=True)
+                ranked_algos_tmp = sorted_bench_scores_tmp.index.tolist()
 
                 for i, algo in enumerate(ranked_algos_tmp):
+                    algos_rmse[algo][0].append( agg_bench_res.loc[algo, error_to_minimize] )
+                    algos_rmse[algo][1].append( i+1 )
                     try:
-                        algos_scores[algo] += i
+                        algos_cstm_scores[algo] += i
                     except:
-                        algos_scores[algo] = i
+                        algos_cstm_scores[algo] = i
             # the algorithm the most often at the beginning of the lists is the best
-            ranked_algos = list(dict(sorted(algos_scores.items(), key=lambda item: item[1])).keys())
-        else:
-            raise Exception('Invalid ranking strategy.')
+            ranked_algos = list(dict(sorted(algos_cstm_scores.items(), key=lambda item: item[1])).keys())
+            compute_weighted_avg = lambda algo: sum(rmse * weight for rmse, weight in zip(algos_rmse[algo][0], algos_rmse[algo][1])) / \
+                                                sum(algos_rmse[algo][1])
+            ranked_algos = pd.DataFrame(data={
+                'algorithms': ranked_algos, 
+                'weighted average %s' % error_to_minimize: [compute_weighted_avg(algo) for algo in ranked_algos],
+                'average %s' % error_to_minimize: [sum(algos_rmse[algo][0]) / len(algos_rmse[algo][0]) for algo in ranked_algos],
+                'average rank': [sum(algos_rmse[algo][1]) / len(algos_rmse[algo][1]) for algo in ranked_algos],
+                'ranks': [algos_rmse[algo][1] for algo in ranked_algos]})
+            ranked_algos = ranked_algos.set_index('algorithms')
+        else: raise Exception('Invalid ranking strategy.')
         
         # remove algorithms listed in algos_to_exclude
-        ranked_algos = [algo for algo in ranked_algos if algo not in algos_to_exclude]
+        ranked_algos = ranked_algos[~ranked_algos.index.isin(algos_to_exclude)]
             
         # replace cdrec_k2 and _k3 by cdrec
-        if 'cdrec_k2' in ranked_algos and 'cdrec_k3' in ranked_algos:
-            idx1 = ranked_algos.index('cdrec_k2')
-            idx2 = ranked_algos.index('cdrec_k3')
-            ranked_algos[min(idx1, idx2)] = 'cdrec' # keep the best of the 2
-            del ranked_algos[max(idx1, idx2)] # remove the worse of the 2
-        elif 'cdrec_k2' in ranked_algos or 'cdrec_k3' in ranked_algos:
-            idx = ranked_algos.index('cdrec_k3') if 'cdrec_k3' in ranked_algos else ranked_algos.index('cdrec_k2')
-            ranked_algos[idx] = 'cdrec'
+        if 'cdrec_k2' in ranked_algos.index and 'cdrec_k3' in ranked_algos.index:
+            idx1 = ranked_algos.index.get_loc('cdrec_k2')
+            idx2 = ranked_algos.index.get_loc('cdrec_k3')
+            ranked_algos = ranked_algos.rename({ranked_algos.index[min(idx1, idx2)]: 'cdrec'}) # keep the best of the 2
+            ranked_algos = ranked_algos.drop(ranked_algos.index[max(idx1, idx2)], axis=0) # remove the worse of the 2
+        elif 'cdrec_k2' in ranked_algos.index or 'cdrec_k3' in ranked_algos.index:
+            idx = ranked_algos.index.get_loc('cdrec_k3') if 'cdrec_k3' in ranked_algos.index else ranked_algos.index.get_loc('cdrec_k2')
+            ranked_algos = ranked_algos.rename({ranked_algos.index[idx]: 'cdrec'})
 
-        return ranked_algos
+        if not return_scores:
+            return ranked_algos.index.tolist()
+        else:
+            return ranked_algos
 
     def _get_labels_from_bench_res(self, all_benchmark_results, properties):
         """

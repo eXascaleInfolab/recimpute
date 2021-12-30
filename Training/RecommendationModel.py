@@ -298,13 +298,19 @@ class RecommendationModel:
                 'Hamming Loss': hamming_loss(y_true, y_pred),
             }
             
-            if not are_multi_labels: # compute MRR only for mono labels classifiers
-                ranks = [list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys()).index(y_true_i) + 1 
-                         for y_true_i, probas in zip(y_true, y_pred_proba)] # rank at which each correct label is found
+            if not are_multi_labels: # TODO those metrics should also be computed for multi-labels classifiers
+                get_sorted_recommendations = lambda probas, classes: list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys())
+                # rank at which each y_true is found in the sorted y_pred_proba (list of len = len(y_true))
+                ranks = [get_sorted_recommendations(y_pred_proba_i, classes).index(y_true_i) + 1 
+                         for y_true_i, y_pred_proba_i in zip(y_true, y_pred_proba)] 
 
                 scores['Mean Reciprocal Rank'] = (1 / len(y_true)) * sum(1 / rank_i for rank_i in ranks)
-                scores['Precision@3'] = sum(int(rank_i <= 3) for rank_i in ranks) / (len(y_true) * 3)
-                scores['Recall@3'] = sum(int(rank_i <= 3) for rank_i in ranks) / len(y_true)
+                # average prec@K and recall@k
+                K = 3
+                prec_at_k = lambda K, rank_y_true: int(rank_y_true <= K) / K
+                scores['Precision@3'] = sum(prec_at_k(K, rank_y_true) for rank_y_true in ranks) / len(y_true)
+                recall_at_k = lambda K, rank_y_true: int(rank_y_true <= K) / 1
+                scores['Recall@3'] = sum(recall_at_k(K, rank_y_true) for rank_y_true in ranks) / len(y_true)
 
             if plot_cm:
                 fig, _, cm_val = Utils.plot_confusion_matrix(y_true, y_pred, are_multi_labels, 

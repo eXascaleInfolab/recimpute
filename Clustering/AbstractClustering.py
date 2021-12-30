@@ -125,26 +125,26 @@ class AbstractClustering(SingletonClass, metaclass=abc.ABCMeta):
             all_cids.append(cid)
         return True
 
-    def _get_dataset_ncc_scores(self, timeseries):
+    def _get_dataset_mean_ncc_score(self, timeseries):
         """
-        Measure the Normalized Cross-Correlation score over all pairs of time series in the data set.
+        Measure the Normalized Cross-Correlation score over all pairs of time series in the data set and return the mean value.
         
         Keyword arguments:
         timeseries -- Pandas DataFrame containing the time series (each row is a time series)
         
         Return:
-        List of NCC scores measured for all pairs of time series (e.g. dataset with 6 time series will produce a list of 15 NCC scores)
+        Average of NCC scores measured for all pairs of time series
         """
         if timeseries.shape[0] > 1: # if there are >1 time series in the data set
-            ncc_scores = []
+            ncc_score, count = 0, 0
             for i in range(1, len(timeseries.index)):
                 for j in range(0, i):
                     values = _ncc_c(timeseries.iloc[i].values, timeseries.iloc[j].values)
-                    ncc_scores.append(values[values.argmax()])
-
-            return np.array(ncc_scores)
+                    ncc_score += values[values.argmax()]
+                    count += 1
+            return ncc_score / count
         else:
-            return np.array([1.0])
+            return 1.0
     
     def _merge_small_clusters(self, datasets, min_nb_ts):
         """
@@ -163,7 +163,7 @@ class AbstractClustering(SingletonClass, metaclass=abc.ABCMeta):
 
         # compute avg ncc score of each cluster
         for dataset, _, cluster, cluster_id in Dataset.yield_each_datasets_cluster(datasets):
-            all_avg_ncc[f'{dataset.name}_{cluster_id}'] = np.mean(self._get_dataset_ncc_scores(cluster))
+            all_avg_ncc[f'{dataset.name}_{cluster_id}'] = self._get_dataset_mean_ncc_score(cluster)
 
         # merging phase
         updated_datasets = []
@@ -182,7 +182,7 @@ class AbstractClustering(SingletonClass, metaclass=abc.ABCMeta):
                         if merged_cluster.shape[0] >= min_nb_ts:
                             # compute the avg ncc score difference (score with merge - score without merge)
                             other_cluster_avg_ncc = all_avg_ncc[f'{dataset.name}_{other_clusters_id}']
-                            merged_cluster_avg_ncc = np.mean(self._get_dataset_ncc_scores(merged_cluster))
+                            merged_cluster_avg_ncc = self._get_dataset_mean_ncc_score(merged_cluster)
                             ncc_diffs[other_clusters_id] = merged_cluster_avg_ncc - other_cluster_avg_ncc
 
                 # merge with the cluster that returned the largest positive diff
@@ -192,7 +192,7 @@ class AbstractClustering(SingletonClass, metaclass=abc.ABCMeta):
 
                 # update the avg ncc score of the merged cluster
                 new_cluster = dataset.get_cluster_by_id(timeseries, selected_cluster_id, clusters_assignment)
-                all_avg_ncc[f'{dataset.name}_{selected_cluster_id}'] = np.mean(self._get_dataset_ncc_scores(new_cluster))
+                all_avg_ncc[f'{dataset.name}_{selected_cluster_id}'] = self._get_dataset_mean_ncc_score(new_cluster)
 
             # save modified assignments to csv
             self.save_clusters(dataset, clusters_assignment)

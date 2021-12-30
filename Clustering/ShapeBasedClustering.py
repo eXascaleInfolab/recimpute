@@ -216,15 +216,15 @@ class ShapeBasedClustering(AbstractClustering):
         Run score
         """
         # compute the score of each cluster
-        allclusters_ncc_scores = []
+        allclusters_mean_ncc_scores = []
         for cluster_id in cassignment['Cluster ID'].unique(): # for each cluster
             # retrieve cluster
             clusters_ts = timeseries.loc[cassignment['Cluster ID'] == cluster_id] 
             # measure normalized cross-correlation between each pair of time series of this cluster
-            cluster_ncc_scores = self._get_dataset_ncc_scores(clusters_ts) if clusters_ts.shape[0] > 1 else [[1.0]]
-            allclusters_ncc_scores.append(cluster_ncc_scores)
+            cluster_mean_ncc_score = self._get_dataset_mean_ncc_score(clusters_ts)
+            allclusters_mean_ncc_scores.append(cluster_mean_ncc_score)
         # compute the run's score: sum( avg( ncc between each pair of time series in the cluster ) for each cluster )
-        run_score = sum(np.mean(v) for v in allclusters_ncc_scores)
+        run_score = sum(allclusters_mean_ncc_scores)
         # normalize the run's score by the number of clusters
         run_score /= len(cassignment['Cluster ID'].unique())
         return run_score
@@ -298,16 +298,16 @@ class ShapeBasedClustering(AbstractClustering):
         ds_nb_clusters_gridsearch = None
 
         # compute median normalized cross-correlation score between each pair of time series in the data set
-        dataset_ncc_scores = None
+        dataset_mean_ncc_score = None
         try:
-            dataset_ncc_scores = self._get_dataset_ncc_scores(timeseries)
+            dataset_mean_ncc_score = self._get_dataset_mean_ncc_score(timeseries)
         except MemoryError:
             ds_scores = None
             ds_nb_clusters_gridsearch = None
             
-        if dataset_ncc_scores is not None:
+        if dataset_mean_ncc_score is not None:
             # use clustering iff time series are not yet correlated enough
-            if np.median(dataset_ncc_scores) < ShapeBasedClustering.CONF['NCC_MIN_THRESHOLD']:
+            if dataset_mean_ncc_score < ShapeBasedClustering.CONF['NCC_MIN_THRESHOLD']:
 
 
                 ds_nb_clusters_gridsearch = self._get_ds_gridsearch_range(dataset)
@@ -332,8 +332,8 @@ class ShapeBasedClustering(AbstractClustering):
                     ds_nb_clusters_gridsearch = None
             else:
                 # no clustering needed
-                print(f'TMP: %s\t no clustering: %.3f' % (dataset.name, np.mean(dataset_ncc_scores)))
-                ds_scores['avg'].append(np.mean(dataset_ncc_scores))
+                print(f'TMP: %s\t no clustering: %.3f' % (dataset.name, dataset_mean_ncc_score))
+                ds_scores['avg'].append(dataset_mean_ncc_score)
                 ds_nb_clusters_gridsearch = None
                 clusters_assignment = pd.DataFrame(list(zip(timeseries.index, np.zeros(len(timeseries.index), np.int8))),
                                                    columns=['Time Series ID', 'Cluster ID'])
@@ -365,7 +365,8 @@ class ShapeBasedClustering(AbstractClustering):
         exception = None
         updated_datasets = []
         try:
-            p = Pool() # create pool of threads (uses all available cores by default)
+            nb_workers = ShapeBasedClustering.CONF['GS_NB_WORKERS']
+            p = Pool(processes= nb_workers if nb_workers > 0 else None) # create pool of threads
             with open(self._get_gs_scores_filename(), 'w') as f:
                 f.write('{')
                 for dataset, res_scores, res_range in p.imap_unordered(self._gridsearch, datasets):

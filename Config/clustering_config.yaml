@@ -7,7 +7,7 @@
 # Clustering related configuration file
 # ------------------------------------
 
-# NCC_MIN_THRESHOLD: data sets with a median NCC score above this threshold will not be clustered (already correlated enough)
+# NCC_MIN_THRESHOLD: data sets with a mean NCC score above this threshold will not be clustered (already correlated enough)
 NCC_MIN_THRESHOLD: 0.95
 
 # GS_MAX_TESTS: used to define max number of clusters to evaluate during gridsearch based on the data set's complexity
@@ -39,6 +39,9 @@ GS_OPTIONAL_RANGES_HINTS:
     - min: 2
     - max: 8
     - step: 1
+
+# GS_NB_WORKERS: number of workers to use for the clustering's gridsearch. If set to <= 0, all available cores are used.
+GS_NB_WORKERS: 2
 
 # CLUSTERING_NB_RUNS: number of runs to perform during the final clustering phase depending on the data sets complexity
 CLUSTERING_NB_RUNS:

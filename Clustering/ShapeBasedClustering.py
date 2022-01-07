@@ -10,6 +10,7 @@ from datetime import datetime
 from functools import partial
 import json
 from kshape.core import kshape
+import math
 from multiprocessing import Pool
 import numpy as np
 import os
@@ -51,57 +52,50 @@ class ShapeBasedClustering(AbstractClustering):
         Return: 
         List of Dataset objects
         """
-        # search for optimal number of clusters for each data set (gridsearch)
-        scores, nb_clusters_gridsearch = self._run_gridsearch(datasets)
-
-        # define optimal number of clusters for each dataset
-        nb_clusters_per_ds = {}
-        for dataset_name, measures in scores.items():
-            if len(measures['avg']) <= 1:
-                nb_clusters_per_ds[dataset_name] = 1
-            else:
-                x_maxima_sc = nb_clusters_gridsearch[dataset_name][np.argmax(measures['avg'], axis=0)]
-                nb_clusters_per_ds[dataset_name] = x_maxima_sc
-
-        # apply "final" clustering: cluster each dataset N times with optimal number of clusters discovered by gridsearch 
-        # and keep the assignment yielding the highest score    
-        datasets = self._run_final_clustering(datasets, nb_clusters_per_ds)
-
-        # merge clusters with <5 time series to the most similar cluster from the same data set
-        # and divide large clusters into smaller ones such that each has between 5 and 15 time series
-        # datasets = self.apply_constraints(datasets, 
-        #                                   min_nb_ts=self.CONF['MIN_NB_TS_PER_CLUSTER'],
-        #                                   max_nb_ts=self.CONF['MAX_NB_TS_PER_CLUSTER'])
+        print('Clustering of following data sets started at %s:\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        for dataset in datasets:
+            print('- %s' % dataset.name)
+        print('\n')
+            
+        updated_datasets = []
+        with Pool() as p:
+            for dataset in p.map(self.cluster, datasets):
+                updated_datasets.append(dataset)
+            
+        print('Clustering ended at %s.\n\n\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
         # change all clusters' ID (for all datasets) such that there are no duplicates
-        datasets = self.make_cids_unique(datasets)
-        return datasets
+        updated_datasets = self.make_cids_unique(updated_datasets)
+        return updated_datasets
 
-    def cluster(self, dataset):
+    def cluster(self, dataset, merge=True):
         """
-        Searches the optimal number of clusters to produce for this data set, performs multiple clustering tries
-        to find the most accurate. Saves the clusters' assignment to a .csv file stored in the Dataset object.
+        Clusters the given data set's time series. Saves the clusters' assignment to a .csv file stored in the Dataset object.
         
         Keyword arguments:
         dataset -- Dataset objects containing the time series to cluster.
+        merge -- True to try merging clusters after their generation, False otherwise (default True)
         
         Return: 
         Updated Dataset object
         """
-        # search for optimal number of clusters for the data set (gridsearch)
-        dataset, res_scores, res_range = self._gridsearch(dataset)
+        timeseries = dataset.load_timeseries(transpose=True)
 
-        # define optimal number of clusters for each dataset
-        if len(res_scores['avg']) <= 1:
-            nb_clusters = 1
-        else:
-            x_maxima_sc = res_range[np.argmax(res_scores['avg'], axis=0)]
-            nb_clusters = x_maxima_sc
+        # cluster iteratively the time series using k-Shape
+        clusters = self._cluster_subroutine(timeseries)
 
-        # apply "final" clustering: cluster each dataset N times with optimal number of clusters discovered by gridsearch 
-        # and keep the assignment yielding the highest score    
-        dataset = self._final_clustering(dataset, {dataset.name: nb_clusters})
+        # merge clusters if correlation remains high
+        merged_clusters = self._merge_clusters(clusters) if merge else clusters
 
+        # create the clusters' assignments data frame
+        data = [
+            (tid, cid) # time series id, assigned cluster's id
+            for cid, cluster in enumerate(merged_clusters)
+            for tid in cluster.index
+        ]
+        clusters_assignment = pd.DataFrame(data=data, columns=['Time Series ID', 'Cluster ID']).sort_values('Time Series ID')
+        assert sorted(timeseries.index) == sorted(clusters_assignment['Time Series ID'].tolist())
+        self.save_clusters(dataset, clusters_assignment)
         return dataset
 
     def save_clusters(self, dataset, cassignment):
@@ -139,6 +133,45 @@ class ShapeBasedClustering(AbstractClustering):
     
     # private methods
 
+    def _cluster_subroutine(self, original_timeseries):
+        """
+        Clusters the given data set's time series.
+        
+        Keyword arguments:
+        original_timeseries -- Pandas DataFrame containing the data set's time series (each row is a time series)
+        
+        Return: 
+        List of resulting clusters (each cluster is a Pandas DataFrame of time series)
+        """
+        stack = [original_timeseries] # contains the clusters that have not been handled yet
+        result = [] # contains the clusters that have been accepted
+        while len(stack) > 0:
+
+            timeseries = stack.pop()
+            assert timeseries.shape[0] > 0
+    
+            threshold = ShapeBasedClustering.CONF['CLUSTER_ACCEPTANCE_THRESHOLD'] if len(result) > 0 \
+                        else ShapeBasedClustering.CONF['INIT_ACCEPTANCE_THRESHOLD']
+            if timeseries.shape[0] == 1 or self._get_dataset_mean_corr(timeseries) >= threshold:#self._get_dataset_mean_ncc_score(timeseries) >= threshold:
+                # correlation is high enough: accept the cluster
+                result.append(timeseries)
+            elif timeseries.shape[0] == 2:
+                # accept the two remaining time series as individual clusters
+                result.append(timeseries.iloc[0].to_frame().T)
+                result.append(timeseries.iloc[1].to_frame().T)
+            else:
+                # correlation in this cluster is not high enough: cluster with k-Shape
+                K = max(2, math.floor(timeseries.shape[0] * ShapeBasedClustering.CONF['TS_PERC_TO_COMPUTE_K']))
+                
+                clusters_assignment = self._cluster_timeseries(timeseries, K)
+                clusters_assignment['Time Series ID'] = timeseries.index
+                
+                for cluster_id in clusters_assignment['Cluster ID'].unique():
+                    ts_ids_for_cid = clusters_assignment['Time Series ID'][clusters_assignment['Cluster ID'] == cluster_id]
+                    clusters_timeseries = timeseries.loc[ts_ids_for_cid]
+                    stack.append(clusters_timeseries)
+        return result
+
     def _cluster_timeseries(self, timeseries, nb_clusters):
         """
         Clusters the given time series.
@@ -159,6 +192,175 @@ class ShapeBasedClustering(AbstractClustering):
         # sort by time series ID and not cluster ID
         clusters_assignment = clusters_assignment.sort_values(clusters_assignment.columns[0])
         return clusters_assignment
+
+    def _merge_clusters(self, clusters):
+        """
+        Tries to merge clusters if the correlation remains high.
+        
+        Keyword arguments:
+        clusters -- list of resulting clusters (each cluster is a Pandas DataFrame of time series)
+        
+        Return:
+        Updated clusters: list of updated clusters (each cluster is a Pandas DataFrame of time series)
+        """
+        clusters = dict(zip(range(0, len(clusters)), clusters))
+        
+        # init: compute a centroid for each cluster as well as the avg correlation inside each cluster
+        all_centroids, all_corrs = {}, {}
+        for cid, cluster_ts in clusters.items():
+            all_centroids[cid] = cluster_ts.mean()
+            all_corrs[cid] = self._get_dataset_mean_corr(cluster_ts)
+        
+        # for each cluster
+        for cid in list(clusters.keys()):
+            # retrieve the cluster's time series and centroid
+            cluster_ts = clusters[cid]
+            centroid = all_centroids[cid]
+
+            # compute the correlation btw the cluster's centroid and all other clusters' centroid
+            all_centroid_corrs = [(other_cid, centroid.corr(all_centroids[other_cid])) for other_cid, _ in clusters.items()]
+            
+            # identify a list of similar clusters
+            similar_clusters = filter(lambda item: item[1] >= ShapeBasedClustering.CONF['SIMILAR_CLUSTER_THRESHOLD'] and item[0] != cid, 
+                                      all_centroid_corrs)
+
+            best_corr, best_corr_diff, best_cid = -np.inf, -np.inf, None
+            # for each similar cluster
+            for other_cid, _ in similar_clusters:
+                other_cluster_ts = clusters[other_cid]
+                # compute the correlation of the cluster's sequences added to those of the "similar" cluster
+                new_corr = self._get_dataset_mean_corr(pd.concat([cluster_ts, other_cluster_ts]))
+                new_corr_diff = new_corr - all_corrs[other_cid]
+                corr_perc = new_corr / all_corrs[other_cid]
+                
+                clusters_merging_threshold = ShapeBasedClustering.CONF['CLUSTERS_MERGING_THRESHOLD'] if other_cluster_ts.shape[0] > 1 \
+                                             else ShapeBasedClustering.CONF['CLUSTERS_MERGING_THRESHOLD_SINGLE_TS']
+                # is this similar cluster the best candidate for merging
+                if new_corr_diff > best_corr_diff and corr_perc >= clusters_merging_threshold:
+                    best_corr = new_corr
+                    best_corr_diff = new_corr_diff
+                    best_cid = other_cid
+                    
+            if best_cid != None:
+                # merge cid and best_cid
+                merged_cluster_ts = pd.concat([cluster_ts, clusters[best_cid]])
+                clusters[best_cid] = merged_cluster_ts
+                all_centroids[best_cid] = merged_cluster_ts.mean()
+                all_corrs[best_cid] = self._get_dataset_mean_corr(merged_cluster_ts)
+                
+                del clusters[cid]
+                del all_centroids[cid]
+                del all_corrs[cid]
+                
+        return list(clusters.values())
+
+    def _compute_run_score(self, timeseries, cassignment):
+        """
+        Computes a clustering run's score.
+        
+        Keyword arguments:
+        timeseries -- Pandas DataFrame containing the time series (each row is a time series)
+        cassignment -- Pandas DataFrame containing clusters' assignment of the data set's time series. 
+                       Its index is the same as the real world data set of this object. The associated 
+                       values are the clusters' id to which are assigned the time series.
+        
+        Return:
+        Run score
+        """
+        # compute the score of each cluster
+        allclusters_mean_ncc_scores = []
+        for cluster_id in cassignment['Cluster ID'].unique(): # for each cluster
+            # retrieve cluster
+            clusters_ts = timeseries.loc[cassignment['Cluster ID'] == cluster_id] 
+            # measure normalized cross-correlation between each pair of time series of this cluster
+            cluster_mean_ncc_score = self._get_dataset_mean_ncc_score(clusters_ts)
+            allclusters_mean_ncc_scores.append(cluster_mean_ncc_score)
+        # compute the run's score: sum( avg( ncc between each pair of time series in the cluster ) for each cluster )
+        run_score = sum(allclusters_mean_ncc_scores)
+        # normalize the run's score by the number of clusters
+        run_score /= len(cassignment['Cluster ID'].unique())
+        return run_score
+
+    def _get_cassignment_filename(self, dataset_name):
+        """
+        Returns the filename of the clusters for the given data set's name.
+        
+        Keyword arguments: 
+        dataset_name -- name of the data set to which the clusters belong
+        
+        Return: 
+        Filename of the clusters for the given data set's name.
+        """
+        return normp(
+            AbstractClustering.CLUSTERS_DIR + \
+            f'/{dataset_name}{ShapeBasedClustering.CLUSTERS_FILENAMES_ID}{AbstractClustering.CLUSTERS_APPENDIX}')
+
+
+    # old - to delete eventually
+
+    def old__cluster_all_datasets(self, datasets):
+        """
+        For each data set, searches the optimal number of clusters to produce, performs multiple clustering tries
+        to find the most accurate. Saves the clusters' assignment to a .csv file stored in the Dataset object.
+        
+        Keyword arguments:
+        datasets -- list of Dataset objects containing the time series to cluster.
+        
+        Return: 
+        List of Dataset objects
+        """
+        # search for optimal number of clusters for each data set (gridsearch)
+        scores, nb_clusters_gridsearch = self._run_gridsearch(datasets)
+
+        # define optimal number of clusters for each dataset
+        nb_clusters_per_ds = {}
+        for dataset_name, measures in scores.items():
+            if len(measures['avg']) <= 1:
+                nb_clusters_per_ds[dataset_name] = 1
+            else:
+                x_maxima_sc = nb_clusters_gridsearch[dataset_name][np.argmax(measures['avg'], axis=0)]
+                nb_clusters_per_ds[dataset_name] = x_maxima_sc
+
+        # apply "final" clustering: cluster each dataset N times with optimal number of clusters discovered by gridsearch 
+        # and keep the assignment yielding the highest score    
+        datasets = self._run_final_clustering(datasets, nb_clusters_per_ds)
+
+        # merge clusters with <5 time series to the most similar cluster from the same data set
+        # and divide large clusters into smaller ones such that each has between 5 and 15 time series
+        # datasets = self.apply_constraints(datasets, 
+        #                                   min_nb_ts=self.CONF['MIN_NB_TS_PER_CLUSTER'],
+        #                                   max_nb_ts=self.CONF['MAX_NB_TS_PER_CLUSTER'])
+
+        # change all clusters' ID (for all datasets) such that there are no duplicates
+        datasets = self.make_cids_unique(datasets)
+        return datasets
+
+    def old__cluster(self, dataset):
+        """
+        Searches the optimal number of clusters to produce for this data set, performs multiple clustering tries
+        to find the most accurate. Saves the clusters' assignment to a .csv file stored in the Dataset object.
+        
+        Keyword arguments:
+        dataset -- Dataset objects containing the time series to cluster.
+        
+        Return: 
+        Updated Dataset object
+        """
+        # search for optimal number of clusters for the data set (gridsearch)
+        dataset, res_scores, res_range = self._gridsearch(dataset)
+
+        # define optimal number of clusters for each dataset
+        if len(res_scores['avg']) <= 1:
+            nb_clusters = 1
+        else:
+            x_maxima_sc = res_range[np.argmax(res_scores['avg'], axis=0)]
+            nb_clusters = x_maxima_sc
+
+        # apply "final" clustering: cluster each dataset N times with optimal number of clusters discovered by gridsearch 
+        # and keep the assignment yielding the highest score    
+        dataset = self._final_clustering(dataset, {dataset.name: nb_clusters})
+
+        return dataset
 
     def _check_clusters_validity(self, cassignment, accept_mono_ts_clusters):
         """
@@ -201,33 +403,6 @@ class ShapeBasedClustering(AbstractClustering):
             id_run += 1
             reruns_scores.append(0)
         return id_run, nb_retries, reruns_scores
-
-    def _compute_run_score(self, timeseries, cassignment):
-        """
-        Computes a clustering run's score.
-        
-        Keyword arguments:
-        timeseries -- Pandas DataFrame containing the time series (each row is a time series)
-        cassignment -- Pandas DataFrame containing clusters' assignment of the data set's time series. 
-                       Its index is the same as the real world data set of this object. The associated 
-                       values are the clusters' id to which are assigned the time series.
-        
-        Return:
-        Run score
-        """
-        # compute the score of each cluster
-        allclusters_mean_ncc_scores = []
-        for cluster_id in cassignment['Cluster ID'].unique(): # for each cluster
-            # retrieve cluster
-            clusters_ts = timeseries.loc[cassignment['Cluster ID'] == cluster_id] 
-            # measure normalized cross-correlation between each pair of time series of this cluster
-            cluster_mean_ncc_score = self._get_dataset_mean_ncc_score(clusters_ts)
-            allclusters_mean_ncc_scores.append(cluster_mean_ncc_score)
-        # compute the run's score: sum( avg( ncc between each pair of time series in the cluster ) for each cluster )
-        run_score = sum(allclusters_mean_ncc_scores)
-        # normalize the run's score by the number of clusters
-        run_score /= len(cassignment['Cluster ID'].unique())
-        return run_score
 
     def _clustering_reruns(self, dataset, nb_clusters, nb_reruns, accept_small_clusters=True, save_best_tocsv=False):
         """
@@ -563,16 +738,4 @@ class ShapeBasedClustering(AbstractClustering):
                 i += 1
         return ShapeBasedClustering.GS_SCORES_FILE
 
-    def _get_cassignment_filename(self, dataset_name):
-        """
-        Returns the filename of the clusters for the given data set's name.
-        
-        Keyword arguments: 
-        dataset_name -- name of the data set to which the clusters belong
-        
-        Return: 
-        Filename of the clusters for the given data set's name.
-        """
-        return normp(
-            AbstractClustering.CLUSTERS_DIR + \
-            f'/{dataset_name}{ShapeBasedClustering.CLUSTERS_FILENAMES_ID}{AbstractClustering.CLUSTERS_APPENDIX}')
+    

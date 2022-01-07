@@ -145,6 +145,23 @@ class AbstractClustering(SingletonClass, metaclass=abc.ABCMeta):
             return ncc_score / count
         else:
             return 1.0
+
+    def _get_dataset_mean_corr(self, timeseries):
+        """
+        Measure the average correlation of time series in the data set.
+        
+        Keyword arguments:
+        timeseries -- Pandas DataFrame containing the time series (each row is a time series)
+        
+        Return:
+        Average correlation for all pairs of time series
+        """
+        if timeseries.shape[0] > 1:
+            #corr_matrix = timeseries.T.corr().round(2)
+            corr_matrix = pd.DataFrame(np.corrcoef(timeseries.T.values, rowvar=False), columns=timeseries.T.columns)
+            n = corr_matrix.shape[0]
+            return ((corr_matrix.sum().sum() - np.trace(corr_matrix)) / 2) / (n * (n - 1) / 2)
+        return 1.0
     
     def _merge_small_clusters(self, datasets, min_nb_ts):
         """

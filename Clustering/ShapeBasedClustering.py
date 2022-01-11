@@ -17,6 +17,7 @@ import os
 from os.path import normpath as normp
 import pandas as pd
 import time
+from tqdm import tqdm
 
 from Clustering.AbstractClustering import AbstractClustering
 from Datasets.Dataset import Dataset
@@ -43,7 +44,7 @@ class ShapeBasedClustering(AbstractClustering):
 
     def cluster_all_datasets(self, datasets):
         """
-        For each data set, searches the optimal number of clusters to produce, performs multiple clustering tries
+        Parallel - For each data set, searches the optimal number of clusters to produce, performs multiple clustering tries
         to find the most accurate. Saves the clusters' assignment to a .csv file stored in the Dataset object.
         
         Keyword arguments:
@@ -59,8 +60,10 @@ class ShapeBasedClustering(AbstractClustering):
             
         updated_datasets = []
         with Pool() as p:
-            for dataset in p.map(self.cluster, datasets):
-                updated_datasets.append(dataset)
+            with tqdm(total=len(datasets)) as pbar:
+                for updated_dataset in p.imap(self.cluster, datasets):
+                    updated_datasets.append(updated_dataset)
+                    pbar.update()
             
         print('Clustering ended at %s.\n\n\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
@@ -68,13 +71,39 @@ class ShapeBasedClustering(AbstractClustering):
         updated_datasets = self.make_cids_unique(updated_datasets)
         return updated_datasets
 
-    def cluster(self, dataset, merge=True):
+    def cluster_all_datasets_seq(self, datasets):
+        """
+        Sequential - For each data set, searches the optimal number of clusters to produce, performs multiple clustering tries
+        to find the most accurate. Saves the clusters' assignment to a .csv file stored in the Dataset object.
+        
+        Keyword arguments:
+        datasets -- list of Dataset objects containing the time series to cluster.
+        
+        Return: 
+        List of Dataset objects
+        """
+        print('Clustering of following data sets started at %s:\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        for dataset in datasets:
+            print('- %s' % dataset.name)
+        print('\n')
+            
+        updated_datasets = []
+        for dataset in tqdm(datasets, total=len(datasets)):
+            updated_dataset = self.cluster(dataset)
+            updated_datasets.append(updated_dataset)
+            
+        print('Clustering ended at %s.\n\n\n' % datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
+        # change all clusters' ID (for all datasets) such that there are no duplicates
+        updated_datasets = self.make_cids_unique(updated_datasets)
+        return updated_datasets
+
+    def cluster(self, dataset):
         """
         Clusters the given data set's time series. Saves the clusters' assignment to a .csv file stored in the Dataset object.
         
         Keyword arguments:
         dataset -- Dataset objects containing the time series to cluster.
-        merge -- True to try merging clusters after their generation, False otherwise (default True)
         
         Return: 
         Updated Dataset object
@@ -85,7 +114,7 @@ class ShapeBasedClustering(AbstractClustering):
         clusters = self._cluster_subroutine(timeseries)
 
         # merge clusters if correlation remains high
-        merged_clusters = self._merge_clusters(clusters) if merge else clusters
+        merged_clusters = self._merge_clusters(clusters) if ShapeBasedClustering.CONF['MERGE_PHASE'] else clusters
 
         # create the clusters' assignments data frame
         data = [
@@ -145,12 +174,13 @@ class ShapeBasedClustering(AbstractClustering):
         """
         stack = [original_timeseries] # contains the clusters that have not been handled yet
         result = [] # contains the clusters that have been accepted
+        first_iter = True
         while len(stack) > 0:
 
             timeseries = stack.pop()
             assert timeseries.shape[0] > 0
     
-            threshold = ShapeBasedClustering.CONF['CLUSTER_ACCEPTANCE_THRESHOLD'] if len(result) > 0 \
+            threshold = ShapeBasedClustering.CONF['CLUSTER_ACCEPTANCE_THRESHOLD'] if not first_iter \
                         else ShapeBasedClustering.CONF['INIT_ACCEPTANCE_THRESHOLD']
             if timeseries.shape[0] == 1 or self._get_dataset_mean_corr(timeseries) >= threshold:#self._get_dataset_mean_ncc_score(timeseries) >= threshold:
                 # correlation is high enough: accept the cluster
@@ -170,6 +200,8 @@ class ShapeBasedClustering(AbstractClustering):
                     ts_ids_for_cid = clusters_assignment['Time Series ID'][clusters_assignment['Cluster ID'] == cluster_id]
                     clusters_timeseries = timeseries.loc[ts_ids_for_cid]
                     stack.append(clusters_timeseries)
+            if first_iter:
+                first_iter = False
         return result
 
     def _cluster_timeseries(self, timeseries, nb_clusters):
@@ -210,7 +242,7 @@ class ShapeBasedClustering(AbstractClustering):
         for cid, cluster_ts in clusters.items():
             all_centroids[cid] = cluster_ts.mean()
             all_corrs[cid] = self._get_dataset_mean_corr(cluster_ts)
-        
+
         # for each cluster
         for cid in list(clusters.keys()):
             # retrieve the cluster's time series and centroid
@@ -235,6 +267,7 @@ class ShapeBasedClustering(AbstractClustering):
                 
                 clusters_merging_threshold = ShapeBasedClustering.CONF['CLUSTERS_MERGING_THRESHOLD'] if other_cluster_ts.shape[0] > 1 \
                                              else ShapeBasedClustering.CONF['CLUSTERS_MERGING_THRESHOLD_SINGLE_TS']
+
                 # is this similar cluster the best candidate for merging
                 if new_corr_diff > best_corr_diff and corr_perc >= clusters_merging_threshold:
                     best_corr = new_corr

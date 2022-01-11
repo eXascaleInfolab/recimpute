@@ -14,13 +14,13 @@ INIT_ACCEPTANCE_THRESHOLD: 0.90
 CLUSTER_ACCEPTANCE_THRESHOLD: 0.85
 
 # TS_PERC_TO_COMPUTE_K: use this percentage * #sequences in a data set to compute K
-TS_PERC_TO_COMPUTE_K: 0.10
+TS_PERC_TO_COMPUTE_K: 0.20
 
-# SMALL_CLUSTERS_THRESHOLD: number of sequences a cluster must have to be added to the merge list
-SMALL_CLUSTERS_THRESHOLD: 5
+# MERGE_PHASE: True to try merging clusters after their generation (to reduce the number of clusters), False otherwise
+MERGE_PHASE: True
 
 # SIMILAR_CLUSTER_THRESHOLD: corr btw centroids must be above this to consider the two clusters similar
-SIMILAR_CLUSTER_THRESHOLD: 0.1
+SIMILAR_CLUSTER_THRESHOLD: 0.55
 
 # CLUSTERS_MERGING_THRESHOLD: min percentage to accept a merge (new corr / old corr)
 CLUSTERS_MERGING_THRESHOLD: 0.80

@@ -111,7 +111,7 @@ class ShapeBasedClustering(AbstractClustering):
         timeseries = dataset.load_timeseries(transpose=True)
 
         # cluster iteratively the time series using k-Shape
-        clusters = self._cluster_subroutine(timeseries)
+        clusters = self._cluster_subroutine(timeseries, dataset.name)
 
         # merge clusters if correlation remains high
         merged_clusters = self._merge_clusters(clusters) if ShapeBasedClustering.CONF['MERGE_PHASE'] else clusters
@@ -162,46 +162,67 @@ class ShapeBasedClustering(AbstractClustering):
     
     # private methods
 
-    def _cluster_subroutine(self, original_timeseries):
+    def _cluster_subroutine(self, original_timeseries, ds_name, security_limit=5, max_iter=10000):
         """
         Clusters the given data set's time series.
         
         Keyword arguments:
         original_timeseries -- Pandas DataFrame containing the data set's time series (each row is a time series)
+        ds_name -- name of the data set being clustered
+        security_limit -- number of iterations without new valid cluster before "helping" the clustering algorithm (default: 5)
+        max_iter -- maximum number of iterations before a force-stop (default: 10000)
         
         Return: 
         List of resulting clusters (each cluster is a Pandas DataFrame of time series)
         """
         stack = [original_timeseries] # contains the clusters that have not been handled yet
         result = [] # contains the clusters that have been accepted
-        first_iter = True
+        security_count = 0
+        iter_count = 0
         while len(stack) > 0:
+
+            # print(len(stack), len(result)) # TODO tmp delete
 
             timeseries = stack.pop()
             assert timeseries.shape[0] > 0
     
-            threshold = ShapeBasedClustering.CONF['CLUSTER_ACCEPTANCE_THRESHOLD'] if not first_iter \
+            threshold = ShapeBasedClustering.CONF['CLUSTER_ACCEPTANCE_THRESHOLD'] if iter_count > 0 \
                         else ShapeBasedClustering.CONF['INIT_ACCEPTANCE_THRESHOLD']
             if timeseries.shape[0] == 1 or self._get_dataset_mean_corr(timeseries) >= threshold:#self._get_dataset_mean_ncc_score(timeseries) >= threshold:
+                security_count = 0
                 # correlation is high enough: accept the cluster
                 result.append(timeseries)
             elif timeseries.shape[0] == 2:
+                security_count = 0
                 # accept the two remaining time series as individual clusters
                 result.append(timeseries.iloc[0].to_frame().T)
                 result.append(timeseries.iloc[1].to_frame().T)
             else:
                 # correlation in this cluster is not high enough: cluster with k-Shape
+                security_count += 1
+
                 K = max(2, math.floor(timeseries.shape[0] * ShapeBasedClustering.CONF['TS_PERC_TO_COMPUTE_K']))
+                if security_count >= security_limit: 
+                    # k-Shape is having difficulties creating clusters that match the criteria
+                    # to unstuck it, increase K to help create valid clusters
+                    K += security_count // (security_limit-1)
+                    K = min(timeseries.shape[0], K)
                 
+                # print('clustering +  %i -> %i (%i)' % (timeseries.shape[0], K, security_count)) # TODO tmp delete
                 clusters_assignment = self._cluster_timeseries(timeseries, K)
+                # print('clustering - ', clusters_assignment['Cluster ID'].nunique()) # TODO tmp delete
                 clusters_assignment['Time Series ID'] = timeseries.index
                 
                 for cluster_id in clusters_assignment['Cluster ID'].unique():
                     ts_ids_for_cid = clusters_assignment['Time Series ID'][clusters_assignment['Cluster ID'] == cluster_id]
                     clusters_timeseries = timeseries.loc[ts_ids_for_cid]
                     stack.append(clusters_timeseries)
-            if first_iter:
-                first_iter = False
+            iter_count += 1
+            if iter_count >= max_iter:
+                print('Max iteration reached for %s! %i clusters did not meet all requirements yet.' % (ds_name, len(stack)))
+                result.extend(stack)
+                break
+        print('clustering subroutine done for %s w/ %i iterations' % (ds_name, iter_count))
         return result
 
     def _cluster_timeseries(self, timeseries, nb_clusters):

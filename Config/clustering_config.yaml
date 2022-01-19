@@ -7,26 +7,30 @@
 # Clustering related configuration file
 # ------------------------------------
 
-# INIT_ACCEPTANCE_THRESHOLD: if original data set has score higher or equal than this, clustering is not necessary
+# INIT_ACCEPTANCE_THRESHOLD: if original data set has a correlation higher or equal than this, clustering is not necessary
 INIT_ACCEPTANCE_THRESHOLD: 0.90
 
-# CLUSTER_ACCEPTANCE_THRESHOLD: if cluster has score higher or equal than this, recusion stops, cluster is accepted 
+# CLUSTER_ACCEPTANCE_THRESHOLD: if cluster has a correlation higher or equal than this, recusion stops, cluster is accepted 
 CLUSTER_ACCEPTANCE_THRESHOLD: 0.85
+
+# SIMILAR_CLUSTER_THRESHOLD: correlation btw centroids must be above this to consider the two clusters similar
+SIMILAR_CLUSTER_THRESHOLD: 0.55
+
+# CENTROID_DIST_THRESHOLD: correlation btw a sequence and its current cluster's centroid must greater than this to consider moving it to another cluster
+CENTROID_DIST_THRESHOLD: 0.4
+
+# CLUSTERS_MERGING_THRESHOLD: min score to accept a merge (new corr / old corr)
+CLUSTERS_MERGING_THRESHOLD: 0.80
+
+# CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: min score to accept a merge (new corr / old corr) if the other is a mono-cluster
+CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: 0.75
+
+# TS_MOVING_THRESHOLD: min score to accept moving a sample to another cluster 
+# ( (new_other corr + new_curr corr) / (old_other corr + old_curr corr) )
+TS_MOVING_THRESHOLD: 1.15
 
 # TS_PERC_TO_COMPUTE_K: use this percentage * #sequences in a data set to compute K
 TS_PERC_TO_COMPUTE_K: 0.20
-
-# MERGE_PHASE: True to try merging clusters after their generation (to reduce the number of clusters), False otherwise
-MERGE_PHASE: True
-
-# SIMILAR_CLUSTER_THRESHOLD: corr btw centroids must be above this to consider the two clusters similar
-SIMILAR_CLUSTER_THRESHOLD: 0.55
-
-# CLUSTERS_MERGING_THRESHOLD: min percentage to accept a merge (new corr / old corr)
-CLUSTERS_MERGING_THRESHOLD: 0.80
-
-# CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: min percentage to accept a merge (new corr / old corr) if the other is a mono-cluster
-CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: 0.75
 
 
 ### ---- old (to delete eventually)

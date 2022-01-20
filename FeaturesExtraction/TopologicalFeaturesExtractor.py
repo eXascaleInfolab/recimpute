@@ -117,7 +117,7 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
     
     # private methods
 
-    def _get_topological_transfomer(nb_timeseries, timeseries_length, 
+    def _get_topological_transfomer(self, nb_timeseries, timeseries_length, 
                                     max_time_delay, max_embedding_dim, stride, max_pca_components, homology_dimensions, n_jobs=-1):
         """
         Creates and returns a topological features transformer.

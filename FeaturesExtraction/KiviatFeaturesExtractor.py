@@ -2,7 +2,7 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-KiviatFeaturesExtracter.py
+KiviatFeaturesExtractor.py
 @author: @chacungu
 """
 
@@ -15,10 +15,10 @@ from os.path import normpath as normp
 import pandas as pd
 import sys
 
-from FeaturesExtraction.AbstractFeaturesExtracter import AbstractFeaturesExtracter
+from FeaturesExtraction.AbstractFeaturesExtractor import AbstractFeaturesExtractor
 from Utils.Utils import Utils
 
-class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
+class KiviatFeaturesExtractor(AbstractFeaturesExtractor):
     """
     Singleton class which computes few "simple" features: Time series' length, an irregularity score, and pairwise correlation.
     """
@@ -30,7 +30,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
 
     def __new__(cls, *args, **kwargs):
         if 'caller' in kwargs and kwargs['caller'] == 'get_instance':
-            return super(KiviatFeaturesExtracter, cls).__new__(cls)
+            return super(KiviatFeaturesExtractor, cls).__new__(cls)
         raise Exception('Singleton class cannot be instantiated. Please use the static method "get_instance".')
 
     def __init__(self, *args, **kwargs):
@@ -74,7 +74,7 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         return dataset
 
     def extract_from_timeseries(self, timeseries):
-        raise Exception('The KiviatFeaturesExtracter is not capable of extracting features on time series that are not clustered.'
+        raise Exception('The KiviatFeaturesExtractor is not capable of extracting features on time series that are not clustered.'
                       + ' Please use the "extract" method to extract features for a whole clustered data set.')
 
     def save_features(self, dataset_name, features):
@@ -149,8 +149,8 @@ class KiviatFeaturesExtracter(AbstractFeaturesExtracter):
         Filename of the features for the given data set's name.
         """
         return normp(
-            AbstractFeaturesExtracter.FEATURES_DIR + \
-            f'/{dataset_name}{KiviatFeaturesExtracter.FEATURES_FILENAMES_ID}{AbstractFeaturesExtracter.FEATURES_APPENDIX}')
+            AbstractFeaturesExtractor.FEATURES_DIR + \
+            f'/{dataset_name}{KiviatFeaturesExtractor.FEATURES_FILENAMES_ID}{AbstractFeaturesExtractor.FEATURES_APPENDIX}')
 
     def _get_irregularity_score(self, timeseries):
         """

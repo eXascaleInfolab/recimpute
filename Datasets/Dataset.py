@@ -205,30 +205,30 @@ class Dataset:
         """
         labeler.save_labels(self.name, labels)
 
-    def load_features(self, features_extracter):
+    def load_features(self, features_extractor):
         """
-        Loads the features created using the given extracter.
+        Loads the features created using the given extractor.
         
         Keyword arguments: 
-        features_extracter -- features extracter instance used to create the features to load
+        features_extractor -- features extractor instance used to create the features to load
         
         Return: 
         Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
         Columns: Time Series ID, (Cluster ID), Feature 1's name, Feature 2's name, ...
         """
-        return features_extracter.load_features(self)
+        return features_extractor.load_features(self)
 
-    def save_features(self, features_extracter, features):
+    def save_features(self, features_extractor, features):
         """
         Saves the given features to CSV.
         
         Keyword arguments: 
-        features_extracter -- features extracter instance used to create the features to save
+        features_extractor -- features extractor instance used to create the features to save
         features -- Pandas DataFrame containing the features to save. 
         
         Return: -
         """
-        features_extracter.save_features(self.name, features)
+        features_extractor.save_features(self.name, features)
 
 
     # private methods

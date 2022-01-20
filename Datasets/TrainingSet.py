@@ -30,7 +30,7 @@ class TrainingSet:
 
     # constructor
 
-    def __init__(self, datasets, clusterer, features_extracters, labeler, labeler_properties, 
+    def __init__(self, datasets, clusterer, features_extractors, labeler, labeler_properties, 
                  true_labeler=None, true_labeler_properties=None, force_generation=False):
         """
         Initializes a TrainingSet object.
@@ -38,7 +38,7 @@ class TrainingSet:
         Keyword arguments:
         datasets -- list of Dataset objects
         clusterer -- instance of a clusterer
-        features_extracters -- list of instances of features extracters
+        features_extractors -- list of instances of features extractors
         labeler -- instance of a labeler used to label training set
         labeler_properties -- dict specifying the labeler's label properties
         true_labeler -- instance of a "true" labeler used to label only the test set (default None: use the labeler)
@@ -52,7 +52,7 @@ class TrainingSet:
         self.labeler_properties = labeler_properties
         self.true_labeler = true_labeler
         self.true_labeler_properties = true_labeler_properties
-        self.features_extracters = features_extracters # list
+        self.features_extractors = features_extractors # list
         
         self.labels_set = None
 
@@ -175,10 +175,10 @@ class TrainingSet:
                     dataset = self.true_labeler.label(dataset)
 
             # features extraction
-            for features_extracter in self.features_extracters:
-                if force_generation or not features_extracter.are_features_created(dataset.name):
+            for features_extractor in self.features_extractors:
+                if force_generation or not features_extractor.are_features_created(dataset.name):
                     # create features if they have not been yet created for this data set
-                    dataset = features_extracter.extract(dataset)
+                    dataset = features_extractor.extract(dataset)
             updated_datasets.append(dataset)
 
         return updated_datasets
@@ -356,8 +356,8 @@ class TrainingSet:
 
             # load features - dataset_features: df w/ cols: Time Series ID, (Cluster ID), Feature 1's name, Feature 2's name, ...
             all_dataset_features = []
-            for features_extracter in self.features_extracters:
-                tmp_dataset_features = dataset.load_features(features_extracter)
+            for features_extractor in self.features_extractors:
+                tmp_dataset_features = dataset.load_features(features_extractor)
                 tmp_dataset_features.set_index('Time Series ID', inplace=True)
                 all_dataset_features.append(tmp_dataset_features)
             dataset_features = pd.concat(all_dataset_features, axis=1) # concat features dataframes

@@ -43,19 +43,19 @@ Note: many parameters and strategies can be set from the configuration files sto
 #### *train* mode:
 
  | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | -models<sup> (\*)</sup> | 
- | ----------- | ----------- | ------- | ---------------------------------- |
- | ImputeBench | ImputeBench | TSFresh | kneighbors                         |
- | KiviatRules | KiviatRules | Kiviat  | maxabsscaler_catboostclassifier    |
- |             |             | *all*   | normalizer_randomforest            |
- |             |             |         | standardscaler_randomforest        |
- |             |             |         | standardscaler_svc                 |
- |             |             |         | *all*                              |
+ | ----------- | ----------- | ------------- | ---------------------------------- |
+ | ImputeBench | ImputeBench | TSFresh       | kneighbors                         |
+ | KiviatRules | KiviatRules | Kiviat        | maxabsscaler_catboostclassifier    |
+ |             |             | Topological   | normalizer_randomforest            |
+ |             |             | *all*         | standardscaler_randomforest        |
+ |             |             |               | standardscaler_svc                 |
+ |             |             |               | *all*                              |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
 
 - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
 - *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name.
-- *-fes*: Name of the features' extracter(s) to use to create time series' feature vectors. Expected: one or multiple values separated by commas.
+- *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected: one or multiple values separated by commas.
 - *-models*: Name of the models' descriptions files (without their .py extension) to instantiate, train and evaluate (files from the Training/ModelsDescription/ folder). Expected: one or multiple values separated by commas.
 - *-train_on_all_data* (optional): Whether or not train the models on ALL data after their evaluation is complete. If not specified, trains on all data after evaluation. Expected: *True* or *False*.
 
@@ -78,17 +78,17 @@ TODO
 
 #### Training
 
-1. Train the *kneighbors* model. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using the *TSFresh* extracter. Once evaluated the model is trained on all data.
+1. Train the *kneighbors* model. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using the *TSFresh* extractor. Once evaluated the model is trained on all data.
 ```bash
     $ python recimpute.py -mode train -lbl ImputeBench -fes TSFresh -models kneighbors -train_on_all_data True
 ```
 
-2. Train the *kneighbors* and *standardscaler_svc* models. The time series from the train and validation sets are labeled with the *KiviatRules* labeler and those from the test sets are labeled with the *ImputeBench* labeler. The features are extracted using the *TSFresh* and *Kiviat* extracters. Once evaluated the models are not trained on all data.
+2. Train the *kneighbors* and *standardscaler_svc* models. The time series from the train and validation sets are labeled with the *KiviatRules* labeler and those from the test sets are labeled with the *ImputeBench* labeler. The features are extracted using the *TSFresh* and *Kiviat* extractors. Once evaluated the models are not trained on all data.
 ```bash
     $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Kiviat -models kneighbors,standardscaler_svc -train_on_all_data False
 ```
 
-3. Train all models. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using all extracters available. Once evaluated the models are trained on all data.
+3. Train all models. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using all extractors available. Once evaluated the models are trained on all data.
 ```bash
     $ python recimpute.py -mode train -lbl ImputeBench -fes all -models all -train_on_all_data True
 ```

@@ -2,7 +2,7 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-TSFreshFeaturesExtracter.py
+TSFreshFeaturesExtractor.py
 @author: @chacungu
 """
 
@@ -14,10 +14,10 @@ import pandas as pd
 from tsfresh import extract_features
 from tsfresh.utilities.dataframe_functions import impute
 
-from FeaturesExtraction.AbstractFeaturesExtracter import AbstractFeaturesExtracter
+from FeaturesExtraction.AbstractFeaturesExtractor import AbstractFeaturesExtractor
 from Utils.Utils import Utils
 
-class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
+class TSFreshFeaturesExtractor(AbstractFeaturesExtractor):
     """
     Singleton class which computes features from the TSFresh library.
     """
@@ -29,7 +29,7 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
 
     def __new__(cls, *args, **kwargs):
         if 'caller' in kwargs and kwargs['caller'] == 'get_instance':
-            return super(TSFreshFeaturesExtracter, cls).__new__(cls)
+            return super(TSFreshFeaturesExtractor, cls).__new__(cls)
         raise Exception('Singleton class cannot be instantiated. Please use the static method "get_instance".')
 
     def __init__(self, *args, **kwargs):
@@ -142,8 +142,8 @@ class TSFreshFeaturesExtracter(AbstractFeaturesExtracter):
         Filename of the features for the given data set's name.
         """
         return normp(
-            AbstractFeaturesExtracter.FEATURES_DIR + \
-            f'/{dataset_name}{TSFreshFeaturesExtracter.FEATURES_FILENAMES_ID}{AbstractFeaturesExtracter.FEATURES_APPENDIX}')
+            AbstractFeaturesExtractor.FEATURES_DIR + \
+            f'/{dataset_name}{TSFreshFeaturesExtractor.FEATURES_FILENAMES_ID}{AbstractFeaturesExtractor.FEATURES_APPENDIX}')
 
     
     # static methods

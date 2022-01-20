@@ -1,0 +1,23 @@
+# RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
+# eXascale Infolab, University of Fribourg, Switzerland
+
+# topologicalfeaturesextractor_config.yaml
+# @author: @chacungu
+
+# Topological features related configuration file
+# ------------------------------------
+
+# MAX_TIME_DELAY: maximum time delay between two consecutive values for constructing one embedded point.
+MAX_TIME_DELAY: 30
+
+# MAX_EMBEDDING_DIM: maximum dimension of the embedding space.
+MAX_EMBEDDING_DIM: 50
+
+# STRIDE: stride duration between two consecutive embedded points.
+STRIDE: 10
+
+# MAX_PCA_COMPONENTS: maximum number of components for PCA dimensionality reduction
+MAX_PCA_COMPONENTS: 3
+
+# HOMOLOGY_DIM: dimensions (non-negative integers) of the topological features to be detected.
+HOMOLOGY_DIM: [0,1,2]

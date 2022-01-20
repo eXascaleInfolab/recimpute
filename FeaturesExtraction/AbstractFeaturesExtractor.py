@@ -2,7 +2,7 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-AbstractFeaturesExtracter.py
+AbstractFeaturesExtractor.py
 @author: @chacungu
 """
 
@@ -13,7 +13,7 @@ from os.path import normpath as normp
 from Utils.Utils import Utils
 from Utils.SingletonClass import SingletonClass
 
-class AbstractFeaturesExtracter(SingletonClass, metaclass=abc.ABCMeta):
+class AbstractFeaturesExtractor(SingletonClass, metaclass=abc.ABCMeta):
     """
     Abstract features extracting class used to extract time series features and handle those features.
     """

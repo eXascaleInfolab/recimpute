@@ -11,7 +11,7 @@ import numpy as np
 from os.path import normpath as normp
 
 from Labeling.AbstractLabeler import AbstractLabeler
-from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
+from FeaturesExtraction.KiviatFeaturesExtractor import KiviatFeaturesExtractor
 from Utils.Utils import Utils
 
 class KiviatRulesLabeler(AbstractLabeler):
@@ -87,12 +87,12 @@ class KiviatRulesLabeler(AbstractLabeler):
         Updated Dataset object
         """
         # load the cluster's features needed to apply the Kiviat rules
-        features_extracter = KiviatFeaturesExtracter.get_instance()
-        if not features_extracter.are_features_created(dataset.name):
-            dataset = features_extracter.extract(dataset)
-        features = features_extracter.load_raw_features(dataset)
+        features_extractor = KiviatFeaturesExtractor.get_instance()
+        if not features_extractor.are_features_created(dataset.name):
+            dataset = features_extractor.extract(dataset)
+        features = features_extractor.load_raw_features(dataset)
         # sample 1 features row per Cluster ID 
-        # (all time series of a same cluster have the same features w/ KiviatFeaturesExtracter)
+        # (all time series of a same cluster have the same features w/ KiviatFeaturesExtractor)
         features = features.groupby('Cluster ID', group_keys=False).apply(lambda df: df.sample(1))
 
         # features: DataFrame - Cluster ID, Length, Irregularity, Correlation

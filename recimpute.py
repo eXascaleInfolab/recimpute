@@ -21,8 +21,9 @@ import warnings
 from Clustering.ShapeBasedClustering import ShapeBasedClustering
 from Datasets.Dataset import Dataset
 from Datasets.TrainingSet import TrainingSet
-from FeaturesExtraction.KiviatFeaturesExtracter import KiviatFeaturesExtracter
-from FeaturesExtraction.TSFreshFeaturesExtracter import TSFreshFeaturesExtracter
+from FeaturesExtraction.KiviatFeaturesExtractor import KiviatFeaturesExtractor
+from FeaturesExtraction.TSFreshFeaturesExtractor import TSFreshFeaturesExtractor
+from FeaturesExtraction.TopologicalFeaturesExtractor import TopologicalFeaturesExtractor
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 from Training.ModelsTrainer import ModelsTrainer
@@ -38,9 +39,10 @@ LABELERS = { # maps the argument name to the actual class name
     'ImputeBench': ImputeBenchLabeler, 
     'KiviatRules': KiviatRulesLabeler,
 }
-FEATURES_EXTRACTERS = { # maps the argument name to the actual class name
-    'Kiviat': KiviatFeaturesExtracter, 
-    'TSFresh': TSFreshFeaturesExtracter,
+FEATURES_EXTRACTORS = { # maps the argument name to the actual class name
+    'Kiviat': KiviatFeaturesExtractor, 
+    'TSFresh': TSFreshFeaturesExtractor,
+    'Topological': TopologicalFeaturesExtractor,
 }
 
 
@@ -49,7 +51,7 @@ Utils.create_dirs_if_not_exist([SYSTEM_INPUTS_DIR])
 Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
 
-def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extracters, models_descriptions_to_use, train_on_all_data):
+def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors, models_descriptions_to_use, train_on_all_data):
 
     print('#########  RecImpute - training  #########')
 
@@ -60,8 +62,8 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     datasets = Dataset.instantiate_from_dir(clusterer)
     print('Loaded data sets:', ''.join(['\n- %s' % d for d in datasets]))
 
-    if any(isinstance(fe, KiviatFeaturesExtracter) for fe in features_extracters):
-        warnings.warn('You are using a KiviatFeaturesExtracter. This features extracter can only compute features for clusters' \
+    if any(isinstance(fe, KiviatFeaturesExtractor) for fe in features_extractors):
+        warnings.warn('You are using a KiviatFeaturesExtractor. This features extractor can only compute features for clusters' \
                     + '(and not individual time series). If you use the resulting models in production, since those time series' \
                     + 'won\'t be clustered, its features will have to be imputed (or set to 0). This may impact the system\'s' \
                     + 'performances.')
@@ -73,7 +75,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     training_set = TrainingSet(
         datasets, 
         clusterer, 
-        features_extracters, 
+        features_extractors, 
         labeler, labeler_properties,
         **true_labeler_info,
         force_generation=False,
@@ -115,19 +117,19 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
     print('#########  RecImpute - use a model  #########')
 
-    # get an instance of each FeaturesExtracter
-    features_extracters = []
+    # get an instance of each FeaturesExtractor
+    features_extractors = []
     for fe_name in fes_names:
-        if fe_name != 'KiviatFeaturesExtracter':
-            assert any(fe_name2.__name__ == fe_name for fe_name2 in FEATURES_EXTRACTERS.values())
+        if fe_name != 'KiviatFeaturesExtractor':
+            assert any(fe_name2.__name__ == fe_name for fe_name2 in FEATURES_EXTRACTORS.values())
             fe_class = getattr(sys.modules[__name__], fe_name)
-            features_extracters.append(fe_class.get_instance())
+            features_extractors.append(fe_class.get_instance())
 
-    # for each FeaturesExtracter: call fe.extract_from_timeseries()
+    # for each FeaturesExtractor: call fe.extract_from_timeseries()
     nb_timeseries, timeseries_length = timeseries.shape
     all_ts_features = []
-    for features_extracter in features_extracters:
-        tmp_ts_features = features_extracter.extract_from_timeseries(timeseries.T, nb_timeseries, timeseries_length)
+    for features_extractor in features_extractors:
+        tmp_ts_features = features_extractor.extract_from_timeseries(timeseries.T, nb_timeseries, timeseries_length)
         tmp_ts_features.set_index('Time Series ID', inplace=True)
         all_ts_features.append(tmp_ts_features)
     timeseries_features = pd.concat(all_ts_features, axis=1) # concat features dataframes
@@ -193,7 +195,7 @@ if __name__ == '__main__':
         # *train* args
         '-lbl': LABELERS.keys(),
         '-true_lbl': LABELERS.keys(),
-        '-fes': [*FEATURES_EXTRACTERS.keys(), 'all'],
+        '-fes': [*FEATURES_EXTRACTORS.keys(), 'all'],
         '-models': [*_models_list, 'all'],
         '-train_on_all_data': ['True', 'False'],
 
@@ -232,13 +234,13 @@ if __name__ == '__main__':
         else:
             true_labeler = true_labeler_properties = None
 
-        # set up the features extracters
+        # set up the features extractors
         if args['-fes'] == 'all':
-            features_extracters = [fe.get_instance() for fe in FEATURES_EXTRACTERS.values()]
+            features_extractors = [fe.get_instance() for fe in FEATURES_EXTRACTORS.values()]
         else:
-            features_extracters = []
+            features_extractors = []
             for fe_name in args['-fes'].split(','):
-                features_extracters.append(FEATURES_EXTRACTERS[fe_name].get_instance())
+                features_extractors.append(FEATURES_EXTRACTORS[fe_name].get_instance())
         
         # set up the models' descriptions to load
         if args['-models'] == 'all':
@@ -252,7 +254,7 @@ if __name__ == '__main__':
         tr, set, models = train(
             labeler, labeler_properties, 
             true_labeler, true_labeler_properties, 
-            features_extracters, 
+            features_extractors, 
             models_descriptions_to_use, 
             args['-train_on_all_data'] == 'True' if '-train_on_all_data' in args else True
         )
@@ -289,9 +291,9 @@ if __name__ == '__main__':
         full_ts_filename = normp(SYSTEM_INPUTS_DIR + '/' + ts_filename)
         timeseries = pd.read_csv(full_ts_filename, sep=' ', header=None, index_col=None)
 
-        # read the _info.txt and get the values under "## Features extracters used:"
+        # read the _info.txt and get the values under "## Features extractors used:"
         info_file = tr.load_info_file_from_archive()
-        fes_names = re.search('## Features extracters used:\n(- \w+\n)+', info_file).group(0).replace('- ', '').split('\n')[1:-1]
+        fes_names = re.search('## Features extractors used:\n(- \w+\n)+', info_file).group(0).replace('- ', '').split('\n')[1:-1]
 
         use_pipeline_prod = args['-use_prod_model'] == 'True' if '-use_prod_model' in args else False
 

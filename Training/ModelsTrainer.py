@@ -11,7 +11,8 @@ import numpy as np
 import operator
 from sklearn.exceptions import FitFailedWarning
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.experimental import enable_halving_search_cv
+from sklearn.model_selection import RandomizedSearchCV, HalvingRandomSearchCV
 import warnings
 
 from Training.RecommendationModel import RecommendationModel
@@ -99,13 +100,21 @@ class ModelsTrainer:
                     if not model.are_params_set and gridsearch:
                         print('Starting gridsearch for model: %s.' % model)
                         with Utils.catchtime('Gridsearch for model %s' % model):
-                            gs = RandomizedSearchCV(model.get_pipeline(),
-                                                    model.get_params_ranges(),
-                                                    cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
-                                                    n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
-                                                    scoring='f1_macro',
-                                                    verbose=1)
-                            gs.fit(all_data.to_numpy().astype('float32'), all_labels.to_numpy().astype('str'))
+                            try:
+                                gs = HalvingRandomSearchCV(model.get_pipeline(),
+                                                           model.get_params_ranges(),
+                                                           cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
+                                                           scoring='f1_macro',
+                                                           n_jobs=-1, verbose=1)
+                                gs.fit(all_data.to_numpy().astype('float32'), all_labels.to_numpy().astype('str'))
+                            except:
+                                gs = RandomizedSearchCV(model.get_pipeline(),
+                                                        model.get_params_ranges(),
+                                                        cv=ModelsTrainer.CONF['GS_NB_CV_SPLITS'], 
+                                                        n_iter=model.get_nb_gridsearch_iter(ModelsTrainer.CONF['GS_ITER_RANGE']),
+                                                        scoring='f1_macro',
+                                                        n_jobs=-1, verbose=1)
+                                gs.fit(all_data.to_numpy().astype('float32'), all_labels.to_numpy().astype('str'))
                             model.set_params(gs.best_params_)
 
                     # training

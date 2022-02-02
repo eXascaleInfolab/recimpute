@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
     _models_list = [f.replace('.py', '') for f in os.listdir('Training/ModelsDescription') if f not in ['__pycache__', '_template.py']]
     _valid_args = {
-        '-mode': ['train', 'eval', 'use'],
+        '-mode': ['cluster', 'label', 'extract_features', 'train', 'eval', 'use'],
 
         # *train* args
         '-lbl': LABELERS.keys(),
@@ -216,7 +216,77 @@ if __name__ == '__main__':
            or (v in _valid_args[k] if not ',' in v else (v_ in _valid_args[k] for v_ in v.split(','))) \
               for k, v in args.items()) # verify that all args values are valid
     
-    if args['-mode'] == 'train':
+    if args['-mode'] == 'cluster':
+
+        NON_OPTIONAL_ARGS = ['-mode']
+        assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
+        
+        # CLUSTER ALL DATA SETS
+
+        # init clusterer
+        clusterer = ShapeBasedClustering()
+
+        # init data sets
+        datasets = Dataset.instantiate_from_dir(clusterer)
+
+        clusterer.cluster_all_datasets_seq(datasets)
+        print('Done.')
+
+
+    elif args['-mode'] == 'label':
+
+        NON_OPTIONAL_ARGS = ['-mode', '-lbl']
+        assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
+        
+        # LABEL ALL DATA SETS
+        
+        # set up the labeler
+        labeler = LABELERS[args['-lbl']].get_instance()
+
+        # init clusterer
+        clusterer = ShapeBasedClustering()
+
+        # init data sets
+        datasets = Dataset.instantiate_from_dir(clusterer)
+
+        # label the datasets' clusters
+        updated_datasets = labeler.label_all_datasets(datasets)
+
+        if '-true_lbl' in args:
+            true_labeler = LABELERS[args['-true_lbl']].get_instance()
+            true_labeler.label_all_datasets(updated_datasets)
+        print('Done.')
+
+
+    elif args['-mode'] == 'extract_features':
+
+        NON_OPTIONAL_ARGS = ['-mode', '-fes']
+        assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
+        
+        # EXTRACT ALL FEATURES
+        
+        # set up the features extractors
+        if args['-fes'] == 'all':
+            features_extractors = [fe.get_instance() for fe in FEATURES_EXTRACTORS.values()]
+        else:
+            features_extractors = []
+            for fe_name in args['-fes'].split(','):
+                features_extractors.append(FEATURES_EXTRACTORS[fe_name].get_instance())
+
+        # init clusterer
+        clusterer = ShapeBasedClustering()
+
+        # init data sets
+        datasets = Dataset.instantiate_from_dir(clusterer)
+
+        # extract the features of the datasets' time series
+        for dataset in datasets:
+            for features_extractor in features_extractors:
+                features_extractor.extract(dataset)
+        print('Done.')
+
+
+    elif args['-mode'] == 'train':
 
         NON_OPTIONAL_ARGS = ['-mode', '-lbl', '-fes', '-models']
         assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified

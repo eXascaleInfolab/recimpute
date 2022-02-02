@@ -81,6 +81,8 @@ class ImputeBenchLabeler(AbstractLabeler):
         # load time series
         timeseries = dataset.load_timeseries(transpose=True)
 
+        print('Labeling %i clusters of %s.' % (dataset.load_cassignment(dataset.clusterer)['Cluster ID'].nunique(), dataset.name)) # TODO tmp print
+
         # for each cluster
         for cluster, cluster_id, _ in dataset.yield_all_clusters(timeseries):
             print('Running benchmark for cluster %i (%s)' % (cluster_id, dataset.name))

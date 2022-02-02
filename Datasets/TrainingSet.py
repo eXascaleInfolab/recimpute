@@ -128,14 +128,16 @@ class TrainingSet:
         updated_datasets = []
         for dataset in datasets:
             if not self.clusterer.are_clusters_created(dataset.name):
+                raise FileNotFoundError('Clusters file for dataset %s does not exist. \
+                                         Please use the *cluster* command to cluster the data sets before using the *train* command.' % dataset.name)
                 # create clusters if they have not been yet created for this data set
-                if not clusters_generated:
-                    warnings.warn('Some data set\'s time series have not been clustered yet. \
-                                    They will be clustered now. Clustering data sets one-by-one is \
-                                    less-efficient than using the clusterer\'s method "cluster_all_datasets" \
-                                    before the instantiation of a TrainingSet object.')
-                dataset = self.clusterer.cluster(dataset)
-                clusters_generated = True
+                #if not clusters_generated:
+                #    warnings.warn('Some data set\'s time series have not been clustered yet. \
+                #                    They will be clustered now. Clustering data sets one-by-one is \
+                #                    less-efficient than using the clusterer\'s method "cluster_all_datasets" \
+                #                    before the instantiation of a TrainingSet object.')
+                #dataset = self.clusterer.cluster(dataset)
+                #clusters_generated = True
             updated_datasets.append(dataset)
 
         # if clusters_generated:
@@ -145,10 +147,10 @@ class TrainingSet:
         #                                                         min_nb_ts=self.clusterer.CONF['MIN_NB_TS_PER_CLUSTER'],
         #                                                         max_nb_ts=self.clusterer.CONF['MAX_NB_TS_PER_CLUSTER'])
                                                                 
-        if clusters_generated or not self.clusterer.are_cids_unique(updated_datasets):
-            # change all clusters' ID (for all datasets) such that there are no duplicates
-            updated_datasets = self.clusterer.make_cids_unique(updated_datasets)
-            clusters_generated = True
+        # if clusters_generated or not self.clusterer.are_cids_unique(updated_datasets):
+        #     # change all clusters' ID (for all datasets) such that there are no duplicates
+        #     updated_datasets = self.clusterer.make_cids_unique(updated_datasets)
+        #     clusters_generated = True
 
         return updated_datasets, clusters_generated
 
@@ -167,18 +169,27 @@ class TrainingSet:
         for dataset in datasets:
             # labeling
             if force_generation or not self.labeler.are_labels_created(dataset.name):
+                raise FileNotFoundError('Labels file for dataset %s does not exist. \
+                                         Please use the *label* command to label the data sets\' time series before \
+                                         using the *train* command.' % dataset.name)
                 # create labels if they have not been yet created for this data set
-                dataset = self.labeler.label(dataset)
+                # dataset = self.labeler.label(dataset)
             if self.true_labeler is not None and self.is_in_test_set(dataset): 
                 if force_generation or not self.true_labeler.are_labels_created(dataset.name):
+                    raise FileNotFoundError('Labels file (for the true_labeler) for dataset %s does not exist. \
+                                             Please use the *label* command to label the data sets\' time series before \
+                                             using the *train* command.' % dataset.name)
                     # create true labels if they have not been yet created for this data set
-                    dataset = self.true_labeler.label(dataset)
+                    #dataset = self.true_labeler.label(dataset)
 
             # features extraction
             for features_extractor in self.features_extractors:
                 if force_generation or not features_extractor.are_features_created(dataset.name):
+                    raise FileNotFoundError('Features file for dataset %s does not exist. \
+                                            Please use the *extract_features* command to extract the data sets\' time series features before \
+                                            using the *train* command.' % dataset.name)
                     # create features if they have not been yet created for this data set
-                    dataset = features_extractor.extract(dataset)
+                    #dataset = features_extractor.extract(dataset)
             updated_datasets.append(dataset)
 
         return updated_datasets
@@ -598,7 +609,7 @@ class TrainingSet:
                 shuffle=True,
                 stratify=all_data_info['Label']
             )
-            return train_indices, test_indices, None
+            return train_indices.index.tolist(), test_indices.index.tolist(), None
 
     def _update_prob_distrib(self, all_data_info, probability_distribution, train_ids):
         """

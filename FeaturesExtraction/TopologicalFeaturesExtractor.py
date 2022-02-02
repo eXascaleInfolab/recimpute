@@ -55,10 +55,13 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
         timeseries = dataset.load_timeseries(transpose=True)
 
         print('Extracting topological features on dataset %s.' % dataset.name)
-        features_df = self.extract_from_timeseries(timeseries)
+        try:
+            features_df = self.extract_from_timeseries(timeseries)
         
-        # save features as CSV
-        dataset.save_features(self, features_df)
+            # save features as CSV
+            dataset.save_features(self, features_df)
+        except Exception as e:
+            print(e)
         return dataset
 
     def extract_from_timeseries(self, timeseries):
@@ -79,11 +82,14 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
             max_pca_components=TopologicalFeaturesExtractor.CONF['MAX_PCA_COMPONENTS'], 
             homology_dimensions=TopologicalFeaturesExtractor.CONF['HOMOLOGY_DIM'],
         )
-        features = topological_transfomer.fit_transform(timeseries.to_numpy().tolist())
-        features_df = pd.DataFrame(features, columns=['topological_%i' % i for i in range(1, len(TopologicalFeaturesExtractor.CONF['HOMOLOGY_DIM'])+1)])
-        features_df['Time Series ID'] = timeseries.index
+        try:
+            features = topological_transfomer.fit_transform(timeseries.to_numpy().tolist())
+            features_df = pd.DataFrame(features, columns=['topological_%i' % i for i in range(1, len(TopologicalFeaturesExtractor.CONF['HOMOLOGY_DIM'])+1)])
+            features_df['Time Series ID'] = timeseries.index
 
-        return features_df
+            return features_df
+        except ValueError as e:
+            raise Exception('Topological features cannot be extracted from this data sets\' time series.')
 
     def save_features(self, dataset_name, features):
         """
@@ -139,14 +145,14 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
         Columns: Time Series ID, Cluster ID, Feature 1's name, Feature 2's name, ...
         """
         #  embedding vectors
-        embedding_time_delay = min(
+        embedding_time_delay = max(min(
             max_time_delay,
-            timeseries_length-1
-        )
-        embedding_dimension = min(
+            int(timeseries_length / 3)
+        ), 1)
+        embedding_dimension = max(min(
             max_embedding_dim,
-            math.floor( nb_timeseries / embedding_time_delay )
-        )
+            math.floor( timeseries_length / embedding_time_delay )
+        ), 2)
         
         embedder = TakensEmbedding(dimension=embedding_dimension,
                                    time_delay=embedding_time_delay,
@@ -163,6 +169,12 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
             max_pca_components,
             min(embedding_shape[1], embedding_shape[2])
         )
+
+        print('embedding_time_delay:', embedding_time_delay, 
+              ', embedding_dimension:', embedding_dimension, 
+              ', stride:', stride, 
+              ', embedding_shape:', embedding_shape, 
+              ', pca_components:', pca_components) # TODO tmp print
         
         batch_pca = CollectionTransformer(PCA(n_components=pca_components), n_jobs=n_jobs)
         
@@ -170,7 +182,7 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
         persistence = VietorisRipsPersistence(homology_dimensions=homology_dimensions, n_jobs=n_jobs)
         
         # scaling
-        scaling = Scaler()
+        #scaling = Scaler()
         
         # entropy of the persistence diagrams
         entropy = PersistenceEntropy(normalize=True, nan_fill_value=-10, n_jobs=n_jobs)
@@ -180,7 +192,7 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
             ("embedder", embedder), # list of 2d signals -> 3d embedding vector
             ("pca", batch_pca), # reduces 3rd dim of embedding vector
             ("persistence", persistence), # reduces 2nd dim of PCA vector
-            ("scaling", scaling), # 
+            #("scaling", scaling), # produces NaNs which causes the next step to crash.
             ("entropy", entropy) # -> list of 1d vector of len= nb persistence diagrams = len(homology_dimensions)
         ]
         topological_transfomer = Pipeline(steps)

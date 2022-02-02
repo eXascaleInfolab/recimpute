@@ -40,16 +40,52 @@ ___
 
 Note: many parameters and strategies can be set from the configuration files stored in the Config/ repository.
 
+#### *cluster* mode:
+
+Cluster the data sets. If the clusters have not been generated yet, this step is required to be executed before training.
+
+No arguments. All data sets listed in the configuration files will be clustered.
+
+#### *label* mode:
+
+Labels the data sets' clusters. If the labels have not been attributed yet, this step is required to be executed before training.
+
+| -lbl<sup> (\*)</sup> | -truelbl |
+| ----------- | ----------- |
+| ImputeBench | ImputeBench |
+| KiviatRules | KiviatRules |
+
+ <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
+
+- *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
+- *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name.
+
+#### *extract_features* mode:
+
+Computes features for the data sets' time series. If the features have not been extracted yet, this step is required to be executed before training.
+
+| -fes<sup> (\*)</sup> |
+| ------------- |
+| TSFresh       |
+| Kiviat        |
+| Topological   |
+| *all*         |
+
+ <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
+
+- *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected: one or multiple values separated by commas.
+
+
 #### *train* mode:
 
- | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | -models<sup> (\*)</sup> | 
- | ----------- | ----------- | ------------- | ---------------------------------- |
- | ImputeBench | ImputeBench | TSFresh       | kneighbors                         |
- | KiviatRules | KiviatRules | Kiviat        | maxabsscaler_catboostclassifier    |
- |             |             | Topological   | normalizer_randomforest            |
- |             |             | *all*         | standardscaler_randomforest        |
- |             |             |               | standardscaler_svc                 |
- |             |             |               | *all*                              |
+ | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | -models<sup> (\*)</sup> | train_on_all_data |
+ | ----------- | ----------- | ------------- | ---------------------------------- | ----------------- |
+ | ImputeBench | ImputeBench | TSFresh       | kneighbors                         | True              |
+ | KiviatRules | KiviatRules | Kiviat        | maxabsscaler_catboostclassifier    | False             |
+ |             |             | Topological   | normalizer_randomforest            |                   |
+ |             |             | *all*         | standardscaler_randomforest        |                   |
+ |             |             |               | standardscaler_svc                 |                   |
+ |             |             |               | *all*                              |                   |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
 
@@ -75,6 +111,21 @@ The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInpu
 TODO
 
 ### Execution examples
+
+### Data sets' preparation
+
+1. Cluster the data sets' time series.
+```bash
+    $ python recimpute.py -mode cluster
+```
+2. Label the data sets' clusters with the *ImputeBench* labeler.
+```bash
+    $ python recimpute.py -mode label -lbl ImputeBench
+```
+3. Extract the data sets' time series features using the *TSFresh* and *Kiviat* extractors.
+```bash
+    $ python recimpute.py -mode extract_features -fes TSFresh,Kiviat
+```
 
 #### Training
 

@@ -123,12 +123,13 @@ class TrainResults:
         """
         return self.results.loc[(self.get_model_results(model)[metric].idxmax(), model), :]
 
-    def save(self, training_set):
+    def save(self, training_set, save_train_set=False):
         """
         Saves this TrainResult's instance to disk.
 
         Keyword arguments: 
         training_set -- TrainingSet instance used for the models' training
+        save_train_set -- True to save the test set AND the training set, False otherwise (default False)
 
         Return: -
         """
@@ -189,8 +190,14 @@ class TrainResults:
                     f_out.write(filepath, self.id + '_' + filepath, compress_type=zipfile.ZIP_DEFLATED)
 
             # save the test set to the archive
-            test_set_filename = training_set.save_test_set_to_disk(TrainResults.RESULTS_DIR)
+            test_set_filename = training_set.save_set_to_disk(TrainResults.RESULTS_DIR, 'test')
             f_out.write(test_set_filename, os.path.split(test_set_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+
+            # save the train set to the archive
+            if save_train_set:
+                training_set_filename = training_set.save_set_to_disk(TrainResults.RESULTS_DIR, 'train')
+                f_out.write(training_set_filename, os.path.split(training_set_filename)[-1], compress_type=zipfile.ZIP_DEFLATED)
+                os.remove(training_set_filename)
 
         # clean up
         os.remove(pickle_filename)
@@ -211,11 +218,12 @@ class TrainResults:
             with archive.open(os.path.split(info_filename)[-1], 'r') as f:
                 return f.read().decode("utf-8")
 
-    def load_test_set_from_archive(self):
+    def load_set_from_archive(self, data_to_load):
         """
         Reads and returns the test set reserved for the models of this TrainResults' instance.
 
-        Keyword arguments: -
+        Keyword arguments: 
+        data_to_load -- String that defines which data load. Can be one of: 'train', 'test'.
 
         Return: 
         Pandas DataFrame containing the test set reserved for the models of this TrainResults' instance.
@@ -223,7 +231,12 @@ class TrainResults:
         """
         archive_filename, _, _ = TrainResults._get_filenames(self.id)
         with zipfile.ZipFile(archive_filename, 'r') as archive:
-            with archive.open(TrainingSet.TEST_SET_FILENAME, 'r') as f:
+            if data_to_load == 'train':
+                filename = TrainingSet.TRAIN_SET_FILENAME
+            elif data_to_load == 'test':
+                filename = TrainingSet.TEST_SET_FILENAME
+            else: raise Exception('Invalid argument data_to_load')
+            with archive.open(filename, 'r') as f:
                 return pd.read_pickle(f)
 
     # private methods

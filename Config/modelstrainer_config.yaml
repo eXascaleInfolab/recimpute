@@ -31,3 +31,6 @@ TDAUB_NB_RUNS: 0
 
 # TDAUB_NB_BEST_MODELS: number of models to train on the whole data set (top N)
 TDAUB_NB_BEST_MODELS: 3
+
+# SAVE_TRAIN_SET: save the train set to disk once the training is done (the test set will always be saved)
+SAVE_TRAIN_SET: True # TODO switch back to False

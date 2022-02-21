@@ -141,7 +141,7 @@ class ModelsTrainer:
         finally:
             # save results to disk
             if save_results:
-                train_results.save(self.training_set)
+                train_results.save(self.training_set, save_train_set=ModelsTrainer.CONF['SAVE_TRAIN_SET'])
 
         return train_results
 

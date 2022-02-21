@@ -25,6 +25,7 @@ class TrainingSet:
     """
 
     CONF = Utils.read_conf_file('trainingset')
+    TRAIN_SET_FILENAME = 'train_set.pkl'
     TEST_SET_FILENAME = 'test_set.pkl'
 
 
@@ -282,20 +283,29 @@ class TrainingSet:
 
         return self.labels_set, X_all, y_all
 
-    def save_test_set_to_disk(self, dir):
+    def save_set_to_disk(self, dir, data_to_load):
         """
         Saves the test set to disk.
         
         Keyword arguments: 
         dir -- directory path pointing where the file should be saved.
+        data_to_load -- String that defines which data load. Can be one of: 'train', 'test'.
         
         Return:
         Filename of the pickle file.
         """
-        all_test_data_info, _ = self._get_test_set()
-        test_set_filename = normp(dir + '/' + TrainingSet.TEST_SET_FILENAME)
-        all_test_data_info.to_pickle(test_set_filename)
-        return test_set_filename
+        
+        if data_to_load == 'test':
+            all_data_info, _ = self._get_test_set()
+            filename = normp(dir + '/' + TrainingSet.TEST_SET_FILENAME)
+        elif data_to_load == 'train':
+            all_data_info, _ = self._load(data_to_load='train')
+            filename = normp(dir + '/' + TrainingSet.TRAIN_SET_FILENAME)
+        else: 
+            raise Exception('Invalid argument data_to_load')
+            
+        all_data_info.to_pickle(filename)
+        return filename
 
     def is_in_test_set(self, dataset):
         """

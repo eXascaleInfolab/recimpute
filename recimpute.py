@@ -339,7 +339,7 @@ if __name__ == '__main__':
         # load the models & test set
         id = args['-id']
         tr, models = load_models_from_tr(id)
-        all_test_data_info = tr.load_test_set_from_archive()
+        all_test_data_info = tr.load_set_from_archive('test')
         
         eval(models, all_test_data_info)
 

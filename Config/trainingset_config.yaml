@@ -37,8 +37,8 @@ BALANCING_STRAT2_MAX_THRESHOLD: 0.20
 # can be one of: one_cluster_every_two_dataset, clusters_percentage, ts_percentage
 TEST_SET_RESERVATION_STRAT: ts_percentage
 
-# TEST_SIZE_PERCENTAGE: percentage of all clusters to use for testing. Only used if TEST_SET_RESERVATION_STRAT == (clusters_percentage or ts_percentage)
-TEST_SIZE_PERCENTAGE: 0.2
+# TEST_SIZE_PERCENTAGE: percentage of clusters/time series to use for testing. Only used if TEST_SET_RESERVATION_STRAT == (clusters_percentage or ts_percentage)
+TEST_SIZE_PERCENTAGE: 0.35 # TODO switch back to .2 ?
 
 # VALIDATION_SET_RESERVATION_STRAT: old, clusters_percentage, ts_percentage
 VALIDATION_SET_RESERVATION_STRAT: ts_percentage

@@ -30,6 +30,7 @@ ALGORITHMS_LIST:
   - tenmf
   - tkcm
   - trmf
+
   #- ssa
   #- m-rnn
   #- brits
@@ -42,7 +43,7 @@ TS_SELECTION_FOR_BCHMK: 'RDM_FROM_DATASET'
 
 # NB_TS_FOR_BCHMK: Number of time series to sample (and fed to the benchmark) from the data set of a cluster we want to label. This
 # parameter is only used if TS_SELECTION_FOR_BCHMK == 'RDM_FROM_DATASET'. 
-NB_TS_FOR_BCHMK: 14
+NB_TS_FOR_BCHMK: 10
 
 # BENCHMARK_SCENARIO: scenario to use when running the ImputeBench benchmark. As of now, only miss_perc can be used.
 BENCHMARK_SCENARIO: miss_perc

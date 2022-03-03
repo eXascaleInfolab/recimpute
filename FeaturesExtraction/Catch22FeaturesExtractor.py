@@ -2,33 +2,29 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-TSFreshFeaturesExtractor.py
+Catch22FeaturesExtractor.py
 @author: @chacungu
 """
 
-import itertools
-import numpy as np
-import os
+from catch22 import catch22_all
 from os.path import normpath as normp
 import pandas as pd
-from tsfresh import extract_features
-from tsfresh.utilities.dataframe_functions import impute
 
 from FeaturesExtraction.AbstractFeaturesExtractor import AbstractFeaturesExtractor
 
-class TSFreshFeaturesExtractor(AbstractFeaturesExtractor):
+class Catch22FeaturesExtractor(AbstractFeaturesExtractor):
     """
-    Singleton class which computes features from the TSFresh library.
+    Singleton class which computes features from the Catch22 library.
     """
 
-    FEATURES_FILENAMES_ID = '_tsfresh'
+    FEATURES_FILENAMES_ID = '_catch22'
 
 
     # constructor
 
     def __new__(cls, *args, **kwargs):
         if 'caller' in kwargs and kwargs['caller'] == 'get_instance':
-            return super(TSFreshFeaturesExtractor, cls).__new__(cls)
+            return super(Catch22FeaturesExtractor, cls).__new__(cls)
         raise Exception('Singleton class cannot be instantiated. Please use the static method "get_instance".')
 
     def __init__(self, *args, **kwargs):
@@ -49,48 +45,31 @@ class TSFreshFeaturesExtractor(AbstractFeaturesExtractor):
         """
         timeseries = dataset.load_timeseries(transpose=False) # /!\ transpose False
 
-        print('Running TSFresh on dataset %s.' % dataset.name)
-        features_df = self.extract_from_timeseries(timeseries, dataset.nb_timeseries, dataset.timeseries_length)
+        print('Running Catch22 on dataset %s.' % dataset.name)
+        features_df = self.extract_from_timeseries(timeseries)
         
         # save features as CSV
         dataset.save_features(self, features_df)
         return dataset
 
-    def extract_from_timeseries(self, timeseries, nb_timeseries, timeseries_length):
+    def extract_from_timeseries(self, timeseries):
         """
         Extracts the given time series' features.
         
         Keyword arguments:
         timeseries -- Pandas DataFrame containing the time series ( /!\ each column is a time series)
-        nb_timeseries -- number of time series
-        timeseries_length -- time series' length
         
         Return:
         Pandas DataFrame containing the time series' features ( /!\ each row is a time series' feature vector)
         """
-        # prepare data to be used in tsfresh
-        # DataFrame used as input of tsfresh:
-        # time series id, time index, measured feature 1, measured feature 2, etc.
-        # since in each data set contains time series of a single feature each (e.g. temperature in different cities),
-        # we always have the three following columns: time series id, time index, values
+        map_catch22_res_to_dict = lambda res: {name: val for name, val in zip(res['names'], res['values'])}
 
-        tsfresh_df = pd.DataFrame(columns=['Time Series ID', 'Time', 'Values'])
-        timeseries_ids = [list(id for _ in range(timeseries_length)) 
-                          for id in range(1, nb_timeseries+1)]
-        tsfresh_df['Time Series ID'] = list(itertools.chain.from_iterable(timeseries_ids))
-        times = [timeseries.index.tolist() for _ in range(nb_timeseries)]
-        tsfresh_df['Time'] = list(itertools.chain.from_iterable(times))
-        tsfresh_df['Values'] = np.array([timeseries[col].tolist() for col in timeseries.columns]).flatten()
-        
         # extract features for the data set's time series
-        features_df = extract_features(tsfresh_df, 
-                                       column_id='Time Series ID', 
-                                       column_sort='Time', n_jobs=os.cpu_count())
+        features_df = pd.DataFrame(
+            [map_catch22_res_to_dict(catch22_all(ts)) for ts in timeseries.T.to_numpy()]
+        )
+        features_df['Time Series ID'] = list(range(0, timeseries.shape[1]))
         
-        # tsfresh imputation: remove NaNs, impute some missing values
-        # features_df = impute(features_df) # this seems to hurt the performances
-        
-        features_df['Time Series ID'] = list(range(0, nb_timeseries))
         return features_df
 
     def save_features(self, dataset_name, features):
@@ -142,7 +121,7 @@ class TSFreshFeaturesExtractor(AbstractFeaturesExtractor):
         """
         return normp(
             AbstractFeaturesExtractor.FEATURES_DIR + \
-            f'/{dataset_name}{TSFreshFeaturesExtractor.FEATURES_FILENAMES_ID}{AbstractFeaturesExtractor.FEATURES_APPENDIX}')
+            f'/{dataset_name}{Catch22FeaturesExtractor.FEATURES_FILENAMES_ID}{AbstractFeaturesExtractor.FEATURES_APPENDIX}')
 
     
     # static methods

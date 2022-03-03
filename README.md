@@ -83,8 +83,8 @@ Computes features for the data sets' time series. If the features have not been 
  | ImputeBench | ImputeBench | TSFresh       | kneighbors                         | True              |
  | KiviatRules | KiviatRules | Kiviat        | maxabsscaler_catboostclassifier    | False             |
  |             |             | Topological   | normalizer_randomforest            |                   |
- |             |             | *all*         | standardscaler_randomforest        |                   |
- |             |             |               | standardscaler_svc                 |                   |
+ |             |             | Catch22       | standardscaler_randomforest        |                   |
+ |             |             | *all*         | standardscaler_svc                 |                   |
  |             |             |               | *all*                              |                   |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>

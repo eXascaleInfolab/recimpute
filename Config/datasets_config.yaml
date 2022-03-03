@@ -24,7 +24,7 @@ USE_LIST:
   - BeetleFly.zip                                                                                      # 40x512
   - BirdChicken.zip                                                                                    # 40x512
   - Car.zip                                                                                            # 120x577
-  - chlorine.zip                                                                                       # 50x1000
+  # - chlorine.zip                                                                                       # 50x1000
   - ChlorineConcentration.zip                                                                          # 4307x166
   - climate_CH4.zip                                                                                    # 125x156
   - climate_CLD.zip                                                                                    # 125x156

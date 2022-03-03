@@ -8,7 +8,6 @@ recimpute.py
 
 #!/usr/bin/env python
 
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 from os.path import normpath as normp
@@ -24,6 +23,7 @@ from Datasets.TrainingSet import TrainingSet
 from FeaturesExtraction.KiviatFeaturesExtractor import KiviatFeaturesExtractor
 from FeaturesExtraction.TSFreshFeaturesExtractor import TSFreshFeaturesExtractor
 from FeaturesExtraction.TopologicalFeaturesExtractor import TopologicalFeaturesExtractor
+from FeaturesExtraction.Catch22FeaturesExtractor import Catch22FeaturesExtractor
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 from Training.ModelsTrainer import ModelsTrainer
@@ -43,6 +43,7 @@ FEATURES_EXTRACTORS = { # maps the argument name to the actual class name
     'Kiviat': KiviatFeaturesExtractor, 
     'TSFresh': TSFreshFeaturesExtractor,
     'Topological': TopologicalFeaturesExtractor,
+    'Catch22': Catch22FeaturesExtractor,
 }
 
 

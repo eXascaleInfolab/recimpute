@@ -134,6 +134,11 @@ class KiviatFeaturesExtractor(AbstractFeaturesExtractor):
         """
         features = self.load_raw_features(dataset)
         features['Correlation'] = features['Correlation'].apply(lambda array: np.median(array))
+
+        features.columns = map(
+            lambda col_name: col_name + KiviatFeaturesExtractor.FEATURES_FILENAMES_ID if col_name not in ['Time Series ID', 'Cluster ID'] else col_name, 
+            features.columns
+        )
         return features
     
     # private methods

@@ -84,8 +84,8 @@ Computes features for the data sets' time series. If the features have not been 
  | KiviatRules | KiviatRules | Kiviat        | maxabsscaler_catboostclassifier    | False             |
  |             |             | Topological   | normalizer_randomforest            |                   |
  |             |             | Catch22       | standardscaler_randomforest        |                   |
- |             |             | *all*         | standardscaler_svc                 |                   |
- |             |             |               | *all*                              |                   |
+ |             |             | Kats          | standardscaler_svc                 |                   |
+ |             |             | *all*         | *all*                              |                   |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
 

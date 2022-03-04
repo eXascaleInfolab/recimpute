@@ -114,11 +114,16 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
         
         Return: 
         Pandas DataFrame containing the data set's features. Each row is a time series feature vector.
-        Columns: Time Series ID, Cluster ID, Feature 1's name, Feature 2's name, ...
+        Columns: Time Series ID, Feature 1's name, Feature 2's name, ...
         """
         # load clusters features
         features_filename = self._get_features_filename(dataset.name)
         features_df = pd.read_csv(features_filename)
+
+        features_df.columns = map(
+            lambda col_name: col_name + TopologicalFeaturesExtractor.FEATURES_FILENAMES_ID if col_name not in ['Time Series ID'] else col_name, 
+            features_df.columns
+        )
         return features_df
     
     # private methods

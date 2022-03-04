@@ -2,29 +2,32 @@
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
 eXascale Infolab, University of Fribourg, Switzerland
 ***
-Catch22FeaturesExtractor.py
+KatsFeaturesExtractor.py
 @author: @chacungu
 """
 
-from catch22 import catch22_all
+from kats.consts import TimeSeriesData
+from kats.tsfeatures.tsfeatures import TsFeatures
+import math
 from os.path import normpath as normp
 import pandas as pd
+import warnings
 
 from FeaturesExtraction.AbstractFeaturesExtractor import AbstractFeaturesExtractor
 
-class Catch22FeaturesExtractor(AbstractFeaturesExtractor):
+class KatsFeaturesExtractor(AbstractFeaturesExtractor):
     """
-    Singleton class which computes features from the Catch22 library.
+    Singleton class which computes features from the Kats library.
     """
 
-    FEATURES_FILENAMES_ID = '_catch22'
+    FEATURES_FILENAMES_ID = '_kats'
 
 
     # constructor
 
     def __new__(cls, *args, **kwargs):
         if 'caller' in kwargs and kwargs['caller'] == 'get_instance':
-            return super(Catch22FeaturesExtractor, cls).__new__(cls)
+            return super(KatsFeaturesExtractor, cls).__new__(cls)
         raise Exception('Singleton class cannot be instantiated. Please use the static method "get_instance".')
 
     def __init__(self, *args, **kwargs):
@@ -45,11 +48,16 @@ class Catch22FeaturesExtractor(AbstractFeaturesExtractor):
         """
         timeseries = dataset.load_timeseries(transpose=False) # /!\ transpose False
 
-        print('Running Catch22 on dataset %s.' % dataset.name)
-        features_df = self.extract_from_timeseries(timeseries)
+        print('Running Kats on dataset %s.' % dataset.name)
+        try:
+            features_df = self.extract_from_timeseries(timeseries)
         
-        # save features as CSV
-        dataset.save_features(self, features_df)
+            # save features as CSV
+            dataset.save_features(self, features_df)
+        except Exception as e:
+            print('Got exception for dataset %s.' % dataset.name)
+            print(e)
+
         return dataset
 
     def extract_from_timeseries(self, timeseries):
@@ -62,14 +70,28 @@ class Catch22FeaturesExtractor(AbstractFeaturesExtractor):
         Return:
         Pandas DataFrame containing the time series' features ( /!\ each row is a time series' feature vector)
         """
-        map_catch22_res_to_dict = lambda res: {name: val for name, val in zip(res['names'], res['values'])}
-
-        # extract features for the data set's time series
-        features_df = pd.DataFrame(
-            [map_catch22_res_to_dict(catch22_all(ts)) for ts in timeseries.T.to_numpy()]
-        )
-        features_df['Time Series ID'] = list(range(0, timeseries.shape[1]))
+        window_size = 20 if timeseries.shape[0] > 20 else math.floor(timeseries.shape[0] / 2)
+        stl_period = acfpacf_lag = (timeseries.shape[0] // 2) - 2 if 7 >= timeseries.shape[0] // 2 else 7
+        model = TsFeatures(window_size=window_size, stl_period=stl_period, acfpacf_lag=acfpacf_lag)
+        features = []
         
+        # extract features for the data set's time series
+        for col in timeseries.columns:
+            # prepare data to be used in Kats: 1 dataframe per time series: 2 cols - "time" and the sequence's values
+            ts = timeseries[col]
+            ts_df = pd.DataFrame(ts)
+            ts_df['time'] = ts_df.index
+            ts_df.index = range(ts_df.shape[0])
+            
+            ts_data = TimeSeriesData(ts_df)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                features.append(model.transform(ts_data))
+
+        features_df = pd.DataFrame(features)
+        features_df['Time Series ID'] = list(range(0, timeseries.shape[1]))
+
         return features_df
 
     def save_features(self, dataset_name, features):
@@ -102,7 +124,7 @@ class Catch22FeaturesExtractor(AbstractFeaturesExtractor):
         features_df = pd.read_csv(features_filename)
 
         features_df.columns = map(
-            lambda col_name: col_name + Catch22FeaturesExtractor.FEATURES_FILENAMES_ID if col_name not in ['Time Series ID'] else col_name, 
+            lambda col_name: col_name + KatsFeaturesExtractor.FEATURES_FILENAMES_ID if col_name not in ['Time Series ID'] else col_name, 
             features_df.columns
         )
         return features_df
@@ -122,7 +144,7 @@ class Catch22FeaturesExtractor(AbstractFeaturesExtractor):
         """
         return normp(
             AbstractFeaturesExtractor.FEATURES_DIR + \
-            f'/{dataset_name}{Catch22FeaturesExtractor.FEATURES_FILENAMES_ID}{AbstractFeaturesExtractor.FEATURES_APPENDIX}')
+            f'/{dataset_name}{KatsFeaturesExtractor.FEATURES_FILENAMES_ID}{AbstractFeaturesExtractor.FEATURES_APPENDIX}')
 
     
     # static methods

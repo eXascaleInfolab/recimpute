@@ -124,7 +124,11 @@ class TSFreshFeaturesExtractor(AbstractFeaturesExtractor):
 
         # remove columns that only have 0s
         # features_df = features_df.T[features_df.any()].T # probably not needed (and possibly not a good idea)
-
+        
+        features_df.columns = map(
+            lambda col_name: col_name + TSFreshFeaturesExtractor.FEATURES_FILENAMES_ID if col_name not in ['Time Series ID'] else col_name, 
+            features_df.columns
+        )
         return features_df
 
     

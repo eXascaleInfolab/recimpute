@@ -24,6 +24,7 @@ from FeaturesExtraction.KiviatFeaturesExtractor import KiviatFeaturesExtractor
 from FeaturesExtraction.TSFreshFeaturesExtractor import TSFreshFeaturesExtractor
 from FeaturesExtraction.TopologicalFeaturesExtractor import TopologicalFeaturesExtractor
 from FeaturesExtraction.Catch22FeaturesExtractor import Catch22FeaturesExtractor
+from FeaturesExtraction.KatsFeaturesExtractor import KatsFeaturesExtractor
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
 from Training.ModelsTrainer import ModelsTrainer
@@ -44,6 +45,7 @@ FEATURES_EXTRACTORS = { # maps the argument name to the actual class name
     'TSFresh': TSFreshFeaturesExtractor,
     'Topological': TopologicalFeaturesExtractor,
     'Catch22': Catch22FeaturesExtractor,
+    'Kats': KatsFeaturesExtractor,
 }
 
 

@@ -6,14 +6,13 @@ ModelsTrainer.py
 @author: @chacungu
 """
 
-import math
-import numpy as np
+import itertools
 import operator
-from sklearn.exceptions import FitFailedWarning
-from sklearn.linear_model import LinearRegression
-from sklearn.experimental import enable_halving_search_cv
-from sklearn.model_selection import RandomizedSearchCV, HalvingRandomSearchCV
-import warnings
+import pandas as pd
+import numpy as np
+import random as rdm
+from scipy.stats import ttest_rel
+from sklearn.model_selection import StratifiedKFold, sklearn_train_test_split
 
 from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
@@ -64,6 +63,116 @@ class ModelsTrainer:
         
     
     # private methods
+
+    def _select(self, pipelines, train_on_all_data=False, training_set_params=None, save_results=True):
+        """
+        Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
+
+        Keyword arguments:
+        pipelines -- list of RecommendationModel instances that should be trained and evaluated
+        train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
+                             otherwise (default: False)
+        training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
+        save_results -- True if the results should be saved to disk, False otherwise (default: True)
+
+        Return:
+        A TrainResults' instance containing the training results
+        """
+        training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
+
+        train_results = TrainResults(pipelines, self.training_set.get_labeler_properties()['type'])
+
+        all_data, _, labels_set, X_train, y_train, X_val, y_val = self.training_set.yield_splitted_train_val(training_set_params, 1)
+        assert X_train.index == y_train.index and X_val.index == y_val.index
+
+        class Pipeline:
+            def __init__(self, id, pipe):
+                self.id = id
+                self.pipe = pipe
+                self.scores = []
+
+        pipelines = [Pipeline(i, pipe) for i,pipe in range(pipelines)]
+
+        try:
+            
+            S = [5, 10, 20, 35, 55, 80] # TODO this is a parameter
+            compute_score = lambda f1, r3, t, alpha=1, beta=1, gamma=1: (alpha*f1) + (beta*r3) - (gamma*t) # TODO this is a parameter
+            p_value = 0.05 # TODO this is a parameter
+            train_index = []
+            
+
+            for i in range(S):
+                n = X_train.shape[0] // (S[i] - (S[i-1] if i > 0 else 0)) # number of data to add for partial training
+
+                #new_pipes = None # TODO sample new pipelines from the ones in "pipelines" (=crossovers btw same clfs)
+                #pipelines.extend(new_pipes)
+                
+                # prepare the partial training set
+                X_train_unused = X_train[~X_train.index.isin(train_index)]
+                y_train_unused = y_train[~y_train.index.isin(train_index)]
+                assert X_train_unused.index == y_train_unused.index
+
+                train_index_new = sklearn_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0]
+                train_index.extend(train_index_new)
+                
+                Xp_train = X_train[train_index]
+                yp_train = y_train[train_index]
+                assert Xp_train.index == yp_train.index
+
+                # train, eval and perform statistic tests
+                metrics = {}
+                for pipe in pipelines:
+                    metrics[pipe.id] = []
+                    n_splits = 10 if i < 1 else 2
+                    skf = StratifiedKFold(n_splits=n_splits)
+
+                    # cross-validation
+                    for train_index_cv, _ in skf.split(Xp_train, yp_train):
+                        Xp_train_cv = Xp_train[train_index_cv]
+                        yp_train_cv = Xp_train[train_index_cv]
+
+                        # training
+                        with Utils.catchtime('Training pipe %s' % pipe) as t:
+                            metrics_, _ = model.train_and_eval(Xp_train_cv, yp_train_cv, X_val, y_val, 
+                                                               all_data.columns, self.training_set.get_labeler_properties(), labels_set,
+                                                               plot_cm=False)
+                        runtime = t.end - t.start
+                        metrics[pipe.id].append((metrics_['F1-Score'], metrics_['Recall@3'], runtime))
+
+                # normalize runtime between 0 and 1 & compute the score of each pipeline on each cv-split
+                max_runtime = max([i[2] for cv_scores in metrics.values() for i in cv_scores])
+                scores_ = {id: [compute_score(f1,r3,t/max_runtime) for f1,r3,t in cv_scores] for id, cv_scores in metrics.items()}
+                
+                # add the newly measured scores to the global scores list
+                for pipe in pipelines:
+                    pipe.scores.extend(scores_[pipe.id])
+                
+                # statistical tests - remove pipes that are significantly worse than any other pipe
+                worse_pipes = [
+                    a if np.mean(a.scores) < np.mean(b.scores) else b  # we keep the worse pipelines of the 2
+                        for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
+                        if ttest_rel(a.scores, b.scores).pvalue < p_value # if the paired t-test shows a statistical difference between the two
+                ]
+
+                # remove the worse pipes
+                pipelines = [p for p in pipelines if p not in worse_pipes]
+
+
+
+            if train_on_all_data: # train the models on all data: 
+                print('\nTraining models on all data.')
+                # Warning this model should not be used for any kind of evaluation but only for production use
+                _, X_all, y_all = self.training_set.get_all_data(training_set_params)
+                for model in pipelines:
+                    with Utils.catchtime('Training model %s on all data' % model):
+                        model.trained_pipeline_prod = model.get_pipeline().fit(X_all, y_all)
+
+        finally:
+            # save results to disk
+            if save_results:
+                train_results.save(self.training_set, save_train_set=ModelsTrainer.CONF['SAVE_TRAIN_SET'])
+
+        return train_results
 
     def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True, gridsearch=True):
         """

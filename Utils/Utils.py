@@ -165,10 +165,12 @@ class Utils:
 
         def __enter__(self):
             self.start = perf_counter()
+            self.end = None
             return self
 
         def __exit__(self, type, value, traceback):
-            time = {'seconds': perf_counter() - self.start, 'minutes': None, 'hours': None, 'days': None}
+            self.end = perf_counter()
+            time = {'seconds': self.end - self.start, 'minutes': None, 'hours': None, 'days': None}
             if time['seconds'] > 60 * 10:
                 time['minutes'] = time['seconds'] / 60
                 if time['minutes'] > 60 * 10:

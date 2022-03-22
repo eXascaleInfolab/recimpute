@@ -99,8 +99,9 @@ def eval(models, all_test_data_info):
     
     print('#########  RecImpute - evaluation  #########')
 
-    X_test = all_test_data_info.iloc[:, ~all_test_data_info.columns.isin(['Data Set Name', 'Cluster ID', 'Label'])]
-    y_test = all_test_data_info['Label']
+    X_test = all_test_data_info.iloc[:, ~all_test_data_info.columns.isin(['Data Set Name', 'Cluster ID', 'Label'])].to_numpy().astype('float32')
+    X_test = np.nan_to_num(X_test)
+    y_test = all_test_data_info['Label'].to_numpy().astype('str')
 
     for model in models:
         print(model)

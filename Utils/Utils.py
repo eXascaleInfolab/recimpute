@@ -160,8 +160,9 @@ class Utils:
         return fig, axes, cm
 
     class catchtime(object):
-        def __init__(self, title):
+        def __init__(self, title, verbose=True):
             self.title = title
+            self.verbose = verbose
 
         def __enter__(self):
             self.start = perf_counter()
@@ -170,15 +171,16 @@ class Utils:
 
         def __exit__(self, type, value, traceback):
             self.end = perf_counter()
-            time = {'seconds': self.end - self.start, 'minutes': None, 'hours': None, 'days': None}
-            if time['seconds'] > 60 * 10:
-                time['minutes'] = time['seconds'] / 60
-                if time['minutes'] > 60 * 10:
-                    time['hours'] = time['minutes'] / 60
-                    if time['hours'] > 24 * 3:
-                        time['days'] = time['hours'] / 24
-            for k, v in list(time.items())[::-1]:
-                if v is not None:
-                    display = v, k
-                    break
-            print('%s: %.2f %s' % (self.title, *display))
+            if self.verbose:
+                time = {'seconds': self.end - self.start, 'minutes': None, 'hours': None, 'days': None}
+                if time['seconds'] > 60 * 10:
+                    time['minutes'] = time['seconds'] / 60
+                    if time['minutes'] > 60 * 10:
+                        time['hours'] = time['minutes'] / 60
+                        if time['hours'] > 24 * 3:
+                            time['days'] = time['hours'] / 24
+                for k, v in list(time.items())[::-1]:
+                    if v is not None:
+                        display = v, k
+                        break
+                print('%s: %.2f %s' % (self.title, *display))

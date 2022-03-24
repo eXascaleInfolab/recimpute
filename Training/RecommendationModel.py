@@ -13,8 +13,8 @@ import os
 from os.path import normpath as normp
 import pandas as pd
 from pickle import dump as p_dump, load as p_load
+from sklearn.base import clone
 from sklearn.metrics import accuracy_score, precision_score, recall_score, hamming_loss, f1_score
-from sklearn.pipeline import Pipeline
 import time
 
 from Utils.Utils import Utils
@@ -36,40 +36,19 @@ class RecommendationModel:
 
 
     # constructor
-    def __init__(self, name, type, steps, params_ranges, training_speed_factor, 
-                 multiclass_strategy=None, bagging_strategy=None, description_filename=None, default_params=None):
+    def __init__(self, id, type, pipe):
         """
         Initializes a RecommendationModel object.
 
         Keyword arguments:
-        name -- name of this model
+        id -- unique id of this model
         type -- type of this model (classifier or regression model)
-        steps -- list of (name, transform) tuples (implementing fit/transform) that are chained, in the order in which they 
-                 are chained, with the last object an estimator
-        params_ranges -- dict with keys being parameters' names and values being ranges of possible parameter value
-        training_speed_factor -- integer between 1 (fast) and 3 (slow) used to indicate the expected training speed of this model
-        multiclass_strategy -- Class of a multiclass strategy (default: None)
-        bagging_strategy -- Class of a bagging strategy (default: None)
-        description_filename -- filename of this model's description file (default: None)
-        default_params -- dict of default parameter names mapped to their values. If None and default parameters should be used, the 
-                          model's default parameters will be used (default: None)
+        pipe -- sklearn pipeline object with each step already set up with their parameters
         """
-        self.name = name
+        self.id = id
         self.type = type
-        self.steps_name, self.steps = zip(*steps)
-        # for step in self.steps:
-        #     assert hasattr(step, 'fit') and callable(getattr(step, 'fit'))
-        #     assert hasattr(step, 'predict') and callable(getattr(step, 'predict'))
-        #     assert hasattr(step, 'transform') and callable(getattr(step, 'transform'))
+        self.pipe = pipe
         assert type in ['classifier', 'regression']
-
-        self.params_ranges = params_ranges
-        self.best_params = None
-        self.training_speed_factor = training_speed_factor
-        self.multiclass_strategy = multiclass_strategy
-        self.bagging_strategy = bagging_strategy
-        self.description_filename = description_filename
-        self.default_params = default_params
 
         self.best_cv_trained_pipeline = None
         self.trained_pipeline_prod = None
@@ -82,89 +61,7 @@ class RecommendationModel:
 
     # public methods
 
-    def get_pipeline(self, use_best_params_if_set=True):
-        """
-        Instantiates and returns a Scikit-Learn Pipeline object created from this model's individual steps.
-
-        Keyword arguments: 
-        use_best_params_if_set -- True if the pipeline should be initialized with its optimal parameters (if they are set),
-                                  and False if the default parameters should be used (default True).
-        
-        Return: 
-        Scikit-Learn Pipeline object created from this model's individual steps and optimal parameters (if set).
-        """
-        # instantiate the Pipeline object
-        pipeline_steps = [(name, step()) for name, step in zip(self.steps_name, self.steps)]
-        pipeline = Pipeline(steps=pipeline_steps)
-        
-        if self.bagging_strategy is not None:
-            n_estimators = 10
-            pipeline = self.bagging_strategy(pipeline, n_jobs=-1, n_estimators=n_estimators, max_samples=1.0 / n_estimators)
-        if self.multiclass_strategy is not None:
-            pipeline = self.multiclass_strategy(pipeline)
-            
-        if self.are_params_set and use_best_params_if_set:
-            pipeline.set_params(**self.best_params)
-        elif self.default_params is not None:
-            pipeline.set_params(**self.default_params)
-
-        return pipeline
-
-    def set_params(self, gs_best_params):
-        """
-        Sets the model's optimal parameters.
-
-        Keyword arguments: 
-        gs_best_params -- Dict with keys being parameters' names and values being the optimal parameter value.
-        
-        Return: -
-        """
-        self.best_params = gs_best_params
-        self.are_params_set = True
-
-    def get_params_ranges(self):
-        """
-        Returns the model parameters' ranges.
-
-        Keyword arguments: -
-        
-        Return:
-        Dict with keys being parameters' names and values being ranges of possible parameter value.
-        """
-        updated_params_ranges = {}
-        for param_key in self.params_ranges.keys():
-            new_param_key = param_key
-
-            if self.bagging_strategy is not None:
-                new_param_key = 'base_estimator__' + new_param_key
-                
-            if self.multiclass_strategy is not None:
-                new_param_key = 'estimator__' + new_param_key
-               
-            updated_params_ranges[new_param_key] = self.params_ranges[param_key]
-        return updated_params_ranges
-
-    def get_nb_gridsearch_iter(self, gs_iter_range):
-        """
-        Returns the number of gridsearch iterations to perform for this model.
-
-        Keyword arguments: 
-        gs_iter_range -- dict specifying the number of gridsearch iterations to perform depending on the 
-                         model's training speed (training efficiency).
-        
-        Return:
-        Number of gridsearch iterations to perform for this model.
-        """
-        if self.training_speed_factor == 1:
-            return gs_iter_range['fast']
-        elif self.training_speed_factor == 2:
-            return gs_iter_range['medium']
-        elif self.training_speed_factor == 3:
-            return gs_iter_range['slow']
-        else:
-            raise Exception('Invalid "training_speed_factor" parameter:', self.training_speed_factor)
-
-    def train_and_eval(self, X_train, y_train, X_val, y_val, features_name, labels_info, labels_set, plot_cm=False):
+    def train_and_eval(self, X_train, y_train, X_val, y_val, features_name, labels_info, labels_set, plot_cm=False, save_if_best=True):
         """
         Trains and evaluates the model on the given train and validation data. 
         
@@ -177,6 +74,7 @@ class RecommendationModel:
         labels_info -- dict specifying the labels' properties
         labels_set -- list of unique labels that may appear in y_train and y_val
         plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
+        save_if_best -- True if the model should be saved if it is the best performing one, false otherwise (default: False)
         
         Return: 
         1. dict of scores measured during the pipeline's evaluation
@@ -188,7 +86,7 @@ class RecommendationModel:
 
         # train model
         start_time = time.time()
-        trained_pipeline = self.get_pipeline(use_best_params_if_set=self.are_params_set).fit(X_train, y_train)
+        trained_pipeline = clone(self.pipe).fit(X_train, y_train)
         end_time = time.time()
         
         # evaluate the model
@@ -197,17 +95,18 @@ class RecommendationModel:
 
         # measure the best training score & save the trained_pipeline if this new score is the best
         current_score = scores[self.METRIC_FOR_SCORING[self.type]['metric']]
-        if self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'higher':
-            if self.best_training_score < current_score:
-                self.best_training_score = current_score
-                self.best_cv_trained_pipeline = trained_pipeline
-        elif self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'lower':
-            if self.best_training_score > current_score:
-                self.best_training_score = current_score
-                self.best_cv_trained_pipeline = trained_pipeline
-        else: 
-            raise Exception('Invalid value for variable: RecommendationModel.METRIC_FOR_SCORING["..."]["best_score_is"]: ' + 
-                            self.METRIC_FOR_SCORING[self.type]['best_score_is'])
+        if save_if_best:
+            if self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'higher':
+                if self.best_training_score < current_score:
+                    self.best_training_score = current_score
+                    self.best_cv_trained_pipeline = trained_pipeline
+            elif self.METRIC_FOR_SCORING[self.type]['best_score_is'] == 'lower':
+                if self.best_training_score > current_score:
+                    self.best_training_score = current_score
+                    self.best_cv_trained_pipeline = trained_pipeline
+            else: 
+                raise Exception('Invalid value for variable: RecommendationModel.METRIC_FOR_SCORING["..."]["best_score_is"]: ' + 
+                                self.METRIC_FOR_SCORING[self.type]['best_score_is'])
 
         return scores, cm
     
@@ -302,6 +201,8 @@ class RecommendationModel:
                 get_sorted_recommendations = lambda probas, classes: list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys())
                 # rank at which each y_true is found in the sorted y_pred_proba (list of len = len(y_true))
                 ranks = [get_sorted_recommendations(y_pred_proba_i, classes).index(y_true_i) + 1 
+                         if y_true_i in classes else
+                         np.inf
                          for y_true_i, y_pred_proba_i in zip(y_true, y_pred_proba)] 
 
                 scores['Mean Reciprocal Rank'] = (1 / len(y_true)) * sum(1 / rank_i for rank_i in ranks)
@@ -333,7 +234,7 @@ class RecommendationModel:
         1. Filename of a serialized RecommendationModel instance
         2. Filename of a serialized trained_pipeline
         """
-        model_filename, model_tp_filename, model_tpp_filename = RecommendationModel._get_filenames(self.name, results_dir)
+        model_filename, model_tp_filename, model_tpp_filename = RecommendationModel._get_filenames(self.id, results_dir)
 
         # serialize the RecommendationModel instance but not its trained_pipeline (using pickle)
         with open(model_filename, 'wb') as model_f_out:
@@ -351,7 +252,7 @@ class RecommendationModel:
         return model_filename, model_tp_filename, model_tpp_filename
 
     def __repr__(self):
-        return '%s: %s' % (self.name, ', '.join([step.__name__ for step in self.steps]))
+        return '%s: %s' % (self.id, ', '.join([step.__name__ for step in self.steps]))
 
 
     # private methods
@@ -385,46 +286,6 @@ class RecommendationModel:
 
     # static methods
     
-    def init_from_descriptions(models_descriptions_to_use):
-        """
-        Initializes objects of type RecommendationModel from the given list of models' descriptions files.
-
-        Keyword arguments:
-        models_descriptions_to_use -- list of models' descriptions files
-
-        Return:
-        List of initialized RecommendationModel instances.
-        """
-        models = []
-
-        # for each model description
-        for model_description_fname in models_descriptions_to_use:
-
-            # load description
-            spec = importlib.util.spec_from_file_location(
-                'Training.ModelsDescription', 
-                normp(RecommendationModel.MODELS_DESCRIPTION_DIR + '/' + model_description_fname)
-            )
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-
-            # init model
-            model = RecommendationModel(
-                name = module.model_info['name'], 
-                type = module.model_info['type'], 
-                steps = module.model_info['steps'], 
-                params_ranges = module.model_info['params_ranges'], 
-                training_speed_factor = module.model_info['training_speed_factor'], 
-
-                multiclass_strategy = module.model_info['multiclass_strategy'], 
-                bagging_strategy = module.model_info['bagging_strategy'],
-                description_filename = model_description_fname,
-                default_params = module.model_info['default_params'],
-            )
-            
-            models.append(model)
-        return models
-
     def load_from_archive(archive, repr):
         """
         Loads and returns a RecommendationModel instance.

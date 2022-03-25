@@ -95,7 +95,7 @@ class ModelsTrainer:
         pipelines = [TmpPipeline(rm) for rm in recommendation_models]
 
             
-        S = [5, 10, 20, 35, 55, 80] # TODO this is a parameter
+        S = [3, 8, 20, 35, 55, 80] # TODO this is a parameter
         compute_score = lambda f1, r3, t, alpha=1., beta=0.75, gamma=0.5: ((alpha*f1) + (beta*r3) - (gamma*t) + gamma) / (alpha+beta+gamma) # TODO this is a parameter
         p_value = 0.05 # TODO this is a parameter
         train_index = []
@@ -112,7 +112,9 @@ class ModelsTrainer:
             y_train_unused = y_train.loc[~y_train.index.isin(train_index)]
             assert X_train_unused.index.identical(y_train_unused.index)
 
-            train_index_new = sklearn_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0]
+            train_index_new = sklearn_train_test_split(X_train_unused, train_size=n)[0].index.tolist() # TODO no stratification here
+            assert all(id not in train_index for id in train_index_new)
+
             train_index.extend(train_index_new)
             print('1/3 - begining of new partial training: %i,%i' % (S[i], len(train_index))) # TODO tmp print
             
@@ -122,7 +124,7 @@ class ModelsTrainer:
 
             # train, eval and perform statistic tests
             metrics = {}
-            for pipe in tqdm(pipelines):
+            for pipe in tqdm(pipelines, leave=False):
                 metrics[pipe.rm.id] = []
                 n_splits = 10 if i < 1 else 2
                 skf = StratifiedKFold(n_splits=n_splits)
@@ -130,8 +132,9 @@ class ModelsTrainer:
                 # cross-validation
                 for train_index_cv, _ in tqdm(skf.split(Xp_train, yp_train), total=n_splits, leave=False):
                     #print('2/3 - cv split') # TODO tmp print
-                    Xp_train_cv = Xp_train.loc[train_index_cv]
-                    yp_train_cv = yp_train.loc[train_index_cv]
+                    # skf returns row indices (0-nb_rows) NOT pandas dataframe's index !!! thus the use of iloc[] and not loc[]
+                    Xp_train_cv = Xp_train.iloc[train_index_cv]
+                    yp_train_cv = yp_train.iloc[train_index_cv]
                     assert Xp_train_cv.index.identical(yp_train_cv.index)
                     Xp_train_cv = Xp_train_cv.to_numpy().astype('float32')
                     yp_train_cv = yp_train_cv.to_numpy().astype('str').flatten()
@@ -169,12 +172,12 @@ class ModelsTrainer:
             # remove the worse pipes
             pipelines = [p for p in pipelines if p not in worse_pipes]
 
+            print('There remains %i pipelines. %i have been eliminated.' % (len(pipelines), len(worse_pipes)))
+
             if len(pipelines) < 3:
-                break
+               break
 
-        # TODO transform the TmpPipelines in "pipelines" to RecommendationModels before returning
-
-        return pipelines
+        return [pipe.rm for pipe in pipelines]
 
     def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True, save_if_best=True):
         """

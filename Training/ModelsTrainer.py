@@ -66,19 +66,22 @@ class ModelsTrainer:
     
     # private methods
 
-    def _select(self, recommendation_models, training_set_params=None):
+    def _select(self, recommendation_models, compute_score, training_set_params=None, S=[3, 8, 20, 35, 55, 80], test_method=ttest_rel, p_value=.01):
         """
         Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
 
         Keyword arguments:
-        pipelines -- list of RecommendationModel instances that should be trained and evaluated
-        train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
-                             otherwise (default: False)
+        recommendation_models -- list of RecommendationModel instances that should be trained and evaluated
+        compute_score -- method that computes the score based on which the models are evaluated. Takes as input the F1-score, Recall@3, and
+                         training runtime for a given model. Returns a floating point value.
         training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
-        save_results -- True if the results should be saved to disk, False otherwise (default: True)
+        S -- list of percentages for the partial training data sets (default: [3, 8, 20, 35, 55, 80])
+        test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the 
+                       p-value. (default: scipy.stats.ttest_rel)
+        p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
 
         Return:
-        A TrainResults' instance containing the training results
+        List of selected RecommendationModel.
         """
         training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
 
@@ -95,11 +98,8 @@ class ModelsTrainer:
         pipelines = [TmpPipeline(rm) for rm in recommendation_models]
 
             
-        S = [3, 8, 20, 35, 55, 80] # TODO this is a parameter
-        compute_score = lambda f1, r3, t, alpha=1., beta=0.75, gamma=0.5: ((alpha*f1) + (beta*r3) - (gamma*t) + gamma) / (alpha+beta+gamma) # TODO this is a parameter
-        p_value = 0.05 # TODO this is a parameter
-        train_index = []
         
+        train_index = []
 
         for i in tqdm(range(len(S))):
             n = X_train.shape[0] // (S[i] - (S[i-1] if i > 0 else 0)) # number of data to add for partial training
@@ -112,11 +112,14 @@ class ModelsTrainer:
             y_train_unused = y_train.loc[~y_train.index.isin(train_index)]
             assert X_train_unused.index.identical(y_train_unused.index)
 
-            train_index_new = sklearn_train_test_split(X_train_unused, train_size=n)[0].index.tolist() # TODO no stratification here
+            try:
+                train_index_new = sklearn_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0].index.tolist()
+            except:
+                train_index_new = sklearn_train_test_split(X_train_unused, train_size=n)[0].index.tolist()
             assert all(id not in train_index for id in train_index_new)
 
             train_index.extend(train_index_new)
-            print('1/3 - begining of new partial training: %i,%i' % (S[i], len(train_index))) # TODO tmp print
+            print('1/3 - begining of new partial training: %i%% -> %i' % (S[i], len(train_index))) # TODO tmp print
             
             Xp_train = X_train.loc[train_index]
             yp_train = y_train.loc[train_index]
@@ -157,15 +160,15 @@ class ModelsTrainer:
                 pipe.scores.extend(scores_[pipe.rm.id])
             
             # statistical tests - remove pipes that are significantly worse than any other pipe
-            worse_pipes = [
-                a if np.mean(a.scores) < np.mean(b.scores) else b  # we keep the worse pipelines of the 2
-                    for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
-                    if ttest_rel(a.scores, b.scores).pvalue < p_value # if the paired t-test shows a statistical difference between the two
-            ]
+            worse_pipes = self._apply_test(
+                list(itertools.combinations(pipelines, r=2)), 
+                test_method,
+                p_value=p_value
+            )
 
             print([(p.rm.id, np.mean(p.scores)) for p in pipelines])
             print([
-                (ttest_rel(a.scores, b.scores).pvalue, a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
+                (test_method(a.scores, b.scores)[1], a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
                     for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
             ])
 
@@ -178,6 +181,37 @@ class ModelsTrainer:
                break
 
         return [pipe.rm for pipe in pipelines]
+
+    def _apply_test(self, pipes_combinations, test_method, p_value=.01):
+        """
+        Applies a significance test (paired t-test) to the pipelines to identify and return those that perform worse than others.
+
+        Keyword arguments:
+        pipes_combinations -- list of TmpPipeline to apply t-test to.
+        test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the p-value.
+        p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
+
+        Return:
+        List of TmpPipeline that is performing worse than others.
+        """
+        worse_pipes = []
+        i = len(pipes_combinations)-1
+        while i > 0:
+            a,b = pipes_combinations[i]
+            # if the paired t-test shows a statistical difference between the two
+            if test_method(a.scores, b.scores)[1] < p_value:
+                # eliminate the worst one
+                eliminated_pipe = a if np.mean(a.scores) < np.mean(b.scores) else b
+                worse_pipes.append(eliminated_pipe)
+                
+                # remove all pairs of pipes continaining the eliminated pipe to avoid unnecessary comparisons
+                for j in reversed(range(len(pipes_combinations))):
+                    x,y = pipes_combinations[j]
+                    if eliminated_pipe in (x,y):
+                        del pipes_combinations[j]
+                        i -= 1 if j < i else 0
+            i -= 1
+        return worse_pipes
 
     def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True, save_if_best=True):
         """

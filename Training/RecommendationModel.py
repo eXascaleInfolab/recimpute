@@ -252,7 +252,7 @@ class RecommendationModel:
         return model_filename, model_tp_filename, model_tpp_filename
 
     def __repr__(self):
-        return '%s: %s' % (self.id, ', '.join([step.__name__ for step in self.steps]))
+        return '%s: %s' % (self.id, ', '.join([str(step) for (_, step) in self.pipe.steps]))
 
 
     # private methods

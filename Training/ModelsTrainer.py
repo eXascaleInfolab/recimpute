@@ -7,9 +7,10 @@ ModelsTrainer.py
 """
 
 import itertools
+from multiprocessing import Pool
+import numpy as np
 import operator
 import pandas as pd
-import numpy as np
 import random as rdm
 from scipy.stats import ttest_rel
 from sklearn.base import clone
@@ -19,6 +20,31 @@ from tqdm.notebook import tqdm
 from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
+
+class _TmpPipeline:
+    def __init__(self, rm):
+        self.rm = rm
+        self.scores = []
+    def __repr__(self):
+        return '%s: %.5f' % (self.rm.id, np.mean(self.scores))
+
+def _parallel_training(args):
+    pipe, train_index_cv, Xp_train, yp_train, X_val, y_val, data_cols, labeler_properties, labels_set = args
+    # get the stratified fold data
+    Xp_train_cv = Xp_train.iloc[train_index_cv]
+    yp_train_cv = yp_train.iloc[train_index_cv]
+    assert Xp_train_cv.index.identical(yp_train_cv.index)
+    Xp_train_cv = Xp_train_cv.to_numpy().astype('float32')
+    yp_train_cv = yp_train_cv.to_numpy().astype('str').flatten()
+
+    # training & evaluation
+    with Utils.catchtime('Training pipe %s' % pipe.rm.pipe, verbose=False) as t:
+        metrics_, _ = pipe.rm.train_and_eval(Xp_train_cv, yp_train_cv, X_val, y_val, 
+                                            data_cols, labeler_properties, labels_set,
+                                            plot_cm=False, save_if_best=False)
+    runtime = t.end - t.start
+    return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
+
 
 class ModelsTrainer:
     """
@@ -92,16 +118,7 @@ class ModelsTrainer:
         assert X_train.index.identical(y_train.index)
         print('0/3 - data loaded') # TODO tmp print
 
-        class TmpPipeline:
-            def __init__(self, rm):
-                self.rm = rm
-                self.scores = []
-            def __repr__(self):
-                return '%s: %.5f' % (self.rm.id, np.mean(self.scores))
-
-        pipelines = [TmpPipeline(rm) for rm in recommendation_models]
-
-            
+        pipelines = [_TmpPipeline(rm) for rm in recommendation_models]
         
         train_index = []
 
@@ -131,30 +148,25 @@ class ModelsTrainer:
                 assert Xp_train.index.identical(yp_train.index)
 
                 # train, eval and perform statistic tests
+                # create params list
+                param_list = []
+                for pipe in pipelines:
+                    n_splits_ = n_splits if len(pipe.scores) >= 10 else 10 - len(pipe.scores)
+                    for train_index_cv, _ in StratifiedKFold(n_splits=n_splits_).split(Xp_train, yp_train):
+                        param_list.append(
+                            (pipe, train_index_cv, # dynamic params
+                             Xp_train, yp_train, X_val, y_val, all_data.columns, self.training_set.get_labeler_properties(), labels_set) # constant params
+                        )
+                
+                # run _parallel_training
                 metrics = {}
-                for pipe in tqdm(pipelines, leave=False):
-                    metrics[pipe.rm.id] = []
-                    n_splits_ = n_splits if len(pipe.scores) >= 10 else 10 - len(pipe.scores) #10 if i < 1 else 2
-                    skf = StratifiedKFold(n_splits=n_splits_)
-
-                    # cross-validation
-                    for train_index_cv, _ in tqdm(skf.split(Xp_train, yp_train), total=n_splits_, leave=False):
-                        #print('2/3 - cv split') # TODO tmp print
-                        # skf returns row indices (0-nb_rows) NOT pandas dataframe's index !!! thus the use of iloc[] and not loc[]
-                        Xp_train_cv = Xp_train.iloc[train_index_cv]
-                        yp_train_cv = yp_train.iloc[train_index_cv]
-                        assert Xp_train_cv.index.identical(yp_train_cv.index)
-                        Xp_train_cv = Xp_train_cv.to_numpy().astype('float32')
-                        yp_train_cv = yp_train_cv.to_numpy().astype('str').flatten()
-
-                        # training
-                        with Utils.catchtime('Training pipe %s' % pipe.rm.pipe, verbose=False) as t:
-                            metrics_, _ = pipe.rm.train_and_eval(Xp_train_cv, yp_train_cv, X_val, y_val, 
-                                                                all_data.columns, self.training_set.get_labeler_properties(), labels_set,
-                                                                plot_cm=False, save_if_best=False)
-                        runtime = t.end - t.start
-                        metrics[pipe.rm.id].append((metrics_['F1-Score'], metrics_['Recall@3'], runtime))
-
+                with Pool() as pool:
+                    for p_id, f1, r3, t in tqdm(pool.imap_unordered(_parallel_training, param_list), total=len(param_list), leave=False):
+                        # save the evaluation results
+                        if p_id not in metrics:
+                            metrics[p_id] = []
+                        metrics[p_id].append((f1, r3, t))
+                
                 print('3/3 - statistic tests') # TODO tmp print
                 # normalize runtime between 0 and 1 & compute the score of each pipeline on each cv-split
                 max_runtime = max([i[2] for cv_scores in metrics.values() for i in cv_scores])
@@ -172,11 +184,12 @@ class ModelsTrainer:
                     p_value=p_value
                 )
 
-                print([(p.rm.id, np.mean(p.scores)) for p in pipelines])
-                print([
-                    (test_method(a.scores, b.scores)[1], a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
-                        for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
-                ])
+                if len(pipelines) < 20: # TODO tmp
+                    print([(p.rm.id, np.mean(p.scores)) for p in pipelines]) # TODO tmp print
+                    print([
+                        (test_method(a.scores, b.scores)[1], a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
+                            for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
+                    ]) # TODO tmp print
 
                 # remove the worse pipes
                 pipelines = [p for p in pipelines if p not in worse_pipes]
@@ -186,26 +199,26 @@ class ModelsTrainer:
                 if len(pipelines) <= 3:
                     break
 
-        return [pipe.rm for pipe in pipelines]
+        return pipelines#[pipe.rm for pipe in pipelines] # TODO uncomment
 
     def _apply_test(self, pipelines, test_method, K=4, p_value=.01):
         """
         Applies a significance test (paired t-test) to the pipelines to identify and return those that perform worse than others.
 
         Keyword arguments:
-        pipelines -- list of TmpPipeline to apply t-test to.
+        pipelines -- list of _TmpPipeline to apply t-test to.
         test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the p-value.
         K -- Pruning factor. Example: if K=4, the expected number of pipes to "survive" is 1/4 of the original set. (default: 4)
         p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
 
         Return:
-        List of TmpPipeline that are performing worse than others.
+        List of _TmpPipeline that are performing worse than others.
         """
         eliminated_pipes = []
         pipes_combinations = list(itertools.combinations(pipelines, r=2))
         worse_counters = {p: 0 for p in pipelines}
         
-        T = (len(pipelines) - len(eliminated_pipes)) // K
+        T = len(pipelines) // K
         
         i = len(pipes_combinations)-1
         while i > 0:
@@ -216,7 +229,7 @@ class ModelsTrainer:
                 worse_pipe = a if np.mean(a.scores) < np.mean(b.scores) else b
                 worse_counters[worse_pipe] += 1
                 
-                if worse_counters[worse_pipe] > T:#thresholds[worse_pipe]:
+                if worse_counters[worse_pipe] > T:
                     # eliminate the worst one
                     eliminated_pipes.append(worse_pipe)
                     # remove all pairs of pipes continaining the eliminated pipe to avoid unnecessary comparisons

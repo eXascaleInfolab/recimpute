@@ -34,21 +34,25 @@ ___
 
 ### Arguments
 
-- *-mode*: Specifies the program's execution mode. There exists two modes:
-    - `train`: Train and evaluate one or mulitple models, or
-    - `use`: Use a pre-trained model to get recommendations for new time series.
+- *-mode*: Specifies which step of the system should be executed:
+    - `cluster`: Cluster the datasets' time series;
+    - `label`: Assign a label to each datasets' cluster;
+    - `extract_features`: Extract the features of each datasets' time series;
+    - `train`: Select the most promising data preprocessing steps, classifiers and their hyperparameters, then train them on the previously labeled time series and their previously extracted features;
+    - `eval`: Evaluate trained models;
+    - `use`: Use a trained model to get recommendations for new time series.
 
 Note: many parameters and strategies can be set from the configuration files stored in the Config/ repository.
 
 #### *cluster* mode:
 
-Cluster the data sets. If the clusters have not been generated yet, this step is required to be executed before training.
+Cluster the datasets. If the clusters have not been generated yet, this step is required to be executed before labeling and training.
 
 No arguments. All data sets listed in the configuration files will be clustered.
 
 #### *label* mode:
 
-Labels the data sets' clusters. If the labels have not been attributed yet, this step is required to be executed before training.
+Labels the datasets' clusters. If the labels have not been attributed yet, this step is required to be executed before training.
 
 | -lbl<sup> (\*)</sup> | -truelbl |
 | ----------- | ----------- |
@@ -62,13 +66,15 @@ Labels the data sets' clusters. If the labels have not been attributed yet, this
 
 #### *extract_features* mode:
 
-Computes features for the data sets' time series. If the features have not been extracted yet, this step is required to be executed before training.
+Computes features for the datasets' time series. If the features have not been extracted yet, this step is required to be executed before training.
 
 | -fes<sup> (\*)</sup> |
 | ------------- |
 | TSFresh       |
 | Kiviat        |
 | Topological   |
+| Catch22       |
+| Kats          |
 | *all*         |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
@@ -78,21 +84,22 @@ Computes features for the data sets' time series. If the features have not been 
 
 #### *train* mode:
 
- | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | -models<sup> (\*)</sup> | train_on_all_data |
- | ----------- | ----------- | ------------- | ---------------------------------- | ----------------- |
- | ImputeBench | ImputeBench | TSFresh       | kneighbors                         | True              |
- | KiviatRules | KiviatRules | Kiviat        | maxabsscaler_catboostclassifier    | False             |
- |             |             | Topological   | normalizer_randomforest            |                   |
- |             |             | Catch22       | standardscaler_randomforest        |                   |
- |             |             | Kats          | standardscaler_svc                 |                   |
- |             |             | *all*         | *all*                              |                   |
+Selects the most-promising pipelines and trains them on the prepared datasets (labeling and features extraction must be done prior to training).
+
+ | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | train_on_all_data |
+ | ----------- | ----------- | ------------- | ----------------- |
+ | ImputeBench | ImputeBench | TSFresh       | True              |
+ | KiviatRules | KiviatRules | Kiviat        | False             |
+ |             |             | Topological   |                   |
+ |             |             | Catch22       |                   |
+ |             |             | Kats          |                   |
+ |             |             | *all*         |                   |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
 
 - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
 - *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name.
 - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected: one or multiple values separated by commas.
-- *-models*: Name of the models' descriptions files (without their .py extension) to instantiate, train and evaluate (files from the Training/ModelsDescription/ folder). Expected: one or multiple values separated by commas.
 - *-train_on_all_data* (optional): Whether or not train the models on ALL data after their evaluation is complete. If not specified, trains on all data after evaluation. Expected: *True* or *False*.
 
 #### *eval* mode:

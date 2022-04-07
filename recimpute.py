@@ -9,7 +9,6 @@ recimpute.py
 #!/usr/bin/env python
 
 import numpy as np
-import os
 from os.path import normpath as normp
 import pandas as pd
 from pprint import pprint
@@ -27,8 +26,8 @@ from FeaturesExtraction.Catch22FeaturesExtractor import Catch22FeaturesExtractor
 from FeaturesExtraction.KatsFeaturesExtractor import KatsFeaturesExtractor
 from Labeling.ImputationTechniques.ImputeBenchLabeler import ImputeBenchLabeler
 from Labeling.ImputationTechniques.KiviatRulesLabeler import KiviatRulesLabeler
+from Training.ClfPipeline import ClfPipeline
 from Training.ModelsTrainer import ModelsTrainer
-from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
 
@@ -54,7 +53,7 @@ Utils.create_dirs_if_not_exist([SYSTEM_INPUTS_DIR])
 Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
 
-def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors, models_descriptions_to_use, train_on_all_data):
+def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors, train_on_all_data):
 
     print('#########  RecImpute - training  #########')
 
@@ -76,7 +75,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     # create a training set
     training_set = TrainingSet(
-        datasets, 
+        datasets[:10], 
         clusterer, 
         features_extractors, 
         labeler, labeler_properties,
@@ -84,11 +83,40 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
         force_generation=False,
     )
 
-    models = RecommendationModel.init_from_descriptions(models_descriptions_to_use)
+    from scipy.stats import ttest_rel#, friedmanchisquare, chisquare
+    #from statsmodels.stats.weightstats import ztest as ztest
+    nb_pipelines = 350 # TODO
+    S = [3, 8, 12, 17, 25] # TODO
+    n_splits = 3 # TODO
+    test_method = ttest_rel # TODO
+    selection_len = 5 # TODO
+    p_value = .01 # TODO
+
+    pipelines, all_pipelines_txt = ClfPipeline.generate(N=nb_pipelines)
+
+    # most promising pipelines' selection
+    trainer = ModelsTrainer(training_set)
+    try:
+        with warnings.catch_warnings(): # TODO tmp delete
+            warnings.simplefilter('ignore') # TODO tmp delete
+            selected_pipes = trainer.select(
+                pipelines, all_pipelines_txt, 
+                S=S, 
+                n_splits=n_splits, 
+                test_method=test_method, 
+                selection_len=selection_len, 
+                p_value=p_value,
+                early_break=False,
+            )
+    finally:
+        import pickle # TODO tmp delete
+        with open('Training/tmp_pipelines.obj', 'wb+') as f: # TODO tmp delete
+            pickle.dump(selected_pipes, f) # TODO tmp delete
+    raise Exception('Models selection done.') # TODO delete this line
+    models = list(map(lambda p: p.rm, selected_pipes))
 
     # training & cross-validation evaluation
-    trainer = ModelsTrainer(training_set, models)
-    tr = trainer.train(train_on_all_data=train_on_all_data) 
+    tr = trainer.train(models, train_on_all_data=train_on_all_data) 
 
     print('\n\n=================== Cross-validation results (averaged) ===================')
     print(tr.results[tr.metrics_measured].to_markdown())
@@ -192,7 +220,6 @@ def get_recommendations_filename(timeseries_filename):
 
 if __name__ == '__main__':
 
-    _models_list = [f.replace('.py', '') for f in os.listdir('Training/ModelsDescription') if f not in ['__pycache__', '_template.py']]
     _valid_args = {
         '-mode': ['cluster', 'label', 'extract_features', 'train', 'eval', 'use'],
 
@@ -200,7 +227,6 @@ if __name__ == '__main__':
         '-lbl': LABELERS.keys(),
         '-true_lbl': LABELERS.keys(),
         '-fes': [*FEATURES_EXTRACTORS.keys(), 'all'],
-        '-models': [*_models_list, 'all'],
         '-train_on_all_data': ['True', 'False'],
 
         # *eval* args
@@ -208,7 +234,6 @@ if __name__ == '__main__':
 
         # *use* args
         '-id': None,
-        '-model': _models_list,
         '-ts': None,
         '-use_prod_model': ['True', 'False'],
     }
@@ -292,7 +317,7 @@ if __name__ == '__main__':
 
     elif args['-mode'] == 'train':
 
-        NON_OPTIONAL_ARGS = ['-mode', '-lbl', '-fes', '-models']
+        NON_OPTIONAL_ARGS = ['-mode', '-lbl', '-fes']
         assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
         
         # TRAIN and EVALUATE W/ CROSS-VAL
@@ -316,20 +341,10 @@ if __name__ == '__main__':
             for fe_name in args['-fes'].split(','):
                 features_extractors.append(FEATURES_EXTRACTORS[fe_name].get_instance())
         
-        # set up the models' descriptions to load
-        if args['-models'] == 'all':
-            models_descriptions_to_use = [m + '.py' for m in _models_list]
-        else:
-            models_descriptions_to_use = []
-            for m_name in args['-models'].split(','):
-                models_descriptions_to_use.append(m_name + '.py')
-
-
         tr, set, models = train(
             labeler, labeler_properties, 
             true_labeler, true_labeler_properties, 
             features_extractors, 
-            models_descriptions_to_use, 
             args['-train_on_all_data'] == 'True' if '-train_on_all_data' in args else True
         )
         print(tr.id)

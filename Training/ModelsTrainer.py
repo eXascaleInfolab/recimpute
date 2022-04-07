@@ -15,18 +15,12 @@ import random as rdm
 from scipy.stats import ttest_rel
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold, train_test_split as sklearn_train_test_split
-from tqdm.notebook import tqdm
+from tqdm import tqdm # .notebook
 
+from Training.ClfPipeline import ClfPipeline
 from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
-
-class _TmpPipeline:
-    def __init__(self, rm):
-        self.rm = rm
-        self.scores = []
-    def __repr__(self):
-        return '%s: %.5f' % (self.rm.id, np.mean(self.scores))
 
 def _parallel_training(args):
     pipe, train_index_cv, Xp_train, yp_train, X_val, y_val, data_cols, labeler_properties, labels_set = args
@@ -56,157 +50,166 @@ class ModelsTrainer:
 
     # constructor
 
-    def __init__(self, training_set, models):
+    def __init__(self, training_set):
         """
         Initializes a ModelsTrainer object.
 
         Keyword arguments:
         training_set -- TrainingSet instance
-        models -- list of RecommendationModels' instances
         """
         self.training_set = training_set
-        self.models = models
+        self.models = None
     
 
     # public methods
 
-    def train(self, train_on_all_data=False):
+    def select(self, pipelines, all_pipelines_txt, 
+                training_set_params=None, S=[3, 8, 12, 17, 25], n_splits=3, test_method=ttest_rel, selection_len=5, p_value=.01, early_break=False):
+        """
+        Selects (and partially trains if pipelines' training can be paused and resumed) the most-promising pipelines.
+
+        Keyword arguments:
+        pipelines -- list of ClfPipeline instances to select from
+        all_pipelines_txt -- list of tuples containing the description of each pipeline (steps and params)
+        training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
+        S -- list of percentages for the partial training data sets (default: [3, 8, 20, 35, 55, 80])
+        n_splits -- number of k-fold stratified splits
+        test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the 
+                       p-value. (default: scipy.stats.ttest_rel)
+        selection_len -- Approximate number of pipelines that should remain after the selection process is done.
+        p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
+        early_break -- True if the process can stop before all the iterations are done IF the target number of pipes has been reached,
+                       False if all the iterations should be executed before returning. (default False)
+
+        Return:
+        List of selected ClfPipeline.
+        """
+        try:
+            training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
+
+            all_data, _, labels_set, X_train, y_train, X_val, y_val = next(self.training_set.yield_splitted_train_val(training_set_params, 1))
+            X_train, y_train = pd.DataFrame(X_train), pd.DataFrame(y_train)
+            assert X_train.index.identical(y_train.index)
+            print('\n0/3 - data loaded') # TODO tmp print
+
+            init_nb_pipes = len(pipelines)
+            pruning_factor = round((init_nb_pipes / selection_len)**(1/len(S)))
+            
+            train_index = []
+
+            for i in tqdm(range(len(S))):
+                with Utils.catchtime('Selection iteration %i' % (i+1), verbose=True):
+                    n = X_train.shape[0] // (S[i] - (S[i-1] if i > 0 else 0)) # number of data to add for partial training
+
+                    # generate new pipelines from the remaining set of candidates
+                    if i > 0:
+                        max_nb_pipes_at_iter_i = init_nb_pipes // (pruning_factor**i)
+                        nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), 0)
+                        new_pipes = ClfPipeline.generate_from_set(pipelines, all_pipelines_txt, nb_pipes_to_generate)
+                        pipelines.extend(new_pipes)
+                        print('\nGenerated %i new pipelines from the remaining candidates.' % len(new_pipes))
+                    
+                    # prepare the partial training set
+                    X_train_unused = X_train.loc[~X_train.index.isin(train_index)]
+                    y_train_unused = y_train.loc[~y_train.index.isin(train_index)]
+                    assert X_train_unused.index.identical(y_train_unused.index)
+
+                    try:
+                        train_index_new = sklearn_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0].index.tolist()
+                    except:
+                        train_index_new = sklearn_train_test_split(X_train_unused, train_size=n)[0].index.tolist()
+                    assert all(id not in train_index for id in train_index_new)
+
+                    train_index.extend(train_index_new)
+                    print('\n1/3 - begining of new partial training: %i%% -> %i' % (S[i], len(train_index))) # TODO tmp print
+                    
+                    Xp_train = X_train.loc[train_index]
+                    yp_train = y_train.loc[train_index]
+                    assert Xp_train.index.identical(yp_train.index)
+
+                    # train, eval and perform statistic tests
+                    # create params list
+                    param_list = []
+                    for pipe in pipelines:
+                        n_splits_ = n_splits if len(pipe.scores) > 0 else 10 + (i * n_splits)
+                        for train_index_cv, _ in StratifiedKFold(n_splits=n_splits_).split(Xp_train, yp_train):
+                            param_list.append(
+                                (pipe, train_index_cv, # dynamic params
+                                Xp_train, yp_train, X_val, y_val, all_data.columns, self.training_set.get_labeler_properties(), labels_set) # constant params
+                            )
+                    
+                    # run _parallel_training
+                    metrics = {}
+                    with Pool() as pool:
+                        for p_id, f1, r3, t in tqdm(pool.imap_unordered(_parallel_training, param_list), total=len(param_list), leave=False):
+                            # save the evaluation results
+                            if p_id not in metrics:
+                                metrics[p_id] = []
+                            metrics[p_id].append((f1, r3, t))
+                    
+                    print('\n3/3 - statistic tests') # TODO tmp print
+                    # normalize runtime between 0 and 1 & compute the score of each pipeline on each cv-split
+                    max_runtime = max([i[2] for cv_scores in metrics.values() for i in cv_scores])
+                    scores_ = {id: [ModelsTrainer._compute_selection_score(f1,r3,t/max_runtime) for f1,r3,t in cv_scores] for id, cv_scores in metrics.items()}
+                    
+                    # add the newly measured scores to the global scores list
+                    for pipe in pipelines:
+                        pipe.scores.extend(scores_[pipe.id])
+                    
+                    # statistical tests - remove pipes that are significantly worse than any other pipe
+                    worse_pipes = self._apply_test(
+                        pipelines, 
+                        test_method,
+                        K=pruning_factor,
+                        p_value=p_value
+                    )
+
+                    if len(pipelines) < 20: # TODO tmp print
+                        print([(p.id, np.mean(p.scores)) for p in pipelines]) # TODO tmp print
+                        print([
+                            (test_method(a.scores, b.scores)[1], a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
+                                for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
+                        ]) # TODO tmp print
+
+                    # remove the worse pipes
+                    pipelines = [p for p in pipelines if p not in worse_pipes]
+
+                    print('\nThere remains %i pipelines. %i have been eliminated.' % (len(pipelines), len(worse_pipes)))
+
+                    if early_break and len(pipelines) <= selection_len:
+                        break
+        except Exception:
+            import logging
+            logging.exception('Got exception while selecting pipelines.')
+        finally:
+            return pipelines
+
+    def train(self, models, train_on_all_data=False):
         """
         Trains and evaluates models given to this initialization of this trainer. Uses T-Daub for best-algorithms selection
         and cross-validation.
 
         Keyword arguments: 
+        models -- list of RecommendationModel instances that should be trained and evaluated
         train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
                              otherwise (default: False)
 
         Return:
         A TrainResults' instance containing the training results
         """
-        t_daub_nb_runs = ModelsTrainer.CONF['TDAUB_NB_RUNS']
-        nb_best_models = ModelsTrainer.CONF['TDAUB_NB_BEST_MODELS']
-        models_to_train = self._t_daub(t_daub_nb_runs, nb_best_models) if t_daub_nb_runs > 0 else self.models
-        
-        train_results = self._train(models_to_train, train_on_all_data=train_on_all_data, gridsearch=self.CONF['USE_GRIDSEARCH'])
+        self.models = models
+        train_results = self._train(models, train_on_all_data=train_on_all_data)
         return train_results
         
     
     # private methods
-
-    def _select(self, recommendation_models, compute_score, training_set_params=None, S=[3, 8, 20, 35, 55, 80], n_splits=3, test_method=ttest_rel, K=4, p_value=.01):
-        """
-        Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
-
-        Keyword arguments:
-        recommendation_models -- list of RecommendationModel instances that should be trained and evaluated
-        compute_score -- method that computes the score based on which the models are evaluated. Takes as input the F1-score, Recall@3, and
-                         training runtime for a given model. Returns a floating point value.
-        training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
-        S -- list of percentages for the partial training data sets (default: [3, 8, 20, 35, 55, 80])
-        n_splits -- number of k-fold stratified splits
-        test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the 
-                       p-value. (default: scipy.stats.ttest_rel)
-        K -- Pruning factor. Example: if K=4, the expected number of pipes to "survive" is 1/4 of the original set. (default: 4)
-        p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
-
-        Return:
-        List of selected RecommendationModel.
-        """
-        training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
-
-        all_data, _, labels_set, X_train, y_train, X_val, y_val = next(self.training_set.yield_splitted_train_val(training_set_params, 1))
-        X_train, y_train = pd.DataFrame(X_train), pd.DataFrame(y_train)
-        assert X_train.index.identical(y_train.index)
-        print('0/3 - data loaded') # TODO tmp print
-
-        pipelines = [_TmpPipeline(rm) for rm in recommendation_models]
-        
-        train_index = []
-
-        for i in tqdm(range(len(S))):
-            with Utils.catchtime('Selection iteration %i' % i, verbose=True):
-                n = X_train.shape[0] // (S[i] - (S[i-1] if i > 0 else 0)) # number of data to add for partial training
-
-                #new_pipes = None # TODO sample new pipelines from the ones in "pipelines" (=crossovers btw same clfs)
-                #pipelines.extend(new_pipes)
-                
-                # prepare the partial training set
-                X_train_unused = X_train.loc[~X_train.index.isin(train_index)]
-                y_train_unused = y_train.loc[~y_train.index.isin(train_index)]
-                assert X_train_unused.index.identical(y_train_unused.index)
-
-                try:
-                    train_index_new = sklearn_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0].index.tolist()
-                except:
-                    train_index_new = sklearn_train_test_split(X_train_unused, train_size=n)[0].index.tolist()
-                assert all(id not in train_index for id in train_index_new)
-
-                train_index.extend(train_index_new)
-                print('1/3 - begining of new partial training: %i%% -> %i' % (S[i], len(train_index))) # TODO tmp print
-                
-                Xp_train = X_train.loc[train_index]
-                yp_train = y_train.loc[train_index]
-                assert Xp_train.index.identical(yp_train.index)
-
-                # train, eval and perform statistic tests
-                # create params list
-                param_list = []
-                for pipe in pipelines:
-                    n_splits_ = n_splits if len(pipe.scores) >= 10 else 10 - len(pipe.scores)
-                    for train_index_cv, _ in StratifiedKFold(n_splits=n_splits_).split(Xp_train, yp_train):
-                        param_list.append(
-                            (pipe, train_index_cv, # dynamic params
-                             Xp_train, yp_train, X_val, y_val, all_data.columns, self.training_set.get_labeler_properties(), labels_set) # constant params
-                        )
-                
-                # run _parallel_training
-                metrics = {}
-                with Pool() as pool:
-                    for p_id, f1, r3, t in tqdm(pool.imap_unordered(_parallel_training, param_list), total=len(param_list), leave=False):
-                        # save the evaluation results
-                        if p_id not in metrics:
-                            metrics[p_id] = []
-                        metrics[p_id].append((f1, r3, t))
-                
-                print('3/3 - statistic tests') # TODO tmp print
-                # normalize runtime between 0 and 1 & compute the score of each pipeline on each cv-split
-                max_runtime = max([i[2] for cv_scores in metrics.values() for i in cv_scores])
-                scores_ = {id: [compute_score(f1,r3,t/max_runtime) for f1,r3,t in cv_scores] for id, cv_scores in metrics.items()}
-                
-                # add the newly measured scores to the global scores list
-                for pipe in pipelines:
-                    pipe.scores.extend(scores_[pipe.rm.id])
-                
-                # statistical tests - remove pipes that are significantly worse than any other pipe
-                worse_pipes = self._apply_test(
-                    pipelines, 
-                    test_method,
-                    K=K,
-                    p_value=p_value
-                )
-
-                if len(pipelines) < 20: # TODO tmp
-                    print([(p.rm.id, np.mean(p.scores)) for p in pipelines]) # TODO tmp print
-                    print([
-                        (test_method(a.scores, b.scores)[1], a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
-                            for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
-                    ]) # TODO tmp print
-
-                # remove the worse pipes
-                pipelines = [p for p in pipelines if p not in worse_pipes]
-
-                print('There remains %i pipelines. %i have been eliminated.' % (len(pipelines), len(worse_pipes)))
-
-                if len(pipelines) <= 3:
-                    break
-
-        return pipelines#[pipe.rm for pipe in pipelines] # TODO uncomment
 
     def _apply_test(self, pipelines, test_method, K=4, p_value=.01):
         """
         Applies a significance test (paired t-test) to the pipelines to identify and return those that perform worse than others.
 
         Keyword arguments:
-        pipelines -- list of _TmpPipeline to apply t-test to.
+        pipelines -- list of ClfPipeline to apply t-test to.
         test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the p-value.
         K -- Pruning factor. Example: if K=4, the expected number of pipes to "survive" is 1/4 of the original set. (default: 4)
         p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
@@ -299,79 +302,22 @@ class ModelsTrainer:
 
         return train_results
 
-    def _t_daub(self, nb_runs, nb_best_models):
+    
+    # static methods
+
+    def _compute_selection_score(f1, r3, t, alpha=1., beta=0.75, gamma=0.5):
         """
-        Uses the T-Daub strategy (from Shah, Syed Yousaf et al. (2021). "AutoAI-TS: AutoAI for Time Series Forecasting") 
-        to predict and return the best performing models when trained on all data without actually training them.
+        Method that computes the score based on which a model will be evaluated during the selection process. 
 
         Keyword arguments:
-        nb_runs -- number of T-Daub runs (max 15). The more runs, the more precise the predictions will be at the expense
-                   of the computation time.
-        nb_best_models -- number of models to return (the predicted top N best-performing ones)
-        
+        f1 -- F1-score of a model measured on a test set
+        r3 -- recall@3 of a model measured on a test set
+        t -- model's training time
+        alpha -- parameter value to define the impact of the F1-score in the score
+        beta -- parameter value to define the impact of the Recall@3 in the score
+        gamma -- parameter value to define the impact of the model's training time in the score
+
         Return:
-        List of RecommendationModel instances (the predicted top N best-performing ones)
+        Returns the score of a model used during the selection process.
         """
-        if nb_runs > 15:
-            raise Exception('Number of T-Daub runs cannot exceed 15 iterations (= 85% of training set used).')
-        if nb_runs > 0 and nb_best_models > len(self.models):
-            raise Exception('Number of models to train on the whole data set is greater than the number of given models.')
-
-        # evaluate each model on different subsets of the data
-        all_data_perc = []
-        all_models_results = {}
-        for run_id in range(nb_runs):
-            # get a subset of the data
-            usable_data_perc = self._t_daub_get_usable_data_perc(run_id)
-            all_data_perc.append(usable_data_perc)
-
-            training_set_properties = self.training_set.get_default_properties()
-            training_set_properties['usable_data_perc'] = usable_data_perc
-            # train each model on the reduced data set
-            train_results = self._train(self.models, training_set_properties, save_results=False)
-            
-            # retrieve the F1-Score of each model from the results
-            for model in train_results.models:
-                model_results = train_results.get_avg_model_results(model)
-                f1score = model_results['F1-Score']
-                try:
-                    all_models_results[model].append(f1score)
-                except:
-                    all_models_results[model] = [f1score]
-        
-        all_data_perc = np.array(all_data_perc).reshape(-1, 1)
-
-        # sort the models by predicted accuracy
-        ranking = {}
-        for model, f1scores in all_models_results.items():
-            f1scores = np.array(f1scores).reshape(-1, 1)
-
-            # linear regression
-            reg = LinearRegression().fit(all_data_perc, f1scores)
-
-            # ranking of the pipelines based on their predicted scores when using all data
-            ranking[model] = reg.predict([[1.0]])[0][0]
-
-        # sort ranking
-        sorted_ranking = list(sorted(ranking.items(), key=operator.itemgetter(1), reverse=True))
-        # selection of the top ranked pipelines
-        best_models = [elem[0] for elem in sorted_ranking[:nb_best_models]]
-
-        return best_models
-
-    def _t_daub_get_usable_data_perc(self, run_id):
-        """
-        Returns the percentage of data to use for the T-Daub run's specified ID.
-        Non-linear range of values see below:
-        [0.05, 0.258, 0.38, 0.466, 0.533, 0.588, 0.634, 0.674, 0.709, 0.741, 0.769, 0.795, 0.819, 0.842, 0.862]
-
-        Keyword arguments:
-        run_id -- int, ID of the next T-Daub run
-        
-        Return:
-        Percentage of data to use
-        """
-        start_range = 0.1
-        x = np.arange(start_range, 3, 0.1)[run_id]
-        used_percentage = round((math.log(x) - math.log(start_range)) * 0.3 + 0.05, 3)
-        return used_percentage
+        return ((alpha*f1) + (beta*r3) - (gamma*t) + gamma) / (alpha+beta+gamma)

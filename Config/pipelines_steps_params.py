@@ -54,11 +54,11 @@ ALL_STEPS = {
             'min_samples_split': [2, 5, 10, 15],
             'min_samples_leaf': [1, 2, 5, 10],
         },
-        SVC: {
-            'kernel': ['rbf', 'poly', 'sigmoid'],
-            'gamma': [1e-4, 1e-3, 'auto'],
-            'C': [1, 10, 100, 1000],
-            'tol': [1e-4, 1e-3],
-        },
+        #SVC: {
+        #    'kernel': ['rbf', 'poly', 'sigmoid'],
+        #    'gamma': [1e-4, 1e-3, 'auto'],
+        #    'C': [1, 10, 100, 1000],
+        #    'tol': [1e-4, 1e-3],
+        #},
     },
 }

@@ -75,7 +75,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     # create a training set
     training_set = TrainingSet(
-        datasets[:10], 
+        datasets,
         clusterer, 
         features_extractors, 
         labeler, labeler_properties,
@@ -85,11 +85,12 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     from scipy.stats import ttest_rel#, friedmanchisquare, chisquare
     #from statsmodels.stats.weightstats import ztest as ztest
-    nb_pipelines = 350 # TODO
+    nb_pipelines = 300 # TODO
     S = [3, 8, 12, 17, 25] # TODO
     n_splits = 3 # TODO
     test_method = ttest_rel # TODO
     selection_len = 5 # TODO
+    score_margin = .2 # TODO
     p_value = .01 # TODO
 
     pipelines, all_pipelines_txt = ClfPipeline.generate(N=nb_pipelines)
@@ -102,9 +103,10 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
             selected_pipes = trainer.select(
                 pipelines, all_pipelines_txt, 
                 S=S, 
+                selection_len=selection_len, 
+                score_margin=score_margin,
                 n_splits=n_splits, 
                 test_method=test_method, 
-                selection_len=selection_len, 
                 p_value=p_value,
                 early_break=False,
             )
@@ -112,7 +114,8 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
         import pickle # TODO tmp delete
         with open('Training/tmp_pipelines.obj', 'wb+') as f: # TODO tmp delete
             pickle.dump(selected_pipes, f) # TODO tmp delete
-    raise Exception('Models selection done.') # TODO delete this line
+    #raise Exception('Models selection done.') # TODO delete this line
+    
     models = list(map(lambda p: p.rm, selected_pipes))
 
     # training & cross-validation evaluation

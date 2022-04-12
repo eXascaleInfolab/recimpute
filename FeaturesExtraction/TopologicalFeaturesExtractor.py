@@ -52,7 +52,7 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
         Return:
         Updated Dataset object
         """
-        timeseries = dataset.load_timeseries(transpose=True)
+        timeseries = dataset.load_timeseries(transpose=False)
 
         print('Extracting topological features on dataset %s.' % dataset.name)
         try:
@@ -69,13 +69,13 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
         Extracts the given time series' features.
         
         Keyword arguments:
-        timeseries -- Pandas DataFrame containing the time series (each row is a time series)
+        timeseries -- Pandas DataFrame containing the time series ( /!\ each column is a time series)
         
         Return:
         Pandas DataFrame containing the time series' features (each row is a time series' feature vector)
         """
         topological_transfomer = self._get_topological_transfomer(
-            timeseries.shape[0], timeseries.shape[1],
+            timeseries.shape[1], timeseries.shape[0],
             max_time_delay=TopologicalFeaturesExtractor.CONF['MAX_TIME_DELAY'], 
             max_embedding_dim=TopologicalFeaturesExtractor.CONF['MAX_EMBEDDING_DIM'], 
             stride=TopologicalFeaturesExtractor.CONF['STRIDE'], 
@@ -83,9 +83,9 @@ class TopologicalFeaturesExtractor(AbstractFeaturesExtractor):
             homology_dimensions=TopologicalFeaturesExtractor.CONF['HOMOLOGY_DIM'],
         )
         try:
-            features = topological_transfomer.fit_transform(timeseries.to_numpy().tolist())
+            features = topological_transfomer.fit_transform(timeseries.T.to_numpy().tolist())
             features_df = pd.DataFrame(features, columns=['topological_%i' % i for i in range(1, len(TopologicalFeaturesExtractor.CONF['HOMOLOGY_DIM'])+1)])
-            features_df['Time Series ID'] = timeseries.index
+            features_df['Time Series ID'] = timeseries.T.index
 
             return features_df
         except ValueError as e:

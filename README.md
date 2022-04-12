@@ -109,7 +109,7 @@ Selects the most-promising pipelines and trains them on the prepared datasets (l
 #### *use* mode:
 
 - *-id*: Identifier of the save containing the model to use. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected: one identifier. Example: *0211_1723_53480*.
-- *-model*: Name of the model to load and use. A model's name is the same as its description file. Expected: one model name. Example: *maxabsscaler_catboostclassifier*.
+- *-model_id*: ID of the model to load and use. The models' ID are listed in the outputs of the *train* and *eval* modes. Expected: one model ID. Example: *745*.
 - *-ts*: File name of the file containing the time series for which recommendations are wanted. Expected: one file name. Example: *timeseries.csv*.
 The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInputs/ folder. The sequence(s) should have been preemptively z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
 - *-use_prod_model* (optional): Whether or not use the model trained on ALL data. If not specified, does not use the model trained on all data (since it may not exist depending on the arguments used for training). Expected: *True* or *False*.
@@ -160,9 +160,9 @@ TODO
 
 #### Usage
 
-1. Use the trained *kneighbors* model (which was trained on all data) saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file.
+1. Use the trained model #745 (which was trained on all data) which is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file.
 ```bash
-    $ python recimpute.py -mode use -id 0411_1456_53480 -model kneighbors -ts my_timeseries.csv -use_prod_model True
+    $ python recimpute.py -mode use -id 0411_1456_53480 -model_id 745 -ts my_timeseries.csv -use_prod_model True
 ```
 
 

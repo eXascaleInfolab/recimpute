@@ -157,7 +157,7 @@ class TrainResults:
             f_out.write('\n## Labels list:')
             f_out.write(', '.join(self.models[0].labels_set))
             f_out.write('\n## Models trained and their optimal parameters:')
-            f_out.write( ''.join([f'\n- {m}: {m.best_params}' for m in self.models]) )
+            f_out.write( ''.join([f'\n- {m.id}: {m.pipe}' for m in self.models]) )
 
         # zip those two files and the Config & used Models descriptions
         with zipfile.ZipFile(archive_filename, 'w') as f_out:
@@ -242,7 +242,7 @@ class TrainResults:
     # private methods
     
     def __getstate__(self):
-        return {k: v if k != 'models' else [model.name for model in v] 
+        return {k: v if k != 'models' else [model.id for model in v] 
                 for (k, v) in self.__dict__.items()}
 
 

@@ -12,7 +12,7 @@ catboost_info
 results_tmp.txt
 _Notebooks_and_Tests/
 _logs/
-Training/tmp_pipelines.obj
+Training/tmp_pipelines*.obj
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,venv,virtualenv,visualstudiocode,python

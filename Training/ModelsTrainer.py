@@ -102,6 +102,8 @@ class ModelsTrainer:
             init_nb_pipes = len(pipelines)
             pruning_factor = max(round((init_nb_pipes / selection_len)**(1/len(S))), 2)
 
+            get_max_nb_p_at_i = lambda iter_id: init_nb_pipes // (pruning_factor**iter_id)
+
             manager = Manager()
             
             train_index = []
@@ -112,11 +114,11 @@ class ModelsTrainer:
 
                     # generate new pipelines from the remaining set of candidates
                     if i > 0:
-                        max_nb_pipes_at_iter_i = init_nb_pipes // (pruning_factor**i)
-                        nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), 0)
+                        max_nb_pipes_at_iter_i = get_max_nb_p_at_i(i) # init_nb_pipes // (pruning_factor**i)
+                        nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), selection_len)
                         new_pipes = ClfPipeline.generate_from_set(pipelines, all_pipelines_txt, nb_pipes_to_generate)
                         pipelines.extend(new_pipes)
-                        print('\nGenerated %i new pipelines from the remaining candidates.' % len(new_pipes))
+                        print('\nGenerated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
                     
                     # prepare the partial training set
                     X_train_unused = X_train.loc[~X_train.index.isin(train_index)]
@@ -185,11 +187,13 @@ class ModelsTrainer:
                             del pipelines[i]
                     
                     # statistical tests - remove pipes that are significantly worse than any other pipe
+                    less_aggressive_pruning = (len(pipelines) <= get_max_nb_p_at_i(i)) if i > 0 else True
                     worse_pipes = self._apply_test(
                         pipelines, 
                         test_method,
                         K=pruning_factor,
-                        p_value=p_value
+                        p_value=p_value,
+                        less_aggressive_pruning=less_aggressive_pruning
                     )
 
                     if len(pipelines) < 20: # TODO tmp print
@@ -232,7 +236,7 @@ class ModelsTrainer:
     
     # private methods
 
-    def _apply_test(self, pipelines, test_method, K=4, p_value=.01):
+    def _apply_test(self, pipelines, test_method, K=4, p_value=.01, less_aggressive_pruning=True):
         """
         Applies a significance test (paired t-test) to the pipelines to identify and return those that perform worse than others.
 
@@ -241,6 +245,8 @@ class ModelsTrainer:
         test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the p-value.
         K -- Pruning factor. Example: if K=4, the expected number of pipes to "survive" is 1/4 of the original set. (default: 4)
         p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
+        less_aggressive_pruning -- uses a less aggressive pruning strategy if True, eliminates any pipe that is significantly worse than any other
+                                   pipe otherwise. (default: True)
 
         Return:
         List of _TmpPipeline that are performing worse than others.
@@ -249,7 +255,7 @@ class ModelsTrainer:
         pipes_combinations = list(itertools.combinations(pipelines, r=2))
         worse_counters = {p: 0 for p in pipelines}
         
-        T = len(pipelines) // K
+        T = len(pipelines) // K if less_aggressive_pruning else 0
         
         i = len(pipes_combinations)-1
         while i > 0:

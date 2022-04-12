@@ -85,8 +85,8 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     from scipy.stats import ttest_rel#, friedmanchisquare, chisquare
     #from statsmodels.stats.weightstats import ztest as ztest
-    nb_pipelines = 300 # TODO
-    S = [3, 8, 12, 17, 25] # TODO
+    nb_pipelines = 1000 # TODO
+    S = [5, 10, 20, 35, 65] # TODO
     n_splits = 3 # TODO
     test_method = ttest_rel # TODO
     selection_len = 5 # TODO
@@ -113,7 +113,18 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     finally:
         import pickle # TODO tmp delete
         with open('Training/tmp_pipelines.obj', 'wb+') as f: # TODO tmp delete
+            from Training.RecommendationModel import RecommendationModel # TODO tmp delete
+            RecommendationModel._PROPS_TO_NOT_PICKLE = []
             pickle.dump(selected_pipes, f) # TODO tmp delete
+            RecommendationModel._PROPS_TO_NOT_PICKLE = ['best_cv_trained_pipeline', 'trained_pipeline_prod'] # TODO tmp delete
+
+
+    #import pickle # TODO tmp delete
+    #with open('Training/tmp_pipelines.obj', 'rb') as f: # TODO tmp delete
+    #    selected_pipes = pickle.load(f) # TODO tmp delete
+
+
+    print('Finished models\' selection with %i remaining candidates.' % len(selected_pipes)) # TODO tmp print
     #raise Exception('Models selection done.') # TODO delete this line
     
     models = list(map(lambda p: p.rm, selected_pipes))
@@ -139,7 +150,7 @@ def eval(models, all_test_data_info):
         used_tp, y_pred = model.predict(X_test, compute_proba=model.labels_info['type']=='monolabels', use_pipeline_prod=False)
         scores, cm = model.eval(y_test, y_pred, used_tp.classes_, plot_cm=True)
 
-        print('\n# %s' % model.name)
+        print('\n# %s - %s' % (model.id, model.pipe))
         pprint(scores, width=1)
         print(np.array_str(cm[1], precision=3, suppress_small=False))
 
@@ -164,8 +175,13 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
     nb_timeseries, timeseries_length = timeseries.shape
     all_ts_features = []
     for features_extractor in features_extractors:
-        tmp_ts_features = features_extractor.extract_from_timeseries(timeseries.T, nb_timeseries, timeseries_length)
+        args = (timeseries.T, nb_timeseries, timeseries_length) if isinstance(features_extractor, TSFreshFeaturesExtractor) else (timeseries.T,)
+        tmp_ts_features = features_extractor.extract_from_timeseries(*args)
         tmp_ts_features.set_index('Time Series ID', inplace=True)
+        tmp_ts_features.columns = map(
+            lambda col_name: col_name + features_extractor.FEATURES_FILENAMES_ID if col_name not in ['Time Series ID'] else col_name, 
+            tmp_ts_features.columns
+        )
         all_ts_features.append(tmp_ts_features)
     timeseries_features = pd.concat(all_ts_features, axis=1) # concat features dataframes
 
@@ -196,19 +212,19 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
     
     return recommendations
 
-def load_models_from_tr(id, model_names=None):
-    # loads all models if model_names is None
-    # otherwise loads the models which name is listed in model_names
+def load_models_from_tr(id, model_ids=None):
+    # loads all models if model_ids is None
+    # otherwise loads the models which id is listed in model_ids
     tr = TrainResults.load(id)
     single_model = False
-    if type(model_names) == str:
+    if type(model_ids) == str:
         single_model = True
-        model_names = [model_names]
+        model_ids = [model_ids]
     selected_models = []
     for model in tr.models:
-        if model_names is None or model.name in model_names:
+        if model_ids is None or str(model.id) in model_ids:
             selected_models.append(model)
-    assert model_names is None or len(model_names) == len(selected_models)
+    assert model_ids is None or len(model_ids) == len(selected_models)
     return tr, selected_models[0] if single_model else selected_models
 
 def get_recommendations_filename(timeseries_filename):
@@ -238,6 +254,7 @@ if __name__ == '__main__':
         # *use* args
         '-id': None,
         '-ts': None,
+        '-model_id': None,
         '-use_prod_model': ['True', 'False'],
     }
 
@@ -368,15 +385,15 @@ if __name__ == '__main__':
 
     elif args['-mode'] == 'use':
 
-        NON_OPTIONAL_ARGS = ['-mode', '-id', '-model', '-ts']
+        NON_OPTIONAL_ARGS = ['-mode', '-id', '-model_id', '-ts']
         assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
 
         # USE PRE-TRAINED MODELS
 
         # load the model
         id = args['-id']
-        model_name = args['-model']
-        tr, model = load_models_from_tr(id, model_name)
+        model_id = args['-model_id']
+        tr, model = load_models_from_tr(id, model_id)
 
         # load time series to label: z-normalized, 1 row = 1 ts, space separator, no header, no index
         ts_filename = args['-ts']

@@ -251,6 +251,9 @@ class TrainingSet:
             if data_properties['augment']:
                 X_train, y_train = self._augment_data(X_train, y_train)
 
+            X_train = np.nan_to_num(X_train)
+            X_val = np.nan_to_num(X_val)
+
             yield data, labels, self.labels_set, X_train, y_train, X_val, y_val
 
     def get_all_data(self, data_properties):

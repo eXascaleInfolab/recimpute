@@ -115,7 +115,7 @@ class ModelsTrainer:
                     # generate new pipelines from the remaining set of candidates
                     if i > 0:
                         max_nb_pipes_at_iter_i = get_max_nb_p_at_i(i) # init_nb_pipes // (pruning_factor**i)
-                        nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), selection_len)
+                        nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), len(pipelines)//10)
                         new_pipes = ClfPipeline.generate_from_set(pipelines, all_pipelines_txt, nb_pipes_to_generate)
                         pipelines.extend(new_pipes)
                         print('\nGenerated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
@@ -210,6 +210,24 @@ class ModelsTrainer:
 
                     if early_break and len(pipelines) <= selection_len:
                         break
+
+            # if we have more pipes remaining that what we wanted
+            if len(pipelines) > selection_len: 
+                print('Too many pipelines remaining. Last attempt to eliminate "worse" candidates.')
+                pipelines = sorted(pipelines, key=lambda p: np.mean(p.scores), reverse=True)
+                for i in reversed(range(len(pipelines))): # rank pipes based on their avg scores
+                    p_i = pipelines[i]
+
+                    # pairwise ttest if p is worse than any other: prune p
+                    for j, p_j in enumerate(pipelines):
+                        if i is not j and test_method(p_i.scores, p_j.scores)[1] < p_value and np.mean(p_i.scores) < np.mean(p_j.scores):
+                            print('%i was eliminated due to significantly worse performances than another candidate.' % p_i.id)
+                            del pipelines[i]
+                            break
+                            
+                    if len(pipelines) <= selection_len:
+                        break
+
         except Exception:
             import logging
             logging.exception('Got exception while selecting pipelines.')

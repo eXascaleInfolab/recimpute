@@ -89,7 +89,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
     S = [5, 10, 20, 35, 65] # TODO
     n_splits = 3 # TODO
     test_method = ttest_rel # TODO
-    selection_len = 5 # TODO
+    selection_len = 10 # TODO
     score_margin = .2 # TODO
     p_value = .01 # TODO
 

@@ -19,16 +19,6 @@ SIMILAR_CLUSTER_THRESHOLD: 0.55
 # CENTROID_DIST_THRESHOLD: correlation btw a sequence and its current cluster's centroid must greater than this to consider moving it to another cluster
 CENTROID_DIST_THRESHOLD: 0.4
 
-# CLUSTERS_MERGING_THRESHOLD: min score to accept a merge (new corr / old corr)
-CLUSTERS_MERGING_THRESHOLD: 0.80
-
-# CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: min score to accept a merge (new corr / old corr) if the other is a mono-cluster
-CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: 0.75
-
-# TS_MOVING_THRESHOLD: min score to accept moving a sample to another cluster 
-# ( (new_other corr + new_curr corr) / (old_other corr + old_curr corr) )
-TS_MOVING_THRESHOLD: 1.15
-
 # TS_PERC_TO_COMPUTE_K: use this percentage * #sequences in a data set to compute K
 TS_PERC_TO_COMPUTE_K: 0.20
 
@@ -82,3 +72,13 @@ MIN_NB_TS_PER_CLUSTER: 5
 
 # Maximum number of time series a cluster can contain
 MAX_NB_TS_PER_CLUSTER: 15
+
+# CLUSTERS_MERGING_THRESHOLD: min score to accept a merge (new corr / old corr)
+CLUSTERS_MERGING_THRESHOLD: 0.80
+
+# CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: min score to accept a merge (new corr / old corr) if the other is a mono-cluster
+CLUSTERS_MERGING_THRESHOLD_SINGLE_TS: 0.75
+
+# TS_MOVING_THRESHOLD: min score to accept moving a sample to another cluster 
+# ( (new_other corr + new_curr corr) / (old_other corr + old_curr corr) )
+TS_MOVING_THRESHOLD: 1.15

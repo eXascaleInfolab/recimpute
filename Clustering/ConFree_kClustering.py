@@ -16,7 +16,7 @@ def sklearn_kmeans_helper(k, X):
 
 
 def cluster(clustering_algo, objective_function, data, 
-            obj_thresh, init_obj_thresh, sim_cluster_thresh, centroid_dist_thresh, merging_thresh, merging_thresh_monosample, moving_thresh,
+            obj_thresh, init_obj_thresh, sim_cluster_thresh, centroid_dist_thresh,
             k_perc=0.2, security_limit=5, max_iter=5000, id='data'):
     """
     Clusters the given data iteratively.
@@ -31,9 +31,6 @@ def cluster(clustering_algo, objective_function, data,
     sim_cluster_thresh -- score btw centroids of two clusters must be above this to consider them "similar" and consider merging
     centroid_dist_thresh -- score btw a sample and its current cluster's centroid must greater than this to consider moving the 
                             sample to another cluster
-    merging_thresh -- min score to accept a merge between two clusters
-    merging_thresh_monosample -- same as "merging_thresh" but in the case where the other cluster has only 1 sample
-    moving_thresh -- min score to accept moving a sample to another cluster
     k_perc -- used to compute K by multiplying this percentage by the number of samples. Must be > 0 (default: 0.2).
     security_limit -- number of iterations without new valid cluster before "helping" the clustering algorithm (default: 5)
     max_iter -- maximum number of iterations before a force-stop (default: 10000)
@@ -42,20 +39,21 @@ def cluster(clustering_algo, objective_function, data,
     Return: 
     List of labels: index of the cluster each sample belongs to
     """
-    
     if isinstance(data, np.ndarray) or isinstance(data, list) and all((isinstance(subdata, list) or isinstance(subdata, np.array)) for subdata in data):
         data = pd.DataFrame(data)
     elif isinstance(data, pd.DataFrame):
         pass
     else: raise TypeError('Invalid type for data.')
     
+    nb_entries = data.shape[0]
+    
     # cluster iteratively the data using the clustering algorithm
     clusters = _iterative_clustering(clustering_algo, objective_function, data, 
-                                   obj_thresh, init_obj_thresh, k_perc, security_limit, max_iter, id)
+                                     obj_thresh, init_obj_thresh, k_perc, security_limit, max_iter, id)
 
     # merge clusters if score remains high
-    merged_clusters = _merging(clusters, objective_function, 
-                               sim_cluster_thresh, centroid_dist_thresh, merging_thresh, merging_thresh_monosample, moving_thresh)
+    merged_clusters = _merging(clusters, objective_function, nb_entries,
+                               sim_cluster_thresh, centroid_dist_thresh)
 
     labels = map(lambda i: i[1], sorted([
         (sid, cid) # sample id, assigned cluster's id
@@ -138,7 +136,7 @@ def _iterative_clustering(clustering_algo, objective_function, data, obj_thresho
     print('clustering subroutine done for %s w/ %i iterations' % (id, iter_count))
     return result
 
-def _merging(clusters, objective_function, sim_cluster_thresh, centroid_dist_thresh, merging_thresh, merging_thresh_monosample, moving_thresh):
+def _merging(clusters, objective_function, nb_entries, sim_cluster_thresh, centroid_dist_thresh):
     """
     Merges clusters if the objective function score remains high enough.
     
@@ -146,12 +144,10 @@ def _merging(clusters, objective_function, sim_cluster_thresh, centroid_dist_thr
     clusters -- list of resulting clusters (each cluster is a Pandas DataFrame of data samples)
     objective_function -- objective function to MAXIMIZE that is given a cluster (a Pandas DataFrame of data samples) and retuns a 
                           single score (float)
+    nb_entries -- number of entries in the dataset the cluster belongs to
     sim_cluster_thresh -- score btw centroids of two clusters must be above this to consider them "similar" and consider merging
     centroid_dist_thresh -- score btw a sample and its current cluster's centroid must greater than this to consider moving the 
                             sample to another cluster
-    merging_thresh -- min score to accept a merge between two clusters
-    merging_thresh_monosample -- same as "merging_thresh" but in the case where the other cluster has only 1 sample
-    moving_thresh -- min score to accept moving a sample to another cluster
     
     Return:
     Updated clusters: list of updated clusters (each cluster is a Pandas DataFrame of data samples)
@@ -176,9 +172,8 @@ def _merging(clusters, objective_function, sim_cluster_thresh, centroid_dist_thr
                                 objective_function(pd.concat([centroid, all_centroids[other_cid]])) >= sim_cluster_thresh
         similar_clusters_ids = [other_cid for other_cid in clusters.keys() if is_cluster_similar(other_cid)]
 
-        get_merge_threshold_cc = lambda other_cluster_samples: merging_thresh if other_cluster_samples.shape[0] > 1 else merging_thresh_monosample
         res = _merging_subroutine(objective_function, clusters, cluster_samples, cid, similar_clusters_ids, 
-                                  all_scores, all_centroids, get_merge_threshold_cc, get_merge_scores_cc)
+                                  nb_entries, all_scores, all_centroids)
         merged, clusters, all_centroids, all_scores = res
         if merged:
             del clusters[cid]
@@ -197,21 +192,16 @@ def _merging(clusters, objective_function, sim_cluster_thresh, centroid_dist_thr
 
             for sid, sample in farthest_samples:
 
-                get_merge_threshold_cs = lambda _: moving_thresh
-
                 res = _merging_subroutine(objective_function, clusters, sample.to_frame().T, cid, filter(lambda id: id != cid, clusters.keys()), 
-                                          all_scores, all_centroids, get_merge_threshold_cs, get_merge_scores_cs)
+                                          nb_entries, all_scores, all_centroids)
                 merged, clusters, all_centroids, all_scores = res
                 if merged: 
                     # 1 ts has been moved -> update
                     clusters[cid] = clusters[cid].drop(sid)
                     if clusters[cid].shape[0] > 0:
-                        print("#31")
                         all_centroids[cid] = clusters[cid].mean().to_frame().T
-                        print(type(all_centroids[cid]))
                         all_scores[cid] = objective_function(clusters[cid])
                     else:
-                        print("#32")
                         # no samples are left in the cluster: delete it
                         del clusters[cid]
                         del all_centroids[cid]
@@ -220,55 +210,30 @@ def _merging(clusters, objective_function, sim_cluster_thresh, centroid_dist_thr
             
     return list(clusters.values())
 
-def get_merge_scores_cc(objective_function, clusters, samples_to_merge, cid, other_cid, all_scores):
+def correlation_gain(objective_function, clusters, sample_to_merge, cid, other_cid, nb_entries, all_scores):
     """
-    Computes a score to evaluate the merge of the given samples and the specified cluster.
+    Computes the correlation gain of merging/moving a cluster/sequence with/to a different cluster.
     
     Keyword arguments:
-    objective_function -- objective function to MAXIMIZE that is given a cluster (a Pandas DataFrame of data samples) and retuns a 
-                          single score (float)
-    clusters -- list of clusters (each cluster is a Pandas DataFrame of samples)
-    samples_to_merge -- Pandas DataFrame of samples to try merging (each row is a sample)
-    cid -- id of the clusters from which the samples_to_merge are originating
-    other_cid -- id of the other cluster that is a candidate for the merge
-    all_scores -- dict with keys being clusters 'id and values their current objective function's score
-    
-    Return:
-    Score of the merge.
-    """
-    # compute the score of the cluster's samples added to those of the other cluster
-    new_score = objective_function(pd.concat([samples_to_merge, clusters[other_cid]]))
-    old_score = all_scores[other_cid]
-    return new_score / old_score
-
-def get_merge_scores_cs(objective_function, clusters, sample_to_merge, cid, other_cid, all_scores):
-    """
-    Computes a score to evaluate the merge of the given sample and the specified cluster.
-    
-    Keyword arguments:
-    objective_function -- objective function to MAXIMIZE that is given a cluster (a Pandas DataFrame of data samples) and retuns a 
+    objective_function -- objective function to MAXIMIZE. Takes a cluster (a Pandas DataFrame of data samples) and retuns a 
                           single score (float)
     clusters -- list of clusters (each cluster is a Pandas DataFrame of samples)
     sample_to_merge -- Pandas DataFrame containing the single sample to try merging
     cid -- id of the clusters from which the sample_to_merge is originating
     other_cid -- id of the other cluster that is a candidate for the merge
+    nb_entries -- number of entries in the dataset the cluster belongs to
     all_scores -- dict with keys being clusters 'id and values their current objective function's score
     
     Return:
-    Score of the merge.
+    Correlation gain.
     """
-    # compute the score of the sample added to those of the other cluster
-    other_new_score = objective_function(pd.concat([sample_to_merge, clusters[other_cid]]))
-    other_old_score = all_scores[other_cid]
-    sid = sample_to_merge.index[0]
-    reduced_cluster = clusters[cid].drop(sid)
-    assert reduced_cluster.shape[0] == clusters[cid].shape[0] - 1
-    curr_new_score = objective_function(reduced_cluster)
-    curr_old_score = all_scores[cid]
-    return (other_new_score + curr_new_score) / (other_old_score + curr_old_score)
+    phi_union = objective_function(pd.concat([sample_to_merge, clusters[other_cid]]))
+    phi_i = all_scores[cid]
+    phi_j = all_scores[other_cid]
+    corr_gain = (1 / (2*nb_entries)) * (phi_union - ((phi_i * phi_j) / nb_entries))
+    return corr_gain
 
-def _merging_subroutine(objective_function, clusters, samples_to_merge, cid, other_clusters_ids, all_scores, all_centroids, 
-                        get_merge_threshold, get_merge_score):
+def _merging_subroutine(objective_function, clusters, samples_to_merge, cid, other_clusters_ids, nb_entries, all_scores, all_centroids):
     """
     Searches for a cluster to merge the given samples with.
     
@@ -279,11 +244,9 @@ def _merging_subroutine(objective_function, clusters, samples_to_merge, cid, oth
     samples_to_merge -- Pandas DataFrame of samples to try merging (each row is a sample)
     cid -- id of the clusters from which the samples_to_merge are originating
     other_clusters_ids -- list of other clusters' ID that are candidates for a merge
+    nb_entries -- number of entries in the dataset the cluster belongs to
     all_scores -- dict with keys being clusters 'id and values their current objective function's score
     all_centroids -- dict with keys being clusters 'id and values their current centroid
-    get_merge_threshold -- function that takes a Pandas DataFrame of samples as argument and returns the threshold to use
-                           to accept or deny a merge
-    get_merge_score -- function that computes the evaluation score of a merge between one or multiple samples and a cluster
     
     Return:
     1. True if a merged occured, False otherwise
@@ -291,13 +254,13 @@ def _merging_subroutine(objective_function, clusters, samples_to_merge, cid, oth
     3. Updated all_scores
     4. Updated all_centroids
     """
-    best_score, best_cid = -np.inf, None
+    best_corr_gain, best_cid = 0, None
     # for each cluster
     for other_cid in other_clusters_ids:
-        score = get_merge_score(objective_function, clusters, samples_to_merge, cid, other_cid, all_scores)
+        corr_gain = correlation_gain(objective_function, clusters, samples_to_merge, cid, other_cid, nb_entries, all_scores)
         # is this other cluster the best candidate yet for merging?
-        if score > best_score and score > get_merge_threshold(clusters[other_cid]):
-            best_score = score
+        if corr_gain > best_corr_gain:
+            best_corr_gain = corr_gain
             best_cid = other_cid
 
     # merge with the best candidate (if we found one)
@@ -326,7 +289,4 @@ if __name__ == "__main__":
             obj_thresh=-2.5, 
             init_obj_thresh=-1.5, 
             sim_cluster_thresh=-3, 
-            centroid_dist_thresh=1,
-            merging_thresh=0.95, 
-            merging_thresh_monosample=0.85,
-            moving_thresh=1)) 
+            centroid_dist_thresh=1)) 

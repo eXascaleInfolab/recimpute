@@ -14,9 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
 from sklearn.preprocessing import MaxAbsScaler, Normalizer, QuantileTransformer, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import BernoulliNB, GaussianNB
-from sklearn.neighbors import NearestCentroid
 from sklearn.neural_network import MLPClassifier
-from sklearn.semi_supervised import LabelPropagation, LabelSpreading
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 
@@ -104,9 +102,6 @@ ALL_STEPS = {
             'learning_rate': ['constant', 'invscaling', 'adaptive'],
             'tol': [1e-2,1e-3,1e-4,1e-5],
         },
-        NearestCentroid: {
-            'metric': ['cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'],
-        },
         QuadraticDiscriminantAnalysis: {
             'tol': [1e-2,1e-3,1e-4,1e-5],
         },
@@ -114,6 +109,7 @@ ALL_STEPS = {
             'radius': [1.0, 10., 50.],
             'weights': ['uniform', 'distance'],
             'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
+            'outlier_label': ['most_frequent'],
         },
         RidgeClassifier: {
             'normalize': [True, False],

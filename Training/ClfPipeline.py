@@ -89,19 +89,7 @@ class ClfPipeline:
                     itertools.product([clf], *[list(itertools.product([key], values)) for key, values in ALL_STEPS['classifiers'][clf].items()]))
             ))
 
-        def _cstm_sample(all_pipes, n):
-            selection = []
-            for _ in range(n):        
-                clf_id = rdm.randint(0, len(all_pipes)-1) # randomly select a type of classifier
-                pipe = rdm.sample(all_pipes[clf_id], 1)[0] # randomly select a pipe which head is of the selected clf type
-                all_pipes[clf_id].remove(pipe) # remove the pipe from the set of still available pipelines
-                selection.append(pipe)
-                
-                if len(all_pipes[clf_id]) <= 0:
-                    del all_pipes[clf_id]
-            return selection, all_pipes
-
-        pipelines_text, all_pipelines = _cstm_sample(all_pipelines, N)
+        pipelines_text, all_pipelines = ClfPipeline._cstm_sample(all_pipelines, N)
                         
         pipelines = [
             ClfPipeline(id= i, pipe= make_pipeline(*ClfPipeline.make_steps(pipe_t)))
@@ -124,16 +112,7 @@ class ClfPipeline:
         1. list of ClfPipeline objects
         2. list of sets containing all possible combinations of pipelines (search space)
         """
-        nb_new_pipes = nb_new_pipes_total // len(pipelines)
-        new_pipes = []
-        for pipe in pipelines:
-            clf_id = ClfPipeline.CLF_IDS_DICT[pipe.rm.pipe[-1].__class__]
-            same_steps_pipes = {
-                p_text for p_text in all_pipelines_txt[clf_id] 
-                if pipe.has_same_steps(p_text)
-            }
-            new_pipes_text = rdm.sample(same_steps_pipes, min(nb_new_pipes, len(same_steps_pipes)))
-            all_pipelines_txt[clf_id].difference_update(new_pipes_text)
+        def _add_new_pipes(new_pipes_text, new_pipes):
             new_pipes.extend(
                 map(
                     lambda x: ClfPipeline(
@@ -143,6 +122,23 @@ class ClfPipeline:
                 )
             )
             ClfPipeline.NEXT_PIPE_ID += len(new_pipes_text)
+            return new_pipes
+        nb_new_pipes_per_type = (2*nb_new_pipes_total//3) // len(pipelines)
+        nb_new_rdm_pipes = nb_new_pipes_total - nb_new_pipes_per_type
+        new_pipes = []
+        for pipe in pipelines:
+            clf_id = ClfPipeline.CLF_IDS_DICT[pipe.rm.pipe[-1].__class__]
+            same_steps_pipes = {
+                p_text for p_text in all_pipelines_txt[clf_id] 
+                if pipe.has_same_steps(p_text)
+            }
+            new_pipes_text = rdm.sample(same_steps_pipes, min(nb_new_pipes_per_type, len(same_steps_pipes)))
+            all_pipelines_txt[clf_id].difference_update(new_pipes_text)
+            new_pipes = _add_new_pipes(new_pipes_text, new_pipes)
+
+        new_pipes_text, all_pipelines_txt = ClfPipeline._cstm_sample(all_pipelines_txt, nb_new_rdm_pipes)
+        new_pipes = _add_new_pipes(new_pipes_text, new_pipes)
+        
         return new_pipes
 
     def make_steps(pipe_text):
@@ -168,3 +164,21 @@ class ClfPipeline:
 
         steps = _add_step(pipe_text[1], steps)
         return steps
+        
+    
+    # private methods
+
+    def _cstm_sample(all_pipes, n):
+        """
+        TODO
+        """
+        selection = []
+        for _ in range(n):        
+            clf_id = rdm.randint(0, len(all_pipes)-1) # randomly select a type of classifier
+            pipe = rdm.sample(all_pipes[clf_id], 1)[0] # randomly select a pipe which head is of the selected clf type
+            all_pipes[clf_id].remove(pipe) # remove the pipe from the set of still available pipelines
+            selection.append(pipe)
+            
+            if len(all_pipes[clf_id]) <= 0:
+                del all_pipes[clf_id]
+        return selection, all_pipes

@@ -114,9 +114,9 @@ class ModelsTrainer:
             print('\n0/3 - data loaded') # TODO tmp print
 
             init_nb_pipes = len(pipelines)
-            pruning_factor = max(round((init_nb_pipes / selection_len)**(1/len(S))), 2)
+            pruning_factor = (init_nb_pipes / selection_len)**(1/len(S))
 
-            get_max_nb_p_at_i = lambda iter_id: init_nb_pipes // (pruning_factor**iter_id)
+            get_max_nb_p_at_i = lambda iter_id: round(init_nb_pipes // (pruning_factor**iter_id))
 
             manager = Manager()
             
@@ -133,8 +133,8 @@ class ModelsTrainer:
                             nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), len(pipelines)//10)
                             new_pipes = ClfPipeline.generate_from_set(pipelines, all_pipelines_txt, nb_pipes_to_generate)
                             pipelines.extend(new_pipes)
-                            print('Tried to generate %i new pipelines.' % nb_pipes_to_generate) # TODO tmp print
-                            print('\nGenerated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
+                            print('\nTried to generate %i new pipelines.' % nb_pipes_to_generate) # TODO tmp print
+                            print('Generated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
                         
                         # prepare the partial training set
                         X_train_unused = X_train.loc[~X_train.index.isin(train_index)]

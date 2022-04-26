@@ -13,6 +13,8 @@ from os.path import normpath as normp
 import pandas as pd
 from pprint import pprint
 import re
+import scipy
+import statsmodels
 import sys
 import warnings
 
@@ -52,11 +54,7 @@ FEATURES_EXTRACTORS = { # maps the argument name to the actual class name
 Utils.create_dirs_if_not_exist([SYSTEM_INPUTS_DIR])
 Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
-
-def train(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors, train_on_all_data):
-
-    print('#########  RecImpute - training  #########')
-
+def init_training_set(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors):
     # init clusterer
     clusterer = ShapeBasedClustering()
 
@@ -82,54 +80,51 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
         **true_labeler_info,
         force_generation=False,
     )
+    return training_set
 
-    from scipy.stats import ttest_rel#, friedmanchisquare, chisquare
-    #from statsmodels.stats.weightstats import ztest as ztest
-    nb_pipelines = 1000 # TODO
-    S = [5, 10, 20, 35, 65] # TODO
-    n_splits = 3 # TODO
-    test_method = ttest_rel # TODO
-    selection_len = 10 # TODO
-    score_margin = .2 # TODO
-    p_value = .01 # TODO
+def select(training_set, MODELSTRAINER_CONF):
 
-    pipelines, all_pipelines_txt = ClfPipeline.generate(N=nb_pipelines)
+    print('#########  RecImpute - models\' selection  #########')
+
+    significance_tests = {
+        'ttest_rel': scipy.stats.ttest_rel,
+        'friedmanchisquare': scipy.stats.friedmanchisquare,
+        'chisquare': scipy.stats.chisquare,
+        'ztest': statsmodels.stats.weightstats.ztest,
+    }
+
+    pipelines, all_pipelines_txt = ClfPipeline.generate(N=MODELSTRAINER_CONF['NB_PIPELINES'])
 
     # most promising pipelines' selection
     trainer = ModelsTrainer(training_set)
-    try:
-        with warnings.catch_warnings(): # TODO tmp delete
-            warnings.simplefilter('ignore') # TODO tmp delete
-            selected_pipes = trainer.select(
-                pipelines, all_pipelines_txt, 
-                S=S, 
-                selection_len=selection_len, 
-                score_margin=score_margin,
-                n_splits=n_splits, 
-                test_method=test_method, 
-                p_value=p_value,
-                early_break=False,
-            )
-    finally:
-        import pickle # TODO tmp delete
-        with open('Training/tmp_pipelines.obj', 'wb+') as f: # TODO tmp delete
-            from Training.RecommendationModel import RecommendationModel # TODO tmp delete
-            RecommendationModel._PROPS_TO_NOT_PICKLE = []
-            pickle.dump(selected_pipes, f) # TODO tmp delete
-            RecommendationModel._PROPS_TO_NOT_PICKLE = ['best_cv_trained_pipeline', 'trained_pipeline_prod'] # TODO tmp delete
 
-
-    #import pickle # TODO tmp delete
-    #with open('Training/tmp_pipelines.obj', 'rb') as f: # TODO tmp delete
-    #    selected_pipes = pickle.load(f) # TODO tmp delete
-
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        selected_pipes = trainer.select(
+            pipelines, all_pipelines_txt, 
+            S=MODELSTRAINER_CONF['S'], 
+            selection_len=MODELSTRAINER_CONF['SELECTION_LEN'], 
+            score_margin=MODELSTRAINER_CONF['SCORE_MARGIN'],
+            n_splits=MODELSTRAINER_CONF['NB_CV_SPLITS'], 
+            test_method=significance_tests[MODELSTRAINER_CONF['TEST_METHOD']], 
+            p_value=MODELSTRAINER_CONF['P_VALUE'],
+            alpha=MODELSTRAINER_CONF['ALPHA'],
+            beta=MODELSTRAINER_CONF['BETA'],
+            gamma=MODELSTRAINER_CONF['GAMMA'],
+            allow_early_eliminations=MODELSTRAINER_CONF['ALLOW_EARLY_ELIMINATIONS'],
+            early_break=False,
+        )
 
     print('Finished models\' selection with %i remaining candidates.' % len(selected_pipes)) # TODO tmp print
-    #raise Exception('Models selection done.') # TODO delete this line
     
     models = list(map(lambda p: p.rm, selected_pipes))
+    return models
+
+def train(models, training_set, train_on_all_data):
+    print('#########  RecImpute - training  #########')
 
     # training & cross-validation evaluation
+    trainer = ModelsTrainer(training_set)
     tr = trainer.train(models, train_on_all_data=train_on_all_data) 
 
     print('\n\n=================== Cross-validation results (averaged) ===================')
@@ -137,7 +132,7 @@ def train(labeler, labeler_properties, true_labeler, true_labeler_properties, fe
 
     return tr, training_set, models
 
-def eval(models, all_test_data_info):
+def eval(models, all_test_data_info, print_details=False):
     
     print('#########  RecImpute - evaluation  #########')
 
@@ -145,19 +140,47 @@ def eval(models, all_test_data_info):
     X_test = np.nan_to_num(X_test)
     y_test = all_test_data_info['Label'].to_numpy().astype('str')
 
+    DATASETS_CONF = Utils.read_conf_file('datasets')
+    categories = np.array(list(map(lambda ds_name: DATASETS_CONF['CATEGORIES'][ds_name], all_test_data_info['Data Set Name'].tolist())))
+
+    all_scores, all_scores_per_category = {}, {}
     for model in models:
-        print(model)
+        if print_details:
+            print(model)
         used_tp, y_pred = model.predict(X_test, compute_proba=model.labels_info['type']=='monolabels', use_pipeline_prod=False)
-        scores, cm = model.eval(y_test, y_pred, used_tp.classes_, plot_cm=True)
+        scores, cm, scores_per_category = model.eval(y_test, y_pred, used_tp.classes_, categories=categories, plot_cm=True)
 
-        print('\n# %s - %s' % (model.id, model.pipe))
-        pprint(scores, width=1)
-        print(np.array_str(cm[1], precision=3, suppress_small=False))
+        for k,v in scores.items():
+            if k in all_scores:
+                all_scores[k].append(v)
+            else:
+                all_scores[k] = [v]
+        for category in scores_per_category.keys():
+            if category not in all_scores_per_category:
+                all_scores_per_category[category] = {}
+            for k,v in scores_per_category[category][0].items():
+                if k in all_scores_per_category[category]:
+                    all_scores_per_category[category][k].append(v)
+                else:
+                    all_scores_per_category[category][k] = [v]
 
-        fig = cm[0]
-        fig.canvas.draw()
-        renderer = fig.canvas.renderer
-        fig.draw(renderer)
+        if print_details:
+            print('\n# %s - %s' % (model.id, model.pipe))
+            pprint(scores, width=1)
+            print(np.array_str(cm[1], precision=3, suppress_small=False))
+
+            pprint(scores_per_category, width=1)
+
+            fig = cm[0]
+            fig.canvas.draw()
+            renderer = fig.canvas.renderer
+            fig.draw(renderer)
+    
+    print("***")
+    print(all_scores_per_category)
+    print('\nAverage results:')
+    pprint(dict(map(lambda i: (i[0], np.mean(i[1])), all_scores.items())))
+    pprint({k1: {k2: np.mean(v2) for k2,v2 in v1.items()} for k1,v1 in all_scores_per_category.items()})
 
 def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
@@ -235,10 +258,7 @@ def get_recommendations_filename(timeseries_filename):
 
 # --------------------------------------------------------------------------------------------
 
-
-
-if __name__ == '__main__':
-
+def main(args):
     _valid_args = {
         '-mode': ['cluster', 'label', 'extract_features', 'train', 'eval', 'use'],
 
@@ -258,7 +278,7 @@ if __name__ == '__main__':
         '-use_prod_model': ['True', 'False'],
     }
 
-    args = dict(zip(sys.argv[1::2], sys.argv[2::2]))
+    args = dict(zip(args[1::2], args[2::2]))
     assert '-mode' in args and args['-mode'] in _valid_args['-mode'] # verify the -mode arg has been specified correctly
     assert all(k in _valid_args.keys() for k in args.keys()) # verify that all args keys are valid
     assert all(_valid_args[k] is None \
@@ -361,13 +381,14 @@ if __name__ == '__main__':
             for fe_name in args['-fes'].split(','):
                 features_extractors.append(FEATURES_EXTRACTORS[fe_name].get_instance())
         
-        tr, set, models = train(
-            labeler, labeler_properties, 
-            true_labeler, true_labeler_properties, 
-            features_extractors, 
-            args['-train_on_all_data'] == 'True' if '-train_on_all_data' in args else True
-        )
+        MODELSTRAINER_CONF = Utils.read_conf_file('modelstrainer')
+
+        training_set = init_training_set(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors)
+        models = select(training_set, MODELSTRAINER_CONF)
+        tr, set, models = train(models, training_set, args['-train_on_all_data'] == 'True' if '-train_on_all_data' in args else True)
+        print('Done.')
         print(tr.id)
+        return tr, set, models
 
 
     elif args['-mode'] == 'eval':
@@ -381,6 +402,7 @@ if __name__ == '__main__':
         all_test_data_info = tr.load_set_from_archive('test')
         
         eval(models, all_test_data_info)
+        print('Done.')
 
 
     elif args['-mode'] == 'use':
@@ -414,3 +436,9 @@ if __name__ == '__main__':
 
         # save the recommendations to disk
         preds.to_csv(get_recommendations_filename(ts_filename), sep=' ', header=True, index=True)
+        print('Done.')
+        return preds
+
+if __name__ == '__main__':
+
+    main(sys.argv)

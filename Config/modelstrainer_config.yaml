@@ -11,15 +11,15 @@
 NB_CV_SPLITS: 3
 
 # SAVE_TRAIN_SET: save the train set to disk once the training is done (the test set will always be saved)
-SAVE_TRAIN_SET: True # TODO switch back to False
+SAVE_TRAIN_SET: False
 
 # --- ModelRace parameters
 
 # NB_PIPELINES: number of pipelines to sample and feed as input to the ModelRace algorithm
-NB_PIPELINES: 1000
+NB_PIPELINES: 300
 
 # S: partial training set sizes to use for training and evaluating the racing models
-S: [5, 10, 20, 35, 65]
+S: [2, 7, 12, 20, 35, 50]
 
 # SELECTION_LEN: approximate number of pipelines that should remain after the selection process is done
 SELECTION_LEN: 10

@@ -14,6 +14,8 @@ from sklearn.pipeline import make_pipeline
 from Training.RecommendationModel import RecommendationModel
 from Config.pipelines_steps_params import ALL_STEPS
 
+#rdm.seed(12345)
+
 class ClfPipeline:
     """
     Class which handles a classification pipeline using Scikit-Learn's pipelines. This class is used only during the selection process.
@@ -30,11 +32,17 @@ class ClfPipeline:
         self.scores = []
 
     def __repr__(self):
-        return '%s: %.5f' % (self.id, np.mean(self.scores))
+        return '%s: %.5f' % (self.rm, np.mean(self.scores))
 
     def has_same_steps(self, pipe2_text):
         """
-        TODO
+        Compares this object's pipeline against the pipeline's textual description given in parameter.
+        
+        Keyword arguments: 
+        pipe2_text -- pipeline's textual description to compare to
+
+        Return
+        True if the two pipelines have the same steps and parameters' values, False otherwise.
         """
         pipe2_steps = ClfPipeline.make_steps(pipe2_text)
         for i, (step_name, step) in enumerate(self.rm.pipe.steps[:-1]):
@@ -47,7 +55,14 @@ class ClfPipeline:
     
     def generate(N):
         """
-        TODO
+        Generates N new random pipelines.
+
+        Keyword arguments:
+        N -- numbers of pipelines to generate
+
+        Return:
+        1. list of ClfPipeline objects
+        2. list of sets containing all possible combinations of pipelines (search space)
         """
         def _get_all(all_x):
             # creates all combinations of steps and params
@@ -98,7 +113,16 @@ class ClfPipeline:
 
     def generate_from_set(pipelines, all_pipelines_txt, nb_new_pipes_total):
         """
-        TODO
+        Generates new pipelines from the existing set.
+
+        Keyword arguments:
+        pipelines -- list of ClfPipeline to use as "parents" for the new pipelines to sample
+        all_pipelines_txt -- list of sets containing all possible combinations of pipelines (remaining search space)
+        nb_new_pipes_total -- number of new pipelines to generate
+
+        Return:
+        1. list of ClfPipeline objects
+        2. list of sets containing all possible combinations of pipelines (search space)
         """
         nb_new_pipes = nb_new_pipes_total // len(pipelines)
         new_pipes = []
@@ -123,7 +147,13 @@ class ClfPipeline:
 
     def make_steps(pipe_text):
         """
-        TODO
+        Creates pipelines steps from its textual description.
+
+        Keyword arguments:
+        pipe_text -- textual description of the pipeline to create.
+
+        Return:
+        list of actual pipeline steps.
         """
         def _add_step(elem, steps):
             if elem[0] is not None:

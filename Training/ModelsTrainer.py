@@ -37,12 +37,15 @@ def _parallel_training(args):
         yp_train_cv = yp_train_cv.to_numpy().astype('str').flatten()
 
         # training & evaluation
-        with Utils.catchtime('Training pipe %s' % pipe.rm.pipe, verbose=False) as t:
-            metrics_, _ = pipe.rm.train_and_eval(Xp_train_cv, yp_train_cv, X_val, y_val, 
-                                                data_cols, labeler_properties, labels_set,
-                                                plot_cm=False, save_if_best=False)
-        runtime = t.end - t.start
-        return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
+        try:
+            with Utils.catchtime('Training pipe %s' % pipe.rm.pipe, verbose=False) as t:
+                metrics_, _ = pipe.rm.train_and_eval(Xp_train_cv, yp_train_cv, X_val, y_val, 
+                                                    data_cols, labeler_properties, labels_set,
+                                                    plot_cm=False, save_if_best=False)
+            runtime = t.end - t.start
+            return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
+        except:
+            return pipe.rm.id
 
 
 class ModelsTrainer:
@@ -97,7 +100,7 @@ class ModelsTrainer:
         Return:
         List of selected ClfPipeline.
         """
-        print('ModelRace config:', S, alpha, beta, gamma, allow_early_eliminations)
+        print('ModelRace config:', S, alpha, beta, gamma, allow_early_eliminations) # TODO tmp print
         try:
             training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
 
@@ -126,6 +129,7 @@ class ModelsTrainer:
                             nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), len(pipelines)//10)
                             new_pipes = ClfPipeline.generate_from_set(pipelines, all_pipelines_txt, nb_pipes_to_generate)
                             pipelines.extend(new_pipes)
+                            print('Tried to generate %i new pipelines.' % nb_pipes_to_generate) # TODO tmp print
                             print('\nGenerated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
                         
                         # prepare the partial training set
@@ -165,7 +169,16 @@ class ModelsTrainer:
                         with Pool() as pool:
                             for res in tqdm(pool.imap_unordered(_parallel_training, param_list), total=len(param_list), leave=False):
                                 if res is not None:
-                                    p_id, f1, r3, t = res
+                                    try:
+                                        p_id, f1, r3, t = res
+                                    except:
+                                        # eliminate this pipe since there most-likely was an exception thrown during its training
+                                        #  maybe due to a problematic parameters' combination?
+                                        p_id = res
+                                        rmvd_pipes[p_id] = True
+                                        print('%i has been eliminated probably due to an exception being thrown' % p_id)
+                                        continue 
+
                                     # save the evaluation results
                                     if p_id not in metrics:
                                         metrics[p_id] = []
@@ -179,6 +192,7 @@ class ModelsTrainer:
                                         elif mean_score < max_score - score_margin: # eliminate prematurely if the pipe performs really poorly
                                             rmvd_pipes[p_id] = True # eliminate this pipe prematurely (do not finish its cross-validation training)
                                             print('%i has been eliminated early: avg_score=%.2f and max_score=%.2f' % (p_id, mean_score, max_score))
+                                
                         print('\n%i pipelines\' training have been stopped prematurely due to poor performances.' % len(rmvd_pipes)) # TODO tmp print
                         
                         print('\n3/3 - statistic tests') # TODO tmp print
@@ -199,6 +213,7 @@ class ModelsTrainer:
                         
                         # statistical tests - remove pipes that are significantly worse than any other pipe
                         less_aggressive_pruning = (len(pipelines) <= get_max_nb_p_at_i(i)) if i > 0 else True
+                        print('Using less aggressive pruning strategy: %s' % less_aggressive_pruning) # TODO tmp print
                         worse_pipes = self._apply_test(
                             pipelines, 
                             test_method,
@@ -239,11 +254,12 @@ class ModelsTrainer:
                         if len(pipelines) <= selection_len:
                             break
 
-        except Exception:
+        except Exception as e:
             import logging
             logging.exception('Got exception while selecting pipelines.')
-        finally:
-            return pipelines
+            if len(pipelines) >= init_nb_pipes:
+                raise e
+        return pipelines
 
     def train(self, models, train_on_all_data=False):
         """

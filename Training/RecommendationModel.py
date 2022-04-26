@@ -26,7 +26,7 @@ class RecommendationModel:
 
     MODELS_DESCRIPTION_DIR = normp('./Training/ModelsDescription/')
     METRICS_CLF_MONO = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Mean Reciprocal Rank', 'Precision@3', 'Recall@3']
-    METRICS_CLF_MULTI = ['Accuracy', 'F1-Score', 'Precision', 'Recall', 'Hamming Loss']
+    METRICS_CLF_MULTI = ['Accuracy', 'F1-Score', 'Precision', 'Recall'] # , 'Hamming Loss'
     METRICS_REGR = ['Mean Squared Error']
     METRIC_FOR_SCORING = {
         'classifier': {'metric': 'F1-Score', 'best_score_is': 'higher'},
@@ -83,6 +83,9 @@ class RecommendationModel:
         self.features_name = features_name
         self.labels_info = labels_info
         self.labels_set = labels_set
+
+        X_train = np.nan_to_num(X_train)
+        X_val = np.nan_to_num(X_val)
 
         # train model
         start_time = time.time()
@@ -167,61 +170,35 @@ class RecommendationModel:
             preds.index.name = 'Time Series ID'
             return preds
 
-    def eval(self, y_true, y_pred, classes, plot_cm=False):
+    def eval(self, y_true, y_pred, classes, categories=None, plot_cm=False):
         """
         Evaluates the model on the given validation/test data. 
         
         Keyword arguments: 
         y_true -- numpy array of true labels
         y_pred -- numpy array of validation/test entries' labels
+        classes -- list of classes
+        categories -- numpy array in the same order as y_true and y_pred that contains the category of the dataset of each sequence. If not None, 
+                      the evaluation is done per category (default. None)
         plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
         
         Return: 
         1. dict of scores measured during the pipeline's evaluation
         2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
+        3. if categories is not None: dict with keys being the categories and values their dict of scores and confusion matrix
+           otherwise None
         """
-        if self.type == 'classifier':
-            are_multi_labels = self.labels_info['type'] == 'multilabels'
-
-            if not are_multi_labels:
-                y_pred_proba = y_pred
-                y_pred = [classes[np.argmax(probas)] for probas in y_pred_proba]
-
-            average_strat = 'samples' if are_multi_labels else 'weighted'
-
-            scores = {
-                'Accuracy': accuracy_score(y_true, y_pred, normalize=True, sample_weight=None), 
-                'F1-Score': f1_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0),
-                'Precision': precision_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
-                'Recall': recall_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
-                'Hamming Loss': hamming_loss(y_true, y_pred),
-            }
-            
-            if not are_multi_labels: # TODO those metrics should also be computed for multi-labels classifiers
-                get_sorted_recommendations = lambda probas, classes: list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys())
-                # rank at which each y_true is found in the sorted y_pred_proba (list of len = len(y_true))
-                ranks = [get_sorted_recommendations(y_pred_proba_i, classes).index(y_true_i) + 1 
-                         if y_true_i in classes else
-                         np.inf
-                         for y_true_i, y_pred_proba_i in zip(y_true, y_pred_proba)] 
-
-                scores['Mean Reciprocal Rank'] = (1 / len(y_true)) * sum(1 / rank_i for rank_i in ranks)
-                # average prec@K and recall@k
-                K = 3
-                prec_at_k = lambda K, rank_y_true: int(rank_y_true <= K) / K
-                scores['Precision@3'] = sum(prec_at_k(K, rank_y_true) for rank_y_true in ranks) / len(y_true)
-                recall_at_k = lambda K, rank_y_true: int(rank_y_true <= K) / 1
-                scores['Recall@3'] = sum(recall_at_k(K, rank_y_true) for rank_y_true in ranks) / len(y_true)
-
-            if plot_cm:
-                fig, _, cm_val = Utils.plot_confusion_matrix(y_true, y_pred, are_multi_labels, 
-                                                            normalize=True, labels=self.labels_set, 
-                                                            verbose=0)
-
-        elif self.type == 'regression':
-            raise Exception('Regression models are not supported yet.')
-
-        return scores, (fig, cm_val) if plot_cm else None
+        
+        global_results = self._eval(y_true, y_pred, classes, plot_cm=plot_cm)
+        if categories is not None:
+            results_per_categories = {}
+            for category in np.unique(categories):
+                ix = np.where(categories == category)
+                if len(ix) > 0:
+                    res = self._eval(y_true[ix], y_pred[ix], classes, plot_cm=plot_cm)
+                    results_per_categories[category] = res
+            return *global_results, results_per_categories
+        return global_results
 
     def save(self, results_dir):
         """
@@ -283,6 +260,64 @@ class RecommendationModel:
             func = _custom_predict_proba_internal
         return func
 
+    def _eval(self, y_true, y_pred, classes, plot_cm=False):
+        """
+        Evaluates the model on the given validation/test data. 
+        
+        Keyword arguments: 
+        y_true -- numpy array of true labels
+        y_pred -- numpy array of validation/test entries' labels
+        classes -- list of classes
+        plot_cm -- True if a confusion matrix plot should be created at the end of evaluation, false otherwise (default: False)
+        
+        Return: 
+        1. dict of scores measured during the pipeline's evaluation
+        2. tuple containing a Matplotlib figure and the confusion matrix' values if plot_cm is True None otherwise
+        3. if categories is not None: dict with keys being the categories and values their dict of scores and confusion matrix
+           otherwise None
+        """
+        if self.type == 'classifier':
+            are_multi_labels = self.labels_info['type'] == 'multilabels'
+
+            if not are_multi_labels:
+                y_pred_proba = y_pred
+                y_pred = [classes[np.argmax(probas)] for probas in y_pred_proba]
+
+            average_strat = 'samples' if are_multi_labels else 'weighted'
+
+            scores = {
+                'Accuracy': accuracy_score(y_true, y_pred, normalize=True, sample_weight=None), 
+                'F1-Score': f1_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0),
+                'Precision': precision_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0).tolist(), 
+                'Recall': recall_score(y_true=y_true, y_pred=y_pred, average=average_strat, zero_division=0).tolist(),
+                #'Hamming Loss': hamming_loss(y_true, y_pred),
+            }
+            
+            if not are_multi_labels: # TODO those metrics should also be computed for multi-labels classifiers
+                get_sorted_recommendations = lambda probas, classes: list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys())
+                # rank at which each y_true is found in the sorted y_pred_proba (list of len = len(y_true))
+                ranks = [get_sorted_recommendations(y_pred_proba_i, classes).index(y_true_i) + 1 
+                        if y_true_i in classes else
+                        np.inf
+                        for y_true_i, y_pred_proba_i in zip(y_true, y_pred_proba)] 
+
+                scores['Mean Reciprocal Rank'] = (1 / len(y_true)) * sum(1 / rank_i for rank_i in ranks)
+                # average prec@K and recall@k
+                K = 3
+                prec_at_k = lambda K, rank_y_true: int(rank_y_true <= K) / K
+                scores['Precision@3'] = sum(prec_at_k(K, rank_y_true) for rank_y_true in ranks) / len(y_true)
+                recall_at_k = lambda K, rank_y_true: int(rank_y_true <= K) / 1
+                scores['Recall@3'] = sum(recall_at_k(K, rank_y_true) for rank_y_true in ranks) / len(y_true)
+
+            if plot_cm:
+                fig, _, cm_val = Utils.plot_confusion_matrix(y_true, y_pred, are_multi_labels, 
+                                                            normalize=True, labels=self.labels_set, 
+                                                            verbose=0)
+
+        elif self.type == 'regression':
+            raise Exception('Regression models are not supported yet.')
+
+        return scores, (fig, cm_val) if plot_cm else None
 
     # static methods
     

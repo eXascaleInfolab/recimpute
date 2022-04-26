@@ -7,6 +7,7 @@ ModelsTrainer.py
 """
 
 import itertools
+import logging
 from multiprocessing import Pool, Manager
 import numpy as np
 import operator
@@ -22,6 +23,8 @@ from Training.ClfPipeline import ClfPipeline
 from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
+
+logging.basicConfig(filename='_Logs/msa_new_clfs_errors.log') # TODO tmp delete
 
 def _parallel_training(args):
     """
@@ -45,6 +48,7 @@ def _parallel_training(args):
             runtime = t.end - t.start
             return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
         except:
+            logging.exception('Error for pipe %s\n\n\n' % pipe) # TODO tmp delete
             return pipe.rm.id
 
 

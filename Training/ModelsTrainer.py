@@ -125,6 +125,11 @@ class ModelsTrainer:
             with Utils.catchtime('ModelRace runtime', verbose=True): # TODO tmp print
                 for i in tqdm(range(len(S)), leave=False):
                     with Utils.catchtime('Selection iteration %i' % (i+1), verbose=True): # TODO tmp print
+
+                        logging.info('Iteration %i started with following pipelines:')
+                        for pipe in pipelines:
+                            logging.info(pipe)
+
                         n = (X_train.shape[0] * (S[i] - (S[i-1] if i > 0 else 0))) // 100 # number of data to add for partial training
 
                         # generate new pipelines from the remaining set of candidates
@@ -217,7 +222,16 @@ class ModelsTrainer:
                         
                         # statistical tests - remove pipes that are significantly worse than any other pipe
                         less_aggressive_pruning = (len(pipelines) <= get_max_nb_p_at_i(i)) if i > 0 else True
-                        print('Using less aggressive pruning strategy: %s' % less_aggressive_pruning) # TODO tmp print
+                        print(
+                            'Using less aggressive pruning strategy: %s -> %i, %i, %i, %s, %i, %.3f' % (
+                                less_aggressive_pruning,
+                                len(pipelines), 
+                                get_max_nb_p_at_i(i),
+                                i,
+                                len(pipelines) <= get_max_nb_p_at_i(i),
+                                init_nb_pipes,
+                                pruning_factor
+                        )) # TODO tmp print
                         worse_pipes = self._apply_test(
                             pipelines, 
                             test_method,
@@ -259,7 +273,6 @@ class ModelsTrainer:
                             break
 
         except Exception as e:
-            import logging
             logging.exception('Got exception while selecting pipelines.')
             if len(pipelines) >= init_nb_pipes:
                 raise e

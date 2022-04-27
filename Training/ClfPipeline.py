@@ -14,7 +14,7 @@ from sklearn.pipeline import make_pipeline
 from Training.RecommendationModel import RecommendationModel
 from Config.pipelines_steps_params import ALL_STEPS
 
-#rdm.seed(12345)
+rdm.seed(12345)
 
 class ClfPipeline:
     """

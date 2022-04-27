@@ -45,15 +45,15 @@ ALL_STEPS = {
             'weights': ['uniform', 'distance'],
         },
         CatBoostClassifier: {
-            'depth': [4,5,6,7,8,9,10,15],
+            'depth': [4,5,6,7,8,9,10],
             'learning_rate': [0.01,0.02,0.03,0.04],
-            'iterations': [10, 20,30,40,50,60,70,80,90,100],
+            'iterations': [10,20,30,40,50,60,70,80,90,100],
             'loss_function': ['MultiClass'],
             'verbose': [False],
         },
         RandomForestClassifier: {
-            'n_estimators': [10, 50, 200, 500, 1000],
-            'max_depth': [5, 8, 15, None],
+            'n_estimators': [10, 50, 200],
+            'max_depth': [5, 8, 15, 20],
             'min_samples_split': [2, 5, 10, 15],
             'min_samples_leaf': [1, 2, 5, 10],
         },
@@ -65,14 +65,14 @@ ALL_STEPS = {
         DecisionTreeClassifier: {
             'criterion': ['gini', 'entropy'],
             'splitter': ['best', 'random'],
-            'max_depth': [5, 8, 15, None],
+            'max_depth': [5, 8, 15, 20],
             'min_samples_split': [2, 5, 10, 15],
             'min_samples_leaf': [1, 2, 5, 10],
         },
         ExtraTreeClassifier: {
             'criterion': ['gini', 'entropy'],
             'splitter': ['best', 'random'],
-            'max_depth': [5, 8, 15, None],
+            'max_depth': [5, 8, 15, 20],
             'min_samples_split': [2, 5, 10, 15],
             'min_samples_leaf': [1, 2, 5, 10],
         },
@@ -82,11 +82,6 @@ ALL_STEPS = {
         LinearDiscriminantAnalysis: {
             'solver': ['svd', 'lsqr'],
             'tol': [1e-2,1e-3,1e-4,1e-5],
-        },
-        LinearSVC: {
-            'multi_class': ['crammer_singer'],
-            'tol': [1e-2,1e-3,1e-4,1e-5],
-            'C': [.1, 1, 10, 100],
         },
         LogisticRegression: {
             'multi_class': ['multinomial'],
@@ -106,10 +101,10 @@ ALL_STEPS = {
             'tol': [1e-2,1e-3,1e-4,1e-5],
         },
         RadiusNeighborsClassifier: {
-            'radius': [1.0, 10., 50.],
+            'radius': [1.0, 10., 50., 100.],
+            'outlier_label': ['most_frequent'],
             'weights': ['uniform', 'distance'],
             'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
-            'outlier_label': ['most_frequent'],
         },
         RidgeClassifier: {
             'normalize': [True, False],
@@ -117,6 +112,11 @@ ALL_STEPS = {
             'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'],
         },
 
+        # LinearSVC: {
+        #     'multi_class': ['crammer_singer'],
+        #     'tol': [1e-2,1e-3,1e-4,1e-5],
+        #     'C': [.1, 1, 10, 100],
+        # },
         # LabelPropagation: {
         #     'kernel': ['knn', 'rbf'],
         #     'gamma': [10,15,20,25],

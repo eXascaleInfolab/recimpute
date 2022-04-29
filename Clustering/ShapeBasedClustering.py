@@ -128,7 +128,7 @@ class ShapeBasedClustering(AbstractClustering):
             centroid_dist_thresh = ShapeBasedClustering.CONF['CENTROID_DIST_THRESHOLD'] +corr_offset,
             k_perc = ShapeBasedClustering.CONF['TS_PERC_TO_COMPUTE_K'], 
             security_limit = 5, 
-            max_iter = 10000, 
+            max_iter = ShapeBasedClustering.CONF['MAX_ITER'], 
             id = dataset.name
         )
 

@@ -1,6 +1,6 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.chdir('/home/guillaume/recimpute')
+os.chdir('../')
 from recimpute import main as recimpute_main
 
 def main():
@@ -24,7 +24,7 @@ def main():
     ]
 
     for fes in fes_configs:
-        res = recimpute_main(['recimpute.py', '-mode', 'train', '-lbl', 'ImputeBench', '-fes', fes, '-train_on_all_data', 'False'])
+        res = recimpute_main(['recimpute.py', '-mode', 'train', '-fes', fes, '-train_on_all_data', 'False'])
         recimpute_main(['recimpute.py', '-mode', 'eval', '-id', str(res[0].id)])
 
 

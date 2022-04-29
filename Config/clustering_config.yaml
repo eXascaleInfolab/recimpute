@@ -22,6 +22,9 @@ CENTROID_DIST_THRESHOLD: 0.4
 # TS_PERC_TO_COMPUTE_K: use this percentage * #sequences in a data set to compute K
 TS_PERC_TO_COMPUTE_K: 0.20
 
+# MAX_ITER: max number of iterations before the algorithm can stop early.
+MAX_ITER: 250
+
 
 ### ---- old (to delete eventually)
 

@@ -132,8 +132,8 @@ CATEGORIES:
   - bafu_7: Water discharge
   - bafu_8: Water discharge
   - Beef: Other
-  - BeetleFly: Other
-  - BirdChicken: Other
+  - BeetleFly: Image Outlines
+  - BirdChicken: Image Outlines
   - Car: Other
   - ChlorineConcentration: Other
   - climate_CH4: Climate
@@ -155,79 +155,79 @@ CATEGORIES:
   - CricketY: Motion
   - CricketZ: Motion
   - drift10: Other
-  - Earthquakes: Other
+  - Earthquakes: Sismical Data
   - electricity: Power consumption
   - EOGHorizontalSignal: Biology
-  - FaceAll: Other
-  - FaceFour: Other
-  - FacesUCR: Other
-  - FiftyWords: Other
+  - FaceAll: Image Outlines
+  - FaceFour: Image Outlines
+  - FacesUCR: Image Outlines
+  - FiftyWords: Word Outlines
   - GunPoint: Motion
   - GunPointAgeSpan: Motion
   - GunPointMaleVersusFemale: Motion
   - GunPointOldVersusYoung: Motion
   - Ham: Other
-  - HandOutlines: Other
+  - HandOutlines: Image Outlines
   - Haptics: Motion
   - Herring: Other
   - HouseTwenty: Power consumption
   - InlineSkate: Motion
   - InsectEPGRegularTrain: Biology
   - InsectEPGSmallTrain: Biology
-  - InsectWingbeatSound: Other
+  - InsectWingbeatSound: Audio
   - LargeKitchenAppliances: Power consumption
-  - Lightning2: Other
-  - Lightning7: Other
+  - Lightning2: Spectrogram Data
+  - Lightning7: Spectrogram Data
   - Mallat: Other
   - Meat: Other
-  - MedicalImages: Other
+  - MedicalImages: Medical Images
   - meteo: Climate
-  - MiddlePhalanxOutlineAgeGroup: Other
-  - MiddlePhalanxOutlineCorrect: Other
-  - MiddlePhalanxTW: Other
-  - MixedShapesRegularTrain: Other
-  - MixedShapesSmallTrain: Other
+  - MiddlePhalanxOutlineAgeGroup: Image Outlines
+  - MiddlePhalanxOutlineCorrect: Image Outlines
+  - MiddlePhalanxTW: Image Outlines
+  - MixedShapesRegularTrain: Image Outlines
+  - MixedShapesSmallTrain: Image Outlines
   - MoteStrain: Climate
   - NonInvasiveFetalECGThorax1: Medical
   - NonInvasiveFetalECGThorax2: Medical
   - OliveOil: Other
-  - OSULeaf: Other
+  - OSULeaf: Image Outlines
   - parking: Other
-  - PhalangesOutlinesCorrect: Other
-  - Phoneme: Other
+  - PhalangesOutlinesCorrect: Image Outlines
+  - Phoneme: Audio
   - PigAirwayPressure: Medical
   - PigArtPressure: Medical
   - PigCVP: Medical
-  - Plane: Other
+  - Plane: Image Outlines
   - PowerCons: Power consumption
-  - ProximalPhalanxOutlineAgeGroup: Other
-  - ProximalPhalanxOutlineCorrect: Other
-  - ProximalPhalanxTW: Other
+  - ProximalPhalanxOutlineAgeGroup: Image Outlines
+  - ProximalPhalanxOutlineCorrect: Image Outlines
+  - ProximalPhalanxTW: Image Outlines
   - RefrigerationDevices: Power consumption
-  - Rock: Other
+  - Rock: Spectral Reflectance
   - ScreenType: Power consumption
   - SemgHandGenderCh2: Biology
   - SemgHandMovementCh2: Biology
   - SemgHandSubjectCh2: Biology
   - ShapeletSim: Other
-  - ShapesAll: Other
+  - ShapesAll: Image Outlines
   - SmallKitchenAppliances: Power consumption
   - SmoothSubspace: Other
   - SonyAIBORobotSurface1: Motion
   - SonyAIBORobotSurface2: Motion
   - stock_exchange: Other
   - Strawberry: Other
-  - SwedishLeaf: Other
+  - SwedishLeaf: Image Outlines
   - Symbols: Motion
   - SyntheticControl: Other
   - temp: Climate
   - ToeSegmentation1: Motion
   - ToeSegmentation2: Motion
-  - Trace: Other
-  - WordSynonyms: Other
+  - Trace: Sensors Failures
+  - WordSynonyms: Word Outlines
   - Worms: Motion
   - WormsTwoClass: Motion
-  - Yoga: Other
+  - Yoga: Image Outlines
 
 # Discarded data sets:
   # - Adiac.zip                                                                                          # 781x176

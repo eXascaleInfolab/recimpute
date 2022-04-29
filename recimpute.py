@@ -39,10 +39,10 @@ SYSTEM_OUTPUTS_DIR = normp('./Datasets/Recommendations/')
 
 LABELERS = { # maps the argument name to the actual class name
     'ImputeBench': ImputeBenchLabeler, 
-    'KiviatRules': KiviatRulesLabeler,
+    # 'KiviatRules': KiviatRulesLabeler,
 }
 FEATURES_EXTRACTORS = { # maps the argument name to the actual class name
-    'Kiviat': KiviatFeaturesExtractor, 
+    # 'Kiviat': KiviatFeaturesExtractor, 
     'TSFresh': TSFreshFeaturesExtractor,
     'Topological': TopologicalFeaturesExtractor,
     'Catch22': Catch22FeaturesExtractor,
@@ -55,6 +55,9 @@ Utils.create_dirs_if_not_exist([SYSTEM_INPUTS_DIR])
 Utils.create_dirs_if_not_exist([SYSTEM_OUTPUTS_DIR])
 
 def init_training_set(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors):
+
+    print('#########  RecImpute - loading training dataset  #########')
+
     # init clusterer
     clusterer = ShapeBasedClustering()
 
@@ -132,7 +135,7 @@ def train(models, training_set, train_on_all_data):
 
     return tr, training_set, models
 
-def eval(models, all_test_data_info, print_details=False):
+def eval(models, all_test_data_info, print_avg=True, print_details=False):
     
     print('#########  RecImpute - evaluation  #########')
 
@@ -176,11 +179,11 @@ def eval(models, all_test_data_info, print_details=False):
             renderer = fig.canvas.renderer
             fig.draw(renderer)
     
-    print("***")
-    print(all_scores_per_category)
-    print('\nAverage results:')
-    pprint(dict(map(lambda i: (i[0], np.mean(i[1])), all_scores.items())))
-    pprint({k1: {k2: np.mean(v2) for k2,v2 in v1.items()} for k1,v1 in all_scores_per_category.items()})
+    if print_avg:
+        print('\nAverage results:')
+        pprint(dict(map(lambda i: (i[0], np.mean(i[1])), all_scores.items())))
+        pprint({k1: {k2: np.mean(v2) for k2,v2 in v1.items()} for k1,v1 in all_scores_per_category.items()})
+    return all_scores, all_scores_per_category
 
 def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
 
@@ -262,8 +265,8 @@ def main(args):
         '-mode': ['cluster', 'label', 'extract_features', 'train', 'eval', 'use'],
 
         # *train* args
-        '-lbl': LABELERS.keys(),
-        '-true_lbl': LABELERS.keys(),
+        # '-lbl': LABELERS.keys(),
+        # '-true_lbl': LABELERS.keys(),
         '-fes': [*FEATURES_EXTRACTORS.keys(), 'all'],
         '-train_on_all_data': ['True', 'False'],
 
@@ -303,13 +306,13 @@ def main(args):
 
     elif args['-mode'] == 'label':
 
-        NON_OPTIONAL_ARGS = ['-mode', '-lbl']
+        NON_OPTIONAL_ARGS = ['-mode'] # , '-lbl'
         assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
         
         # LABEL ALL DATA SETS
         
         # set up the labeler
-        labeler = LABELERS[args['-lbl']].get_instance()
+        labeler = ImputeBenchLabeler.get_instance() #LABELERS[args['-lbl']].get_instance()
 
         # init clusterer
         clusterer = ShapeBasedClustering()
@@ -320,9 +323,9 @@ def main(args):
         # label the datasets' clusters
         updated_datasets = labeler.label_all_datasets(datasets)
 
-        if '-true_lbl' in args:
-            true_labeler = LABELERS[args['-true_lbl']].get_instance()
-            true_labeler.label_all_datasets(updated_datasets)
+        # if '-true_lbl' in args:
+        #     true_labeler = LABELERS[args['-true_lbl']].get_instance()
+        #     true_labeler.label_all_datasets(updated_datasets)
         print('Done.')
 
 
@@ -356,13 +359,13 @@ def main(args):
 
     elif args['-mode'] == 'train':
 
-        NON_OPTIONAL_ARGS = ['-mode', '-lbl', '-fes']
+        NON_OPTIONAL_ARGS = ['-mode', '-fes'] # , '-lbl'
         assert all(noa in args.keys() for noa in NON_OPTIONAL_ARGS) # verify that all non-optional args are specified
         
         # TRAIN and EVALUATE W/ CROSS-VAL
         
         # set up the labeler & true_labeler
-        labeler = LABELERS[args['-lbl']].get_instance()
+        labeler = ImputeBenchLabeler.get_instance() # LABELERS[args['-lbl']].get_instance()
         labeler_properties = labeler.get_default_properties()
 
         if '-true_lbl' in args:
@@ -397,10 +400,11 @@ def main(args):
 
         # load the models & test set
         id = args['-id']
-        tr, models = load_models_from_tr(id)
+        model_id = args['-model_id'] if '-model_id' in args else None
+        tr, models = load_models_from_tr(id, model_id)
         all_test_data_info = tr.load_set_from_archive('test')
         
-        eval(models, all_test_data_info)
+        eval(models if isinstance(models, list) else [models], all_test_data_info)
         
         print('Done.')
 

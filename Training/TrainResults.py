@@ -78,7 +78,7 @@ class TrainResults:
         assert model in self.models
 
         key = (split_id, model)
-        values = {metric: scores[metric] for metric in self.metrics_measured}
+        values = {metric: scores[metric] if scores is not None else np.nan for metric in self.metrics_measured} 
         print('Results for split n°%i and model %s: %s' % (split_id, model, values))
         values['Conf Matrix'] = cm
         self.results.loc[key,:] = values

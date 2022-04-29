@@ -14,6 +14,7 @@ ___
 
 ## Prerequisites
 - Clone this repository.
+- Install the following Linux packages: python3.8-venv, libpython3.8-dev, python3-dev, build-essential
 - Install all Python modules listed in recimpute/requirements.txt
     1. Move to the project's repository: `cd recimpute/`
     2. Create a Python virtual environment if you want to avoid installing the modules in the Python's system directories: `python3.8 -m venv venv`
@@ -21,7 +22,6 @@ ___
     4. Update PIP: `python3.8 -m pip install --upgrade pip`
     5. Install the requirements (if you are using another system than Linux, some additional modules may have to be installed, please refer to the outputs of this command): `pip install -r requirements.txt`
 - Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
-- Install the following Linux packages: libpython3.8-dev, python3-dev, build-essential
 
 
 ___
@@ -55,15 +55,15 @@ No arguments. All data sets listed in the configuration files will be clustered.
 
 Labels the datasets' clusters. If the labels have not been attributed yet, this step is required to be executed before training.
 
-| -lbl<sup> (\*)</sup> | -truelbl |
-| ----------- | ----------- |
-| ImputeBench | ImputeBench |
-| KiviatRules | KiviatRules |
-
- <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
-
-- *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
-- *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name.
+<!-- | -lbl<sup> (\*)</sup> | -truelbl | -->
+<!-- | ----------- | ----------- | -->
+<!-- | ImputeBench | ImputeBench | -->
+<!-- | KiviatRules | KiviatRules | -->
+<!--  -->
+ <!-- <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub> -->
+<!--  -->
+<!-- - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name. -->
+<!-- <!-- - *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name. --> -->
 
 #### *extract_features* mode:
 
@@ -72,7 +72,7 @@ Computes features for the datasets' time series. If the features have not been e
 | -fes<sup> (\*)</sup> |
 | ------------- |
 | TSFresh       |
-| Kiviat        |
+<!-- | Kiviat        | -->
 | Topological   |
 | Catch22       |
 | Kats          |
@@ -87,21 +87,29 @@ Computes features for the datasets' time series. If the features have not been e
 
 Selects the most-promising pipelines and trains them on the prepared datasets (labeling and features extraction must be done prior to training).
 
- | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | train_on_all_data |
+ <!-- | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | train_on_all_data |
  | ----------- | ----------- | ------------- | ----------------- |
+ | KiviatRules | KiviatRules | Kiviat        |                   |
  | ImputeBench | ImputeBench | TSFresh       | True              |
- | KiviatRules | KiviatRules | Kiviat        | False             |
- |             |             | Topological   |                   |
+ |             |             | Topological   | False             |
  |             |             | Catch22       |                   |
  |             |             | Kats          |                   |
- |             |             | *all*         |                   |
+ |             |             | *all*         |                   | -->
+
+ | -fes<sup> (\*)</sup> | -train_on_all_data |
+ | ------------- | ----------------- |
+ | TSFresh       | True              |
+ | Topological   | False             |
+ | Catch22       |                   |
+ | Kats          |                   |
+ | *all*         |                   |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
 
-- *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
-- *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name.
+<!-- - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
+- *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name. -->
 - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected: one or multiple values separated by commas.
-- *-train_on_all_data* (optional): Whether or not train the models on ALL data after their evaluation is complete. If not specified, trains on all data after evaluation. Expected: *True* or *False*.
+- *-train_on_all_data* (optional): Whether or not train the models on ALL data. If not specified, trains on all data. Expected: *True* or *False*. Warning: a model trained on all data should only be used in production and shouldn't be evaluated on the test set anymore since these data samples will have been used for training.
 
 #### *eval* mode:
 
@@ -115,6 +123,8 @@ Selects the most-promising pipelines and trains them on the prepared datasets (l
 The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInputs/ folder. The sequence(s) should have been preemptively z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
 - *-use_prod_model* (optional): Whether or not use the model trained on ALL data. If not specified, does not use the model trained on all data (since it may not exist depending on the arguments used for training). Expected: *True* or *False*.
 
+Important: after using ModelRace to select the most-promising classifiers, the remaining ones are used together in a Voting Classifier that does majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
+
 ### Execution examples
 
 ### Data sets' preparation
@@ -123,9 +133,9 @@ The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInpu
 ```bash
     $ python recimpute.py -mode cluster
 ```
-2. Label the data sets' clusters with the *ImputeBench* labeler.
+2. Label the data sets' clusters.
 ```bash
-    $ python recimpute.py -mode label -lbl ImputeBench
+    $ python recimpute.py -mode label
 ```
 3. Extract the data sets' time series features using the *TSFresh* and *Catch22* extractors.
 ```bash
@@ -134,19 +144,14 @@ The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInpu
 
 #### Training
 
-1. Train the models that will be selected by our ModelRace algorithm. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using the *TSFresh* extractor. Once evaluated the models are trained on all data.
-```bash
-    $ python recimpute.py -mode train -lbl ImputeBench -fes TSFresh -train_on_all_data True
-```
-
-2. Train the models that will be selected by our ModelRace algorithm. The time series from the train and validation sets are labeled with the *KiviatRules* labeler and those from the test sets are labeled with the *ImputeBench* labeler. The features are extracted using the *TSFresh* and *Catch22* extractors. Once evaluated the models are not trained on all data.
-```bash
-    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_on_all_data False
-```
-
-3. Train the models that will be selected by our ModelRace algorithm. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using all extractors available. Once evaluated the models are trained on all data.
+1. Train the models selected by our ModelRace algorithm. All features' should be used. The models will be trained on all the data.
 ```bash
     $ python recimpute.py -mode train -lbl ImputeBench -fes all -train_on_all_data True
+```
+
+2. Train the models selected by our ModelRace algorithm. The features that should be used are *TSFresh*'s and *Catch22*'s. The models will not be trained on all the data.
+```bash
+    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_on_all_data False
 ```
 
 #### Evaluation
@@ -158,9 +163,9 @@ The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInpu
 
 #### Usage
 
-1. Use the trained model #745 (which was trained on all data) which is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file.
+1. Use the trained model #-1 (which is refering to the VotingClassifier that uses all the other classifiers). Since *use_prod_model* is set to True, it means this model was trained on all data. It is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file. The results will appear in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
 ```bash
-    $ python recimpute.py -mode use -id 0411_1456_53480 -model_id 745 -ts my_timeseries.csv -use_prod_model True
+    $ python recimpute.py -mode use -id 0411_1456_53480 -model_id -1 -ts my_timeseries.csv -use_prod_model True
 ```
 
 

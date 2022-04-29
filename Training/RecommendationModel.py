@@ -14,6 +14,7 @@ from os.path import normpath as normp
 import pandas as pd
 from pickle import dump as p_dump, load as p_load
 from sklearn.base import clone
+from sklearn.ensemble import VotingClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, hamming_loss, f1_score
 import time
 
@@ -244,7 +245,8 @@ class RecommendationModel:
         return model_filename, model_tp_filename, model_tpp_filename
 
     def __repr__(self):
-        return '%s: %s' % (self.id, ', '.join([str(step) for (_, step) in self.pipe.steps]))
+        return '%s: %s' % (self.id, ', '.join([str(step) for (_, step) in self.pipe.steps]) 
+                if not isinstance(self.pipe.steps[-1][1], VotingClassifier) else 'VotingClassifier')
 
 
     # private methods

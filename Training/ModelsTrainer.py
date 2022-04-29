@@ -123,7 +123,6 @@ class ModelsTrainer:
         Return:
         List of selected ClfPipeline.
         """
-        print('ModelRace config:', S, alpha, beta, gamma, allow_early_eliminations) # TODO tmp print
         try:
             training_set_params = self.training_set.get_default_properties() if training_set_params is None else training_set_params
 
@@ -405,11 +404,13 @@ class ModelsTrainer:
                     # training
                     print('Training %s.' % model)
                     with Utils.catchtime('Training model %s @ split %i' % (model, split_id)):
-                        scores, cm = model.train_and_eval(X_train, y_train, X_val, y_val, 
-                                                          all_data.columns, self.training_set.get_labeler_properties(), labels_set,
-                                                          plot_cm=True, save_if_best=save_if_best)
-
-                    #cm[0].savefig('Training/Results/Plots/%s: %i' % (model, split_id)) # TODO tmp print
+                        try:
+                            scores, cm = model.train_and_eval(X_train, y_train, X_val, y_val, 
+                                                            all_data.columns, self.training_set.get_labeler_properties(), labels_set,
+                                                            plot_cm=True, save_if_best=save_if_best)
+                        except Exception as e:
+                            print('Encountered exception while training %s. \n %s' % (model, e))
+                            scores, cm = None, None
 
                     # save results
                     # TrainResults contain a dict grouping the results of each trained model
@@ -421,7 +422,10 @@ class ModelsTrainer:
                 _, X_all, y_all = self.training_set.get_all_data(training_set_params)
                 for model in models_to_train:
                     with Utils.catchtime('Training model %s on all data' % model):
-                        model.trained_pipeline_prod = clone(model.pipe).fit(X_all, y_all)
+                        try:
+                            model.trained_pipeline_prod = clone(model.pipe).fit(X_all, y_all)
+                        except Exception as e:
+                            print('Encountered exception while training %s on all data. \n %s' % (model, e))
 
         finally:
             # save results to disk

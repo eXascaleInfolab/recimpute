@@ -13,7 +13,7 @@ results_tmp.txt
 _Notebooks_and_Tests/
 _logs/
 Training/tmp_pipelines*.obj
-Experiments/test_new_clfs*
+Experiments/pid.txt
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,venv,virtualenv,visualstudiocode,python

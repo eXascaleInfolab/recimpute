@@ -16,13 +16,13 @@ SAVE_TRAIN_SET: False
 # --- ModelRace parameters
 
 # NB_PIPELINES: number of pipelines to sample and feed as input to the ModelRace algorithm
-NB_PIPELINES: 300
+NB_PIPELINES: 100
 
 # S: partial training set sizes to use for training and evaluating the racing models
-S: [2, 7, 12, 20, 35, 50]
+S: [2, 7, 12, 20, 50]
 
 # SELECTION_LEN: approximate number of pipelines that should remain after the selection process is done
-SELECTION_LEN: 10
+SELECTION_LEN: 5
 
 # N_CV_SPLITS: number of cross-validation splits performed at each iteration of the ModelRace algorithm
 N_CV_SPLITS: 3
@@ -45,7 +45,7 @@ GAMMA: .50 # TODO
 
 # SCORE_MARGIN: Scores acceptance margin. During selection, if a pipeline performs below MAX_SCORE - MARGIN it gets eliminated before 
 # even finishing cross-validation. Scores vary between 0 and 1.
-SCORE_MARGIN: .2
+SCORE_MARGIN: .15
 
 # ALLOW_EARLY_ELIMINATIONS: True if early eliminations are allowed in ModelRace, False if every model should finish their cv-partial-training
 # even if early results show evidences of bad performance.

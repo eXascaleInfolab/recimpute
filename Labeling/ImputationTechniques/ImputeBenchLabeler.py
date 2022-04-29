@@ -164,7 +164,7 @@ class ImputeBenchLabeler(AbstractLabeler):
         Scores DataFrame from the ImputeBench benchmark results. Index: algorithms' names. 
         Columns: Cluster ID. Values: measured error when running the ImputeBench benchmark.
         """
-        raise Exception('Old code. Method should be updated.') # TODO
+        raise Exception('Old code that should not be used anymore.')
         # create scores data frame
         score_matrix = pd.DataFrame()
         for i, benchmark_results_dict in enumerate(all_benchmark_results['Benchmark Results']):
@@ -547,7 +547,7 @@ class ImputeBenchLabeler(AbstractLabeler):
             
             # create label from benchmark results
             if properties['type'] == 'regression':
-                # TODO implement regression
+                # todo implement regression
                 raise Exception('Regression not implemented yet')
             elif properties['type'] == 'multilabels':
                 top_n = properties['multi_labels_nb_rel']

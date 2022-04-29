@@ -106,12 +106,12 @@ ALL_STEPS = {
             'weights': ['uniform', 'distance'],
             'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
         },
-        RidgeClassifier: {
-            'normalize': [True, False],
-            'tol': [1e-2,1e-3,1e-4],
-            'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'],
-        },
-
+        
+        # RidgeClassifier: {
+        #     'normalize': [True, False],
+        #     'tol': [1e-2,1e-3,1e-4],
+        #     'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'],
+        # },
         # LinearSVC: {
         #     'multi_class': ['crammer_singer'],
         #     'tol': [1e-2,1e-3,1e-4,1e-5],

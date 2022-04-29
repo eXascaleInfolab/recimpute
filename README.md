@@ -21,6 +21,7 @@ ___
     4. Update PIP: `python3.8 -m pip install --upgrade pip`
     5. Install the requirements (if you are using another system than Linux, some additional modules may have to be installed, please refer to the outputs of this command): `pip install -r requirements.txt`
 - Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
+- Install the following Linux packages: libpython3.8-dev, python3-dev, build-essential
 
 
 ___
@@ -114,9 +115,6 @@ Selects the most-promising pipelines and trains them on the prepared datasets (l
 The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInputs/ folder. The sequence(s) should have been preemptively z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
 - *-use_prod_model* (optional): Whether or not use the model trained on ALL data. If not specified, does not use the model trained on all data (since it may not exist depending on the arguments used for training). Expected: *True* or *False*.
 
-### Results
-TODO
-
 ### Execution examples
 
 ### Data sets' preparation
@@ -129,26 +127,26 @@ TODO
 ```bash
     $ python recimpute.py -mode label -lbl ImputeBench
 ```
-3. Extract the data sets' time series features using the *TSFresh* and *Kiviat* extractors.
+3. Extract the data sets' time series features using the *TSFresh* and *Catch22* extractors.
 ```bash
-    $ python recimpute.py -mode extract_features -fes TSFresh,Kiviat
+    $ python recimpute.py -mode extract_features -fes TSFresh,Catch22
 ```
 
 #### Training
 
-1. Train the *kneighbors* model. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using the *TSFresh* extractor. Once evaluated the model is trained on all data.
+1. Train the models that will be selected by our ModelRace algorithm. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using the *TSFresh* extractor. Once evaluated the models are trained on all data.
 ```bash
-    $ python recimpute.py -mode train -lbl ImputeBench -fes TSFresh -models kneighbors -train_on_all_data True
+    $ python recimpute.py -mode train -lbl ImputeBench -fes TSFresh -train_on_all_data True
 ```
 
-2. Train the *kneighbors* and *standardscaler_svc* models. The time series from the train and validation sets are labeled with the *KiviatRules* labeler and those from the test sets are labeled with the *ImputeBench* labeler. The features are extracted using the *TSFresh* and *Kiviat* extractors. Once evaluated the models are not trained on all data.
+2. Train the models that will be selected by our ModelRace algorithm. The time series from the train and validation sets are labeled with the *KiviatRules* labeler and those from the test sets are labeled with the *ImputeBench* labeler. The features are extracted using the *TSFresh* and *Catch22* extractors. Once evaluated the models are not trained on all data.
 ```bash
-    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Kiviat -models kneighbors,standardscaler_svc -train_on_all_data False
+    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_on_all_data False
 ```
 
-3. Train all models. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using all extractors available. Once evaluated the models are trained on all data.
+3. Train the models that will be selected by our ModelRace algorithm. All time series (train, validation, and test sets) are labeled with the *ImputeBench* labeler and the features are extracted using all extractors available. Once evaluated the models are trained on all data.
 ```bash
-    $ python recimpute.py -mode train -lbl ImputeBench -fes all -models all -train_on_all_data True
+    $ python recimpute.py -mode train -lbl ImputeBench -fes all -train_on_all_data True
 ```
 
 #### Evaluation
@@ -166,10 +164,6 @@ TODO
 ```
 
 
-### Parametrized execution
-TODO
-
-
 ___
 
 ## Extension
@@ -185,15 +179,12 @@ ___
     - The data sets' archive must be placed in the ./Datasets/RealWorld/ directory.
     - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this behaviour, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of data sets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
     - It is recommended to z-normalize the time series before-hand.
-- To add and train new models:
-    -  TODO
-    - Copy paste the Training/ModelsDescription/_template.py file and rename it with the name of your new model.
-    - Fill in all the required info (check other ModelsDescription files if you need examples).
-    - TEMPORARY: add your model to the "models_descriptions_to_use" list defined in the "run_all" method in the recimpute.py file.
+- To add new classifiers or pre-processing steps in the search space of ModelRace:
+    - Open the Config/pipelines_steps_params.py file.
+    - Add your classifier. For each parameter that should not use their default value, specify the range of values that should be considered..
 - To get recommendations for any new time series:
-    - TODO
     - Save the sequence(s) to a text (.csv, .txt) file in the Datasets/SystemInputs/ directory. The sequence(s) should have been z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
-    - TEMPORARY: in recimpute.py set the 'ts_filename' value to the name of your file.
+    - See the section about using the system to find the command to run.
 
 
 ___

@@ -107,7 +107,7 @@ class TrainingSet:
         elif strategy == 'ts_percentage':
             all_ts_ids = list(range(0, sum(ds.nb_timeseries for ds in datasets)))
             nb_test_sequences = int(np.ceil(len(all_ts_ids) * self.CONF['TEST_SIZE_PERCENTAGE']))
-            test_set = rdm.sample(all_ts_ids, nb_test_sequences) # TODO smarter selection? maybe use sklearn's train_test_split?
+            test_set = rdm.sample(all_ts_ids, nb_test_sequences)
             return 'timeseries', test_set
 
         else:

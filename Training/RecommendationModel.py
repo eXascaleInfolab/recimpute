@@ -130,16 +130,7 @@ class RecommendationModel:
         1. Model which was used to get recommendations
         2. Numpy array of labels
         """
-        if pipeline is None and use_pipeline_prod and self.trained_pipeline_prod is None:
-            raise Exception('This model has not been trained on all data after its evaluation. The argument "use_prod_model" '\
-                            + 'cannot be set to True.')
-
-        if pipeline is not None:
-            trained_pipeline = pipeline
-        elif use_pipeline_prod:
-            trained_pipeline = self.trained_pipeline_prod
-        else:
-            trained_pipeline = self.best_cv_trained_pipeline
+        trained_pipeline = self.get_trained_pipeline(pipeline=pipeline, use_pipeline_prod=use_pipeline_prod)
 
         if self.type == 'classifier' and compute_proba:
             y_pred = self._custom_predict_proba(trained_pipeline)(X) # probability vector
@@ -147,6 +138,30 @@ class RecommendationModel:
             y_pred = trained_pipeline.predict(X)
 
         return trained_pipeline, y_pred
+
+    def get_trained_pipeline(self, pipeline=None, use_pipeline_prod=True):
+        """
+        Returns the appropriate trained pipeline to use to get predictions.
+
+        Keyword arguments:
+        pipeline -- trained pipeline to use to get predictions. If None, uses either the "production" pipeline or the
+                    best pipeline from the cross-validation training (default: None). 
+        use_pipeline_prod -- True to use the production pipeline trained on all data, False to use the last pipeline
+                             trained during cross-validation (default: True)
+
+        Return:
+        Trained pipeline to use to get predictions.
+        """
+        if pipeline is None and use_pipeline_prod and self.trained_pipeline_prod is None:
+            raise Exception('This model has not been trained on all data after its evaluation. The argument "use_prod_model" '\
+                            + 'cannot be set to True.')
+        if pipeline is not None:
+            trained_pipeline = pipeline
+        elif use_pipeline_prod:
+            trained_pipeline = self.trained_pipeline_prod
+        else:
+            trained_pipeline = self.best_cv_trained_pipeline
+        return trained_pipeline
 
     def get_recommendations(self, X, use_pipeline_prod=True):
         """
@@ -293,7 +308,7 @@ class RecommendationModel:
                 #'Hamming Loss': hamming_loss(y_true, y_pred),
             }
             
-            if not are_multi_labels: # TODO those metrics should also be computed for multi-labels classifiers
+            if not are_multi_labels: # todo those metrics should also be computed for multi-labels classifiers
                 get_sorted_recommendations = lambda probas, classes: list({b:a for a,b in sorted(zip(probas, classes), reverse=True)}.keys())
                 # rank at which each y_true is found in the sorted y_pred_proba (list of len = len(y_true))
                 ranks = [get_sorted_recommendations(y_pred_proba_i, classes).index(y_true_i) + 1 

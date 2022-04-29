@@ -216,7 +216,6 @@ def use(timeseries, model, features_name, fes_names, use_pipeline_prod=True):
         missing_features_l = list(set(features_name) - set(timeseries_features.columns))
         missing_features = dict(zip(missing_features_l, [list(features_name).index(f) for f in missing_features_l]))
         for feature, feature_index in dict(sorted(missing_features.items(), key=lambda item: item[1])).items():
-            # TODO: find a clever way to impute missing feature values (maybe store the avg in the models?)
             imputed_feature_values = np.zeros(nb_timeseries)
             timeseries_features.insert(feature_index, feature, imputed_feature_values)
         perc_missing_features = len(missing_features_l) / len(features_name)
@@ -402,6 +401,7 @@ def main(args):
         all_test_data_info = tr.load_set_from_archive('test')
         
         eval(models, all_test_data_info)
+        
         print('Done.')
 
 

@@ -123,8 +123,9 @@ class ClfPipeline:
             )
             ClfPipeline.NEXT_PIPE_ID += len(new_pipes_text)
             return new_pipes
-        nb_new_pipes_per_type = (2*nb_new_pipes_total//3) // len(pipelines)
-        nb_new_rdm_pipes = nb_new_pipes_total - nb_new_pipes_per_type
+        nb_new_pipes_per_type_total = 2*nb_new_pipes_total // 3
+        nb_new_pipes_per_type = nb_new_pipes_per_type_total // len(pipelines)
+        nb_new_rdm_pipes = nb_new_pipes_total - nb_new_pipes_per_type_total
         new_pipes = []
         for pipe in pipelines:
             clf_id = ClfPipeline.CLF_IDS_DICT[pipe.rm.pipe[-1].__class__]
@@ -170,7 +171,15 @@ class ClfPipeline:
 
     def _cstm_sample(all_pipes, n):
         """
-        TODO
+        Samples n pipelines from the set of all possible pipelines.
+
+        Keyword arguments:
+        all_pipes -- list of sets containing all possible combinations of pipelines (remaining search space)
+        n -- number of samples
+
+        Return:
+        1. list of selected pipelines
+        2. updated "all_pipes" to which was removed the selected pipelines
         """
         selection = []
         for _ in range(n):        

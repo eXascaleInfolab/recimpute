@@ -16,7 +16,9 @@ import random as rdm
 from scipy.stats import ttest_rel
 from sklearn import pipeline
 from sklearn.base import clone
+from sklearn.ensemble import VotingClassifier
 from sklearn.model_selection import StratifiedKFold, train_test_split as sklearn_train_test_split
+from sklearn.pipeline import Pipeline
 from tqdm import tqdm # .notebook
 
 from Training.ClfPipeline import ClfPipeline
@@ -24,11 +26,28 @@ from Training.RecommendationModel import RecommendationModel
 from Training.TrainResults import TrainResults
 from Utils.Utils import Utils
 
-logging.basicConfig(filename='_Logs/msa_new_clfs_errors.log') # TODO tmp delete
-
 def _parallel_training(args):
     """
-    TODO
+    Trains and evaluates a pipeline. This method is used by ModelRace to train pipelines in parallel.
+
+    Keyword arguments:
+    pipe -- the ClfPipeline to train
+    train_index_cv -- list of indices of the training samples in Xp_train
+    Xp_train -- numpy array of train entries
+    yp_train -- numpy array of train entries' labels
+    X_val -- numpy array of validation entries
+    y_val -- numpy array of validation entries' labels
+    data_cols -- training set's features name
+    labeler_properties -- dict specifying the labels' properties
+    labels_set -- list of unique labels that may appear in y_train and y_val
+
+    Return:
+    If an error was thrown: the pipe's id
+    Otherwise:
+    1. the pipe's id
+    2. the measured F1-score
+    3. the measured recall@3
+    4. the training time
     """
     pipe, train_index_cv, rmvd_pipes, Xp_train, yp_train, X_val, y_val, data_cols, labeler_properties, labels_set = args
     if pipe.rm.id not in rmvd_pipes:
@@ -48,7 +67,7 @@ def _parallel_training(args):
             runtime = t.end - t.start
             return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
         except:
-            logging.exception('Error for pipe %s\n\n\n' % pipe) # TODO tmp delete
+            logging.exception('Error for pipe %s\n\n\n' % pipe) # TODO tmp print
             return pipe.rm.id
 
 
@@ -70,13 +89,13 @@ class ModelsTrainer:
         training_set -- TrainingSet instance
         """
         self.training_set = training_set
-        self.models = None
+        self.models = None # list of RecommendationModels
     
 
     # public methods
 
     def select(self, pipelines, all_pipelines_txt, S, selection_len, score_margin,
-               training_set_params=None, n_splits=3, test_method=ttest_rel, p_value=.01, alpha=1., beta=1., gamma=1., # TODO give good values to alpha,beta,gamma
+               training_set_params=None, n_splits=3, test_method=ttest_rel, p_value=.01, alpha=.5, beta=.5, gamma=.5,
                allow_early_eliminations=True, early_break=False):
         """
         Selects (and partially trains if pipelines' training can be paused and resumed) the most-promising pipelines.
@@ -93,9 +112,9 @@ class ModelsTrainer:
         test_method -- Significance test. Takes as input two lists of equal length and returns a tuples which 2nd value is the 
                        p-value. (default: scipy.stats.ttest_rel)
         p_value -- p_value used with the paired t-test to decide if a difference is significant or not (default: 0.01).
-        alpha -- alpha parameter in the score function. Weight of F1-Score. Must be between 0 and 1 (default: TODO).
-        beta -- beta parameter in the score function. Weight of Recall@3. Must be between 0 and 1 (default: TODO).
-        gamma -- gamma parameter in the score function. Weight of training time. Must be between 0 and 1 (default: TODO).
+        alpha -- alpha parameter in the score function. Weight of F1-Score. Must be between 0 and 1 (default: .5).
+        beta -- beta parameter in the score function. Weight of Recall@3. Must be between 0 and 1 (default: .5).
+        gamma -- gamma parameter in the score function. Weight of training time. Must be between 0 and 1 (default: .5).
         allow_early_eliminations -- True if early eliminations are allowed, False if every model should finish their cv-partial-training
                                      even if early results show evidences of bad performance (default True).
         early_break -- True if the process can stop before all the iterations are done IF the target number of pipes has been reached,
@@ -291,7 +310,20 @@ class ModelsTrainer:
         Return:
         A TrainResults' instance containing the training results
         """
+        
+        vc_estimators = []
+        for m in models:
+            est = m.get_trained_pipeline(use_pipeline_prod=False)
+            vc_estimators.append( (str(m.id), est if est is not None else m.pipe) )
+        vc = VotingClassifier(vc_estimators, voting='soft')
+        
+        models.insert(
+            0,
+            RecommendationModel(-1, 'classifier', Pipeline([('voting ensemble', vc)]))
+        )
+
         self.models = models
+
         train_results = self._train(models, train_on_all_data=train_on_all_data)
         return train_results
         

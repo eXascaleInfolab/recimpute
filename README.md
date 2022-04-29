@@ -63,7 +63,7 @@ Labels the datasets' clusters. If the labels have not been attributed yet, this 
  <!-- <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub> -->
 <!--  -->
 <!-- - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name. -->
-<!-- <!-- - *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name. --> -->
+<!-- <!-- - *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name. -->
 
 #### *extract_features* mode:
 
@@ -72,11 +72,11 @@ Computes features for the datasets' time series. If the features have not been e
 | -fes<sup> (\*)</sup> |
 | ------------- |
 | TSFresh       |
-<!-- | Kiviat        | -->
 | Topological   |
 | Catch22       |
 | Kats          |
 | *all*         |
+<!-- | Kiviat        | -->
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
 
@@ -118,16 +118,16 @@ Selects the most-promising pipelines and trains them on the prepared datasets (l
 #### *use* mode:
 
 - *-id*: Identifier of the save containing the model to use. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected: one identifier. Example: *0211_1723_53480*.
-- *-model_id*: ID of the model to load and use. The models' ID are listed in the outputs of the *train* and *eval* modes. Expected: one model ID. Example: *745*.
+- *-model_id*: ID of the model to load and use. The models' ID are listed in the outputs of the *train* and *eval* modes. If set to -1, the model used will always be the Voting Classifier that combines the knowledge of all the other classifiers. Expected: one model ID. Example: *745*.
 - *-ts*: File name of the file containing the time series for which recommendations are wanted. Expected: one file name. Example: *timeseries.csv*.
 The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInputs/ folder. The sequence(s) should have been preemptively z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
 - *-use_prod_model* (optional): Whether or not use the model trained on ALL data. If not specified, does not use the model trained on all data (since it may not exist depending on the arguments used for training). Expected: *True* or *False*.
 
-Important: after using ModelRace to select the most-promising classifiers, the remaining ones are used together in a Voting Classifier that does majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
+Note: after using ModelRace to select the most-promising classifiers, the remaining ones are combined in a Voting Classifier that uses majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
 
 ### Execution examples
 
-### Data sets' preparation
+#### Data sets' preparation
 
 1. Cluster the data sets' time series.
 ```bash

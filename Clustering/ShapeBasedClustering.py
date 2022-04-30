@@ -129,7 +129,8 @@ class ShapeBasedClustering(AbstractClustering):
             k_perc = ShapeBasedClustering.CONF['TS_PERC_TO_COMPUTE_K'], 
             security_limit = 5, 
             max_iter = ShapeBasedClustering.CONF['MAX_ITER'], 
-            id = dataset.name
+            id = dataset.name,
+            apply_merging = ShapeBasedClustering.CONF['APPLY_MERGING']
         )
 
         # create the clusters' assignments data frame
@@ -227,8 +228,36 @@ class ShapeBasedClustering(AbstractClustering):
             AbstractClustering.CLUSTERS_DIR + \
             f'/{dataset_name}{ShapeBasedClustering.CLUSTERS_FILENAMES_ID}{AbstractClustering.CLUSTERS_APPENDIX}')
 
+    def _compute_run_score(self, timeseries, cassignment):
+        """
+        Computes a clustering run's score.
+        
+        Keyword arguments:
+        timeseries -- Pandas DataFrame containing the time series (each row is a time series)
+        cassignment -- Pandas DataFrame containing clusters' assignment of the data set's time series. 
+                       Its index is the same as the real world data set of this object. The associated 
+                       values are the clusters' id to which are assigned the time series.
+        
+        Return:
+        Run score
+        """
+        # compute the score of each cluster
+        allclusters_mean_ncc_scores = []
+        for cluster_id in cassignment['Cluster ID'].unique(): # for each cluster
+            # retrieve cluster
+            clusters_ts = timeseries.loc[cassignment['Cluster ID'] == cluster_id] 
+            # measure normalized cross-correlation between each pair of time series of this cluster
+            cluster_mean_ncc_score = self._get_dataset_mean_ncc_score(clusters_ts)
+            allclusters_mean_ncc_scores.append(cluster_mean_ncc_score)
+        # compute the run's score: sum( avg( ncc between each pair of time series in the cluster ) for each cluster )
+        run_score = sum(allclusters_mean_ncc_scores)
+        # normalize the run's score by the number of clusters
+        run_score /= len(cassignment['Cluster ID'].unique())
+        return run_score
 
-    # old - to delete eventually
+    
+
+    # to delete eventually (still used in the clusterings comparison experiment to compare against this gridsearch approach)
 
     def cluster_old(self, dataset):
         """
@@ -385,33 +414,6 @@ class ShapeBasedClustering(AbstractClustering):
                 del all_corrs[cid]
                 
         return list(clusters.values())
-
-    def _compute_run_score(self, timeseries, cassignment):
-        """
-        Computes a clustering run's score.
-        
-        Keyword arguments:
-        timeseries -- Pandas DataFrame containing the time series (each row is a time series)
-        cassignment -- Pandas DataFrame containing clusters' assignment of the data set's time series. 
-                       Its index is the same as the real world data set of this object. The associated 
-                       values are the clusters' id to which are assigned the time series.
-        
-        Return:
-        Run score
-        """
-        # compute the score of each cluster
-        allclusters_mean_ncc_scores = []
-        for cluster_id in cassignment['Cluster ID'].unique(): # for each cluster
-            # retrieve cluster
-            clusters_ts = timeseries.loc[cassignment['Cluster ID'] == cluster_id] 
-            # measure normalized cross-correlation between each pair of time series of this cluster
-            cluster_mean_ncc_score = self._get_dataset_mean_ncc_score(clusters_ts)
-            allclusters_mean_ncc_scores.append(cluster_mean_ncc_score)
-        # compute the run's score: sum( avg( ncc between each pair of time series in the cluster ) for each cluster )
-        run_score = sum(allclusters_mean_ncc_scores)
-        # normalize the run's score by the number of clusters
-        run_score /= len(cassignment['Cluster ID'].unique())
-        return run_score
 
     def old__cluster_all_datasets(self, datasets):
         """

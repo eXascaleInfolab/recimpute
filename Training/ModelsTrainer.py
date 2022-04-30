@@ -240,16 +240,6 @@ class ModelsTrainer:
                         
                         # statistical tests - remove pipes that are significantly worse than any other pipe
                         less_aggressive_pruning = (len(pipelines) <= get_max_nb_p_at_i(i)) if i > 0 else True
-                        print(
-                            'Using less aggressive pruning strategy: %s -> %i, %i, %i, %s, %i, %.3f' % (
-                                less_aggressive_pruning,
-                                len(pipelines), 
-                                get_max_nb_p_at_i(i),
-                                i,
-                                len(pipelines) <= get_max_nb_p_at_i(i),
-                                init_nb_pipes,
-                                pruning_factor
-                        )) # TODO tmp print
                         worse_pipes = self._apply_test(
                             pipelines, 
                             test_method,

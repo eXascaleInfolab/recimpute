@@ -25,6 +25,9 @@ TS_PERC_TO_COMPUTE_K: 0.20
 # MAX_ITER: max number of iterations before the algorithm can stop early.
 MAX_ITER: 250
 
+# APPLY_MERGING: whether or not the merging process should be applied after the incremental clustering is done
+APPLY_MERGING: True
+
 
 ### ---- old (to delete eventually)
 

@@ -17,7 +17,7 @@ def sklearn_kmeans_helper(k, X):
 
 def cluster(clustering_algo, objective_function, data, 
             obj_thresh, init_obj_thresh, sim_cluster_thresh, centroid_dist_thresh,
-            k_perc=0.2, security_limit=5, max_iter=5000, id='data'):
+            k_perc=0.2, security_limit=5, max_iter=5000, id='data', apply_merging=True):
     """
     Clusters the given data iteratively.
     
@@ -35,6 +35,7 @@ def cluster(clustering_algo, objective_function, data,
     security_limit -- number of iterations without new valid cluster before "helping" the clustering algorithm (default: 5)
     max_iter -- maximum number of iterations before a force-stop (default: 10000)
     id -- used to identify the data that is clustered in print messages (default 'data')
+    apply_merging -- True if the merging phase should be used after the incremental clustering, False otherwise (default True)
     
     Return: 
     List of labels: index of the cluster each sample belongs to
@@ -52,8 +53,11 @@ def cluster(clustering_algo, objective_function, data,
                                      obj_thresh, init_obj_thresh, k_perc, security_limit, max_iter, id)
 
     # merge clusters if score remains high
-    merged_clusters = _merging(clusters, objective_function, nb_entries,
-                               sim_cluster_thresh, centroid_dist_thresh)
+    if apply_merging:
+        merged_clusters = _merging(clusters, objective_function, nb_entries,
+                                sim_cluster_thresh, centroid_dist_thresh)
+    else:
+        merged_clusters = clusters
 
     labels = map(lambda i: i[1], sorted([
         (sid, cid) # sample id, assigned cluster's id

@@ -17,13 +17,12 @@ import pandas as pd
 from scipy.stats import ttest_rel
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression, RidgeClassifier
 from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
 from sklearn.preprocessing import MaxAbsScaler, Normalizer, QuantileTransformer, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import BernoulliNB, GaussianNB
 from sklearn.neural_network import MLPClassifier
-from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
+from sklearn.tree import ExtraTreeClassifier
 from sklearn.pipeline import make_pipeline
 import warnings
 
@@ -31,7 +30,6 @@ def print_scores(models, tr):
     test_set = tr.load_set_from_archive('test')
     all_scores, _ = eval(models[1:], test_set, print_avg=False, print_details=False)
     all_scores_df = pd.DataFrame(all_scores)
-    print('Without any selection:')
     print('Minimum scores')
     print(all_scores_df.min())
     print('Maximum scores')
@@ -110,7 +108,9 @@ def main():
     tr2, _, models2 = train([p.rm for p in selected_pipes], training_set, False)
 
     print('\n\n Scores comparison:')
+    print('~~ Without any selection: ~~')
     print_scores(models, tr)
+    print('~~ After using ModelRace: ~~')
     print_scores(models2, tr2)
 
 

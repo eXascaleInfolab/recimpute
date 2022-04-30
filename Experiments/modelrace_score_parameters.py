@@ -18,7 +18,7 @@ import pandas as pd
 from scipy.stats import ttest_rel
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import MaxAbsScaler, Normalizer, QuantileTransformer, StandardScaler
@@ -82,17 +82,38 @@ def main():
         ClfPipeline(1, make_pipeline(KNeighborsClassifier(n_neighbors=5))),
         ClfPipeline(2, make_pipeline(Normalizer(norm='l1'), MaxAbsScaler(), PCA(svd_solver='full'), BernoulliNB(alpha=0.5))),
         ClfPipeline(3, make_pipeline(Normalizer(norm='l1'), MaxAbsScaler(), MLPClassifier(activation='logistic', alpha=1e-05, hidden_layer_sizes=250, learning_rate='adaptive', tol=0.01))),
-        ClfPipeline(4, make_pipeline(CatBoostClassifier(verbose=False))),
+        ClfPipeline(4, make_pipeline(CatBoostClassifier(verbose=False, loss_function='MultiClass'))),
         ClfPipeline(5, make_pipeline(Normalizer(), StandardScaler(), QuadraticDiscriminantAnalysis(tol=1e-2))),
         ClfPipeline(6, make_pipeline(PCA(svd_solver='auto'), RadiusNeighborsClassifier(radius=1.0, outlier_label='most_frequent'))),
-        ClfPipeline(7, make_pipeline(Normalizer(), PCA(), CatBoostClassifier(verbose=False))),
+        ClfPipeline(7, make_pipeline(Normalizer(), PCA(), CatBoostClassifier(verbose=False, loss_function='MultiClass'))),
         ClfPipeline(8, make_pipeline(Normalizer(), PCA(), GaussianNB(var_smoothing=1e-10))),
         ClfPipeline(9, make_pipeline(StandardScaler(), ExtraTreeClassifier(splitter='random', max_depth=5))),
         ClfPipeline(10, make_pipeline(Normalizer(), ExtraTreeClassifier(splitter='best', max_depth=15))),
         ClfPipeline(11, make_pipeline(LinearDiscriminantAnalysis(solver='svd', tol=1e-2))),
         ClfPipeline(12, make_pipeline(QuantileTransformer(), RadiusNeighborsClassifier(outlier_label='most_frequent'))),
-        ClfPipeline(13, make_pipeline(QuantileTransformer(), CatBoostClassifier(verbose=False, learning_rate=0.1, iterations=30))),
+        ClfPipeline(13, make_pipeline(QuantileTransformer(), CatBoostClassifier(verbose=False, learning_rate=0.01, iterations=30, loss_function='MultiClass'))),
         ClfPipeline(14, make_pipeline(QuantileTransformer(), PCA(svd_solver='full'), RandomForestClassifier(min_samples_leaf=5, n_estimators=50))),
+        ClfPipeline(15, make_pipeline(PCA(svd_solver='arpack'), BernoulliNB(alpha=0.5))),
+        ClfPipeline(16, make_pipeline(Normalizer(norm='l1'), PCA(svd_solver='arpack'), BernoulliNB(alpha=0.25, fit_prior=False))),
+        ClfPipeline(17, make_pipeline(Normalizer(), QuadraticDiscriminantAnalysis(tol=0.01))),
+        ClfPipeline(18, make_pipeline(PCA(), MLPClassifier(alpha=1e-05, hidden_layer_sizes=50, solver='sgd'))),
+        ClfPipeline(19, make_pipeline(StandardScaler(), PCA(svd_solver='arpack'), QuadraticDiscriminantAnalysis())),
+        ClfPipeline(20, make_pipeline(MaxAbsScaler(), PCA(svd_solver='full'), RadiusNeighborsClassifier(outlier_label='most_frequent', radius=50.0))),
+        ClfPipeline(21, make_pipeline(Normalizer(), MLPClassifier(alpha=0.001, hidden_layer_sizes=50, learning_rate='invscaling', solver='sgd'))),
+        ClfPipeline(22, make_pipeline(StandardScaler(), RadiusNeighborsClassifier(algorithm='ball_tree', outlier_label='most_frequent', radius=100.0))),
+        ClfPipeline(23, make_pipeline(MaxAbsScaler(), PCA(svd_solver='randomized'), RadiusNeighborsClassifier(algorithm='brute', outlier_label='most_frequent', radius=100.0))	),
+        ClfPipeline(24, make_pipeline(Normalizer(), StandardScaler(), PCA(svd_solver='arpack'), DecisionTreeClassifier(max_depth=20, min_samples_leaf=5, min_samples_split=10, splitter='random'))),
+        ClfPipeline(25, make_pipeline(Normalizer(norm='l1'), MaxAbsScaler(), PCA(), RadiusNeighborsClassifier(algorithm='ball_tree', outlier_label='most_frequent'))),
+        ClfPipeline(26, make_pipeline(Normalizer(norm='l1'), MaxAbsScaler(), PCA(svd_solver='full'), RadiusNeighborsClassifier(algorithm='brute', outlier_label='most_frequent'))),
+        ClfPipeline(27, make_pipeline(Normalizer(norm='l1'), StandardScaler(), PCA(), DecisionTreeClassifier(max_depth=15, min_samples_leaf=2, min_samples_split=15))),
+        ClfPipeline(28, make_pipeline(QuantileTransformer(), PCA(svd_solver='arpack'), MLPClassifier(activation='tanh', alpha=0.001, hidden_layer_sizes=100, learning_rate='adaptive', solver='sgd'))),
+        ClfPipeline(29, make_pipeline(Normalizer(norm='l1'), QuantileTransformer(), PCA(svd_solver='arpack'), MLPClassifier(activation='tanh', alpha=1e-05, hidden_layer_sizes=50, solver='lbfgs', tol=0.001))),
+        ClfPipeline(30, make_pipeline(MaxAbsScaler(), PCA(svd_solver='arpack'), LogisticRegression(C=10, multi_class='multinomial', tol=0.001))),
+        ClfPipeline(31, make_pipeline(Normalizer(norm='l1'), PCA(svd_solver='arpack'), MLPClassifier(alpha=0.001, hidden_layer_sizes=250, learning_rate='adaptive'))),
+        ClfPipeline(32, make_pipeline(Normalizer(norm='l1'), CatBoostClassifier(verbose=False, learning_rate=0.03, iterations=100, depth=10, loss_function='MultiClass'))),
+        ClfPipeline(33, make_pipeline(Normalizer(norm='l1'), PCA(svd_solver='randomized'), LinearDiscriminantAnalysis(tol=0.01))),
+        ClfPipeline(34, make_pipeline(Normalizer(norm='l1'), StandardScaler(), ExtraTreeClassifier(max_depth=15, min_samples_leaf=10, min_samples_split=10, splitter='best'))),
+        ClfPipeline(34, make_pipeline(Normalizer(norm='l1'), StandardScaler(), ExtraTreeClassifier(max_depth=15, min_samples_leaf=10, min_samples_split=10, splitter='best'))),
     ]
     ClfPipeline.NEXT_PIPE_ID += len(pipelines)
 

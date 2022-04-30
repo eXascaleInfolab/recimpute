@@ -2,6 +2,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.chdir('../')
 from recimpute import main as recimpute_main
+from tqdm import tqdm
 
 def main():
 
@@ -23,7 +24,7 @@ def main():
         'Kats',
     ]
 
-    for fes in fes_configs:
+    for fes in tqdm(fes_configs):
         res = recimpute_main(['recimpute.py', '-mode', 'train', '-fes', fes, '-train_on_all_data', 'False'])
         recimpute_main(['recimpute.py', '-mode', 'eval', '-id', str(res[0].id)])
 

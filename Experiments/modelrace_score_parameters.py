@@ -27,6 +27,7 @@ from sklearn.naive_bayes import BernoulliNB, GaussianNB
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 import time
+from tqdm import tqdm
 import warnings
 
 def custom_select(pipelines, training_set, MODELSTRAINER_CONF):
@@ -126,21 +127,21 @@ def main():
 
     # vary alpha, then beta, and then gamma. measure accuracy metrics, and runtime.
     all_scores_per_param = {}
-    for alpha in alpha_values:
+    for alpha in tqdm(alpha_values):
         MODELSTRAINER_CONF['ALPHA'] = alpha
         MODELSTRAINER_CONF['BETA'] = default_beta
         MODELSTRAINER_CONF['GAMMA'] = default_gamma
         start_time = time.time()
         all_scores_per_param['alpha=%.2f' % alpha] = train_and_eval(pipelines, training_set, MODELSTRAINER_CONF)
         all_scores_per_param['alpha=%.2f' % alpha]['Runtime'] = [time.time() - start_time]
-    for beta in beta_values:
+    for beta in tqdm(beta_values):
         MODELSTRAINER_CONF['ALPHA'] = default_alpha
         MODELSTRAINER_CONF['BETA'] = beta
         MODELSTRAINER_CONF['GAMMA'] = default_gamma
         start_time = time.time()
         all_scores_per_param['beta=%.2f' % beta] = train_and_eval(pipelines, training_set, MODELSTRAINER_CONF)
         all_scores_per_param['beta=%.2f' % beta]['Runtime'] = [time.time() - start_time]
-    for gamma in gamma_values:
+    for gamma in tqdm(gamma_values):
         MODELSTRAINER_CONF['ALPHA'] = default_alpha
         MODELSTRAINER_CONF['BETA'] = default_beta
         MODELSTRAINER_CONF['GAMMA'] = gamma

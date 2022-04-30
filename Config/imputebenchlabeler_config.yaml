@@ -29,7 +29,7 @@ ALGORITHMS_LIST:
   - spirit
   - tenmf
   - tkcm
-  - trmf
+  #- trmf # not working on Ubuntu 20.04
 
   #- ssa
   #- m-rnn

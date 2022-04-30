@@ -181,8 +181,9 @@ class ModelsTrainer:
                         # create params list
                         rmvd_pipes = manager.dict()
                         param_list = []
+                        max_nb_scores = max(len(pipe.scores) for pipe in pipelines) + (n_splits if i > 0 else 10)
                         for pipe in pipelines:
-                            n_splits_ = n_splits if len(pipe.scores) > 0 else 10 + (i * n_splits)
+                            n_splits_ = max_nb_scores - len(pipe.scores)
                             for train_index_cv, _ in StratifiedKFold(n_splits=n_splits_).split(Xp_train, yp_train):
                                 param_list.append(
                                     (pipe, train_index_cv, rmvd_pipes, # dynamic params
@@ -345,7 +346,9 @@ class ModelsTrainer:
             a,b = pipes_combinations[i]
 
             # if the paired t-test shows a statistical difference between the two
-            if test_method(a.scores, b.scores)[1] < p_value:
+            try: significance_diff = test_method(a.scores, b.scores)[1] < p_value
+            except: significance_diff = True
+            if significance_diff:
                 worse_pipe = a if np.mean(a.scores) < np.mean(b.scores) else b
                 worse_counters[worse_pipe] += 1
                 

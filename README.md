@@ -114,6 +114,8 @@ Selects the most-promising pipelines and trains them on the prepared datasets (l
 #### *eval* mode:
 
 - *-id*: Identifier of the save containing the models to evaluate. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected: one identifier. Example: *0211_1723_53480*.
+- *-model_id* (optional): ID of the model to load and evaluate. If specified, only this model will be evaluated, otherwise, all models will be. The models' ID are listed in the outputs of the *train* modes. If set to -1, the model evaluated will always be the Voting Classifier that combines the knowledge of all the other classifiers. Expected: one model ID. Example: *745*.
+
 
 #### *use* mode:
 

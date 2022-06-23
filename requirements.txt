@@ -1,7 +1,7 @@
 adtk==0.6.2
 argon2-cffi==21.3.0
 argon2-cffi-bindings==21.2.0
-aslib-scenario==1.0.0
+#aslib-scenario==1.0.0
 astroid==2.8.2
 attrs==21.4.0
 ax-platform==0.2.3

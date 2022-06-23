@@ -11,22 +11,38 @@ ___
 
 ## Prerequisites
 - Clone this repository.
-- Install the following Linux packages: python3.8-venv, libpython3.8-dev, python3-dev, build-essential
-- Install all Python modules listed in recimpute/requirements.txt
-    1. Move to the project's repository: `cd recimpute/`
-    2. Create a Python virtual environment if you want to avoid installing the modules in the Python's system directories: `python3.8 -m venv venv`
-    3. Activate your virtual environment: on Linux: `source venv/bin/activate` or on Windows: `\venv\Scripts\activate`
-    4. Update PIP: `python3.8 -m pip install --upgrade pip`
-    5. Install the requirements (if you are using another system than Linux, some additional modules may have to be installed, please refer to the outputs of this command): `pip install -r requirements.txt`
-- Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
+- Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
+- Move to the project's repository: `cd recimpute/`
+- Run the install script: `sh install_script.txt`
 
 
 ___
 
 ## Execution
 
+Run all experiments:
 ```bash
     $ cd recimpute/
+    $ source venv/bin/activate
+    $ python recimpute.py -mode cluster
+    $ python recimpute.py -mode label
+    $ python recimpute.py -mode extract_features -fes all
+    $ python recimpute.py -mode train -fes all -train_on_all_data False
+```
+
+The last command will output an `id` which should then be used in the next one:
+
+```bash
+    $ python recimpute.py -mode eval -model_id -1 -id id_from_the_train_command
+```
+
+___
+
+## Full documentation
+
+```bash
+    $ cd recimpute/
+    $ source venv/bin/activate
     $ python recimpute.py [arguments]
 ```
 

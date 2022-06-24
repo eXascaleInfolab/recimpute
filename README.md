@@ -64,12 +64,7 @@ The last command will output an `id` which should then be used in the next one:
 
 #### Training
 
-1. Train the models selected by our ModelRace algorithm using all features on all the data.
-```bash
-    $ python recimpute.py -mode train -lbl ImputeBench -fes all -train_on_all_data True
-```
-
-2. Train the models selected by our ModelRace algorithm using the features extracted by *TSFresh*' and *Catch22*'.
+- Train the models selected by our ModelRace algorithm using the features extracted by *TSFresh*' and *Catch22*'.
 
 ```bash
     $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_on_all_data true

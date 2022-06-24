@@ -91,14 +91,14 @@ ___
 
 - To train models on a new dataset (it is recommended to z-normalize the time series)
     -  The time series file can have as extension either .txt or .csv.  Each column is a time series. No headers. Delimiters is single space. 
-        - If the first column contains only date time objects, it will be used as index.
-        - If the first column cannot be used as index, the archive can either contain:
+      - If the first column contains only date time objects, it will be used as index.
+      - If the first column cannot be used as index, the archive can either contain:
             - an .index file containing a single column with the data set's index.
             - an .info file containing a header ("start periods freq") and the related information (e.g."'1900-01-01 00:00:00' 24 H").
     - The dataset must be stored as a zip file in the ./Datasets/RealWorld/ directory
-        - The archive name should have the name of the dataset (e.g. "ArrowHead.zip").
-        - Each file inside the archive must contain the datasets' name (e.g. "ArrowHead.info"). 
-        - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this setup, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of datasets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
+     - The archive name should have the name of the dataset (e.g. "ArrowHead.zip").
+     - Each file inside the archive must contain the datasets' name (e.g. "ArrowHead.info"). 
+     - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this setup, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of datasets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
 - To add new classifiers or pre-processing steps in the search space of ModelRace:
     - Open the Config/pipelines_steps_params.py file.
     - Add your classifier. You can also specify the range of values that should be considered for parameters.
@@ -119,11 +119,11 @@ ___
 - `cluster`: Cluster the datasets' time series. All datasets listed in the configuration files will be clustered. This step is required for the labeling and training.
 - `label`: Assign a label to each datasets' cluster. This step is required for the training.
 - `extract_features`: Extract the features of each datasets' time series. This step is required for the training.
-    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, Kats, *all*).
+    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, Kats, all).
 - `train`: Select the most promising data preprocessing steps, classifiers and their hyperparameters, then train them on the previously labeled time series and their previously extracted features;
-    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas.
+    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (Kiviat, TSFresh, Topological, Catch22, Kats, all).
     - *-train_on_all_data* (optional): Whether or not train the models on ALL data. If not specified, trains on all data. Expected value: *True* or *False*. 
-         - Warning: a model trained on all data should only be used in production and shouldn't be evaluated on the test set anymore since these data samples will have been used for training.
+    - Warning: a model trained on all data should only be used in production and shouldn't be evaluated on the test set anymore since these data samples will have been used for training.
 - `eval`: Evaluate trained models:
     - *-id*: Identifier of the save containing the models to evaluate. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected value: one identifier. Example: *0211_1723_53480*.
     - *-model_id* (optional): ID of the model to load and evaluate. If specified, only this model will be evaluated, otherwise, all models will be. The models' ID are listed in the outputs of the *train* modes. If set to -1, the model evaluated will always be the Voting Classifier that combines the knowledge of all the other classifiers. Expected value: one model ID. Example: *745*.

@@ -21,7 +21,7 @@ ___
 
 ```bash
     $ cd recimpute/
-    $ sh install_scrip.sh
+    $ sh install_script.sh
 ```
 
 ___

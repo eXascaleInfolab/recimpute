@@ -122,8 +122,6 @@ ___
 - `extract_features`: Extract the features of each datasets' time series. This step is required for the training.
     - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, Kats, all).
 - `train`: Select the most promising data preprocessing steps, classifiers and their hyperparameters, then train them on the previously labeled time series and their previously extracted features:
-    - *-lbls*: TBA
-    - *-true_lbl*: TBA
     - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, Kats, all).
     - *-train_on_all_data* (optional): Whether or not train the models on ALL data. If not specified, trains on all data. Expected value: *True* or *False*. 
     - Warning: a model trained on all data should only be used in production and shouldn't be evaluated on the test set anymore since these data samples will have been used for training.

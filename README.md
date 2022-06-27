@@ -29,9 +29,14 @@ ___
 
 ## Execution
 
+<!---
 The code can be excuted either by running the full system or by running sequentially the individual components.   
+-->
 
-### Full  system
+### Training the model
+
+The training with the default setup takes ~64h on AMD EPYC 7402P 24-Core Processor with 128GB of memory.
+
 ```bash
     $ source venv/bin/activate
     $ python recimpute.py -mode cluster
@@ -40,12 +45,26 @@ The code can be excuted either by running the full system or by running sequenti
     $ python recimpute.py -mode train -fes all -train_on_all_data False
 ```
 
-The last command will output an `id` which should then be used in the next one:
+### Using the model
+
+The last command of the training sequence will output an `id` which should then be used in the following ones.
+
+Produce an accuracy estimation (F1) for the model:
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id id_from_the_train_command
 ```
 
+Use the trained model on an example time series.
+
+```bash
+    $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model True
+```
+The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
+
+To use your own time series, assuming stored them in Datasets/SystemInputs as a csv file and run the command with the correct file name.
+
+<!---
 ### Individual steps
 
 #### Dataset pre-processing
@@ -85,6 +104,7 @@ The last command will output an `id` which should then be used in the next one:
     $ python recimpute.py -mode use -id 0411_1456_53480 -model_id -1 -ts my_timeseries.csv -use_prod_model True
 ```
 By setting *use_prod_model* to True the model was trained on all data. It is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file. The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
+-->
 
 ___
 

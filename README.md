@@ -58,7 +58,7 @@ Produce an accuracy estimation (F1) for the model:
 Use the trained model on an example time series.
 
 ```bash
-    $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model True
+    $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model False
 ```
 The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
 

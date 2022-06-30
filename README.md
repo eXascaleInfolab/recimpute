@@ -35,7 +35,7 @@ The code can be excuted either by running the full system or by running sequenti
 
 ### Training the model
 
-The training with the default setup takes ~64h on AMD EPYC 7402P 24-Core Processor with 128GB of memory.
+The training with the default setup (takes ~64h).
 
 ```bash
     $ source venv/bin/activate
@@ -47,9 +47,8 @@ The training with the default setup takes ~64h on AMD EPYC 7402P 24-Core Process
 
 ### Using the model
 
-The last command of the training sequence will output an `id` which should then be used in the following ones.
-
-Produce an accuracy estimation (F1) for the model:
+The last command of the training sequence will output an `id` which should then be used in the following ones. The model will produce
+an accuracy estimation (F1).
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id id_from_the_train_command
@@ -60,9 +59,7 @@ Use the trained model on an example time series.
 ```bash
     $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model False
 ```
-The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
-
-To use your own time series, assuming stored them in Datasets/SystemInputs as a csv file and run the command with the correct file name.
+The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file. To use your own time series, assuming stored them in Datasets/SystemInputs as a csv file and run the command with the correct file name.
 
 <!---
 ### Individual steps

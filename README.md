@@ -59,7 +59,7 @@ Use the trained model on an example time series.
 ```bash
     $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model False
 ```
-The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file. To use your own time series, store them as a csv file in `Datasets/SystemInputs` repository and run the command above with the corresponding file name.
+The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file. To use the model on a new dataset, store the time series as a csv file in `Datasets/SystemInputs` folder and run the last command with the corresponding file name.
 
 <!---
 ### Individual steps

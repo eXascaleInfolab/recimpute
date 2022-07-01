@@ -47,8 +47,8 @@ The training with the default setup (takes ~64h).
 
 ### Using the model
 
-The last command of the training sequence will output an `id` which should then be used in the following ones. The model will produce
-an accuracy estimation (F1).
+The last command of the training sequence will output an `id` which should then be used in the following ones. The model will produce F1
+as accuracy measure.
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id id_from_the_train_command

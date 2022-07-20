@@ -3,7 +3,7 @@
 Important: all experiments have Python dependencies. To install those, please refer to the main README file of this repository. It is recommended to use the same Python environment as the one you use to run the whole system.
 
 Note: for all Python script executions we recommend redirecting the outputs to a file to obtain better readability of the results.
-For example: `python -u features_analysis_1.py 2>&1 | tee Experiments/results/features_analysis_1_results.txt
+For example: `python -u features_analysis_1.py 2>&1 | tee results/features_analysis_1_results.txt
 
 
 ## Simplified A-Darts execution

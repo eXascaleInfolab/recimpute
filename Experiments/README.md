@@ -62,7 +62,7 @@ Results will be printed on the command line.
 Running this code will give you the number of pipelines pruned when varying the number of sampled pipelines. Those values were used to create figure 3.b of the paper.
 
 ```
-python modelrace_accuracy.py
+python modelrace_pruning.py
 ```
 
 Results will be printed on the command line. 

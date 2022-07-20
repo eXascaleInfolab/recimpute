@@ -2,7 +2,7 @@
 
 Important: all experiments have Python dependencies. To install those, please refer to the main README file of this repository. It is recommended to use the same Python environment as the one you use to run the whole system.
 
-Note: for all Python script executions we recommend redirecting the outputs to a file to obtain better readability of the results.
+You can redirect the outputs to a file to obtain better readability of the results using the following command:
 For example: 
 
 ```

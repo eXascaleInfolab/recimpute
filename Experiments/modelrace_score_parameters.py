@@ -122,8 +122,8 @@ def main():
 
     default_alpha, default_beta, default_gamma = .50, .50, .50
     alpha_values = [0., .25, .50, .75, 1.]
-    beta_values = [0., .25, .75, 1.]
-    gamma_values = [0., .25, .75, 1.]
+    beta_values = [0., .25, .50, .75, 1.]
+    gamma_values = [0., .25, .50, .75, 1.]
 
     # vary alpha, then beta, and then gamma. measure accuracy metrics, and runtime.
     all_scores_per_param = {}

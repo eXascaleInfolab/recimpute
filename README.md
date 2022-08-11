@@ -10,7 +10,7 @@ RecImpute is a recommendation system of imputation techniques for missing values
 ___
 
 ## Prerequisites
-- Ubuntu 18 or Ubuntu 20 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
+- Ubuntu 18 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
 - A server with a least 64~GB RAM
 - Clone this repository.
 

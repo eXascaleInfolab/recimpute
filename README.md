@@ -11,7 +11,7 @@ ___
 
 ## Prerequisites
 - Ubuntu 18 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
-- A server with a least 64~GB RAM
+- A server with a least 64GB of RAM
 - Clone this repository.
 
 ```bash

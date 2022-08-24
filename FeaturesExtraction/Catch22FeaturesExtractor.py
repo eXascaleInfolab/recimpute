@@ -6,7 +6,7 @@ Catch22FeaturesExtractor.py
 @author: @chacungu
 """
 
-from catch22 import catch22_all
+from pycatch22 import catch22_all
 from os.path import normpath as normp
 import pandas as pd
 

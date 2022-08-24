@@ -75,8 +75,8 @@ USE_LIST:
   - MiddlePhalanxOutlineAgeGroup.zip                                                                   # 554x80
   - MiddlePhalanxOutlineCorrect.zip                                                                    # 891x80
   - MiddlePhalanxTW.zip                                                                                # 553x80
-  - MixedShapesRegularTrain.zip                                                                        # 2925x1024
-  - MixedShapesSmallTrain.zip                                                                          # 2525x1024
+#  - MixedShapesRegularTrain.zip                                                                        # 2925x1024
+#  - MixedShapesSmallTrain.zip                                                                          # 2525x1024
   - MoteStrain.zip                                                                                     # 1272x84
   - NonInvasiveFetalECGThorax1.zip                                                                     # 3765x750
   - NonInvasiveFetalECGThorax2.zip                                                                     # 3765x750

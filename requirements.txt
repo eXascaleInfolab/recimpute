@@ -9,7 +9,7 @@ backcall==0.2.0
 bleach==4.1.0
 botorch==0.6.0
 catboost==1.0.0
-catch22==0.2.0
+pycatch22==0.4.2
 certifi==2021.5.30
 cffi==1.15.0
 charset-normalizer==2.0.6

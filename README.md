@@ -39,9 +39,8 @@ ___
 The code can be excuted either by running the full system or by running sequentially the individual components.   
 -->
 
-### Training the model
+### Train the model
 
-The training with the default setup (takes ~64h).
 
 ```bash
     $ source venv/bin/activate
@@ -51,22 +50,27 @@ The training with the default setup (takes ~64h).
     $ python recimpute.py -mode train -fes all -train_on_all_data False
 ```
 
-### Using the model
+The last command of the training step will output an `id` which should be used in the next part. 
 
-The last command of the training sequence will output an `id` which should then be used in the following ones. The model will produce F1
-as accuracy measure.
+
+### Use the model
+To use the model, please replace `id_from_the_train_command` with the corresponding `id`
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id id_from_the_train_command
 ```
 
-Use the trained model on an example time series.
+Users can apply the trained model on an example time series (my_timeseries.csv) using the following command:
 
 ```bash
     $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model False
 ```
-The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file. To use the model on a new dataset, store the time series as a csv file in `Datasets/SystemInputs` folder and run the last command with the corresponding file name.
 
+ The results of the model will be stored as `my_timeseries__recommendations.csv` under `Datasets/Recommendations/`
+
+<!---
+To use the model on a new dataset, store the time series as a csv file in `Datasets/SystemInputs` folder and run the last command with the corresponding file name.
+-->
 <!---
 ### Individual steps
 
@@ -113,7 +117,7 @@ ___
 
 ## Extension
 
-- To train models on a new dataset (it is recommended to z-normalize the time series)
+- To train the model on a new dataset (it is recommended to z-normalize the time series)
     -  The time series file can have as extension either .txt or .csv.  Each column is a time series. No headers. Delimiters is single space. 
       - If the first column contains only date time objects, it will be used as index.
       - If the first column cannot be used as index, the archive can either contain:

@@ -4,6 +4,7 @@ sudo apt-get install -y python3.8-venv
 sudo apt-get install -y libpython3.8-dev
 sudo apt-get install -y python3-dev
 sudo apt-get install -y build-essential
+sudo apt-get install -y unzip
 
 python3.8 -m venv venv
 . venv/bin/activate

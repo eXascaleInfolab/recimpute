@@ -12,11 +12,7 @@ ___
 ## Prerequisites
 - Ubuntu 18 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
 - A server with a least 64GB of RAM
-- Clone this repository.
-
-```bash
-    $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
-```
+- Clone this repository into the folder named `recimpute/`.
 
 - Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
 

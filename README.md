@@ -35,10 +35,6 @@ ___
 
 ## Execution
 
-<!---
-The code can be excuted either by running the full system or by running sequentially the individual components.   
--->
-
 ### Train the model
 
 
@@ -67,51 +63,10 @@ Users can apply the trained model on an example time series (my_timeseries.csv) 
 ```
 
  The results of the model will be stored as `my_timeseries__recommendations.csv` under `Datasets/Recommendations/`
+ 
+### Comparison with baselines
 
-<!---
-To use the model on a new dataset, store the time series as a csv file in `Datasets/SystemInputs` folder and run the last command with the corresponding file name.
--->
-<!---
-### Individual steps
-
-#### Dataset pre-processing
-
-1. Cluster the data sets' time series.
-```bash
-    $ python recimpute.py -mode cluster
-```
-2. Label the data sets' clusters.
-```bash
-    $ python recimpute.py -mode label
-```
-3. Extract the data sets' time series features using the *TSFresh* and *Catch22* extractors.
-```bash
-    $ python recimpute.py -mode extract_features -fes TSFresh,Catch22
-```
-
-#### Training
-
-- Train the models selected by our ModelRace algorithm using the features extracted by *TSFresh*' and *Catch22*'.
-
-```bash
-    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_on_all_data true
-```
-
-#### Evaluation
-
-- Evaluate all models saved in the *0411_1456_53480*.zip results' archive file on their test set.
-```bash
-    $ python recimpute.py -mode eval -id 0411_1456_53480
-```
-
-#### Usage
-
-- Use the trained model #-1 (which refers to the VotingClassifier). 
-```bash
-    $ python recimpute.py -mode use -id 0411_1456_53480 -model_id -1 -ts my_timeseries.csv -use_prod_model True
-```
-By setting *use_prod_model* to True the model was trained on all data. It is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file. The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
--->
+The results of all baselines reported in the paper can be reproduced using the scripts located in the folder `Experiments/`
 
 ___
 
@@ -164,71 +119,6 @@ The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInpu
     - Note: after using ModelRace to select the most-promising classifiers, the remaining ones are combined in a Voting Classifier that uses majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
 
 Note: The parameters and strategies can be modified in the configuration files stored in the Config/ repository.
-
-<!---
-| -lbl<sup> (\*)</sup> | -truelbl |
-| ----------- | ----------- |
-| ImputeBench | ImputeBench |
-| KiviatRules | KiviatRules |
-
- <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
-
-- *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
-- *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name. 
--->
-
-
-<!---
-| -fes<sup> (\*)</sup> |
-| ------------- |
-| TSFresh       |
-| Topological   |
-| Catch22       |
-| Kats          |
-| *all*         |
-| Kiviat        | 
-
- <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
- -->
-
-
-
-
-
-
- <!--- 
- | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | train_on_all_data |
- | ----------- | ----------- | ------------- | ----------------- |
- | KiviatRules | KiviatRules | Kiviat        |                   |
- | ImputeBench | ImputeBench | TSFresh       | True              |
- |             |             | Topological   | False             |
- |             |             | Catch22       |                   |
- |             |             | Kats          |                   |
- |             |             | *all*         |                   | 
-
- | -fes<sup> (\*)</sup> | -train_on_all_data |
- | ------------- | ----------------- |
- | TSFresh       | True              |
- | Topological   | False             |
- | Catch22       |                   |
- | Kats          |                   |
- | *all*         |                   |
-
- <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>
- -->
-
-<!-- - *-lbl*: Name of the labeler used to label the time series. Expected: one labeler name.
-- *-true_lbl* (optional): Name of the labeler used to label the time series of the test set only. If not specified, uses the labeler specified with the -lbl argument. Expected: one labeler name. 
--->
-
-
-
-___
-
-## Contributors
-Mourad Khayati (<a href="mkhayati@exascale.info">mkhayati@exascale.info</a>) and Guillaume Chacun (<a href="chacungu@gmail.com">chacungu@gmail.com</a>).
-
-
 ___
 
 ## Citation

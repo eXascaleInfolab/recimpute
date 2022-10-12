@@ -83,4 +83,4 @@ BENCH_RES_AGG_AND_RANK_STRATEGY_PARAMS:
 
 
 # BENCHMARK_PATH: path to the Debug folder of the ImputeBench benchmark
-BENCHMARK_PATH: /home/guillaume/bench-vldb20/TestingFramework/bin/Debug
+BENCHMARK_PATH: /home/user/bench-vldb20/TestingFramework/bin/Debug

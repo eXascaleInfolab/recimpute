@@ -7,7 +7,7 @@ AbstractClustering.py
 """
 
 import abc
-#from kshape.core import _ncc_c
+from kshape.core import _ncc_c
 import numpy as np
 import numpy.core.numeric as _nx
 import operator
@@ -17,19 +17,6 @@ import pandas as pd
 from Datasets.Dataset import Dataset
 from Utils.Utils import Utils
 from Utils.SingletonClass import SingletonClass
-
-from numpy.linalg import norm
-from numpy.fft import fft, ifft
-
-def _ncc_c(x, y):
-    den = np.array(norm(x) * norm(y))
-    den[den == 0] = np.Inf
-    x_len = len(x)
-    fft_size = 1 << (2*x_len-1).bit_length()
-    cc = ifft(fft(x, fft_size) * np.conj(fft(y, fft_size)))
-    cc = np.concatenate((cc[-(x_len-1):], cc[:x_len]))
-    return np.real(cc) / den
-
 
 class AbstractClustering(SingletonClass, metaclass=abc.ABCMeta):
     """

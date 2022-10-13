@@ -1,9 +1,9 @@
 """
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
-eXascale Infolab, University of Fribourg, Switzerland
+XXXXX
 ***
 TrainingSet.py
-@author: @chacungu
+@author: @XXXXX
 """
 
 from imblearn.over_sampling import SMOTE

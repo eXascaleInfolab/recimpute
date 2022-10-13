@@ -1,9 +1,9 @@
 """
 ConFree_kClustering - A system capable to use any derivative of k-Means clustering algorithm without specifying the number of clusters to produce.
-eXascale Infolab, University of Fribourg, Switzerland
+XXXXX
 ***
 ConFree_kClustering.py
-@author: @chacungu
+@author: @XXXXX
 """
 
 import math

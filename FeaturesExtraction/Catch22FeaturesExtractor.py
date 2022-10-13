@@ -1,9 +1,9 @@
 """
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
-eXascale Infolab, University of Fribourg, Switzerland
+XXXXX
 ***
 Catch22FeaturesExtractor.py
-@author: @chacungu
+@author: @XXXXX
 """
 
 from pycatch22 import catch22_all

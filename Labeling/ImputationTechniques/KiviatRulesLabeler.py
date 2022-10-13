@@ -1,9 +1,9 @@
 """
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
-eXascale Infolab, University of Fribourg, Switzerland
+XXXXX
 ***
 KiviatRulesLabeler.py
-@author: @chacungu
+@author: @XXXXX
 """
 
 import pandas as pd

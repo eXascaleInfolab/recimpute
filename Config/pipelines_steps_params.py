@@ -1,9 +1,9 @@
 """
 RecImpute - A Recommendation System of Imputation Techniques for Missing Values in Time Series,
-eXascale Infolab, University of Fribourg, Switzerland
+XXXXX
 ***
 pipelines_steps_params.py
-@author: @chacungu
+@author: @XXXXX
 """
 
 from catboost import CatBoostClassifier

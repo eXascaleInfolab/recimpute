@@ -13,9 +13,8 @@ USE_LIST:
   - fft_aggregated__aggtype_"variance"
   - fft_coefficient__attr_"abs"__coeff_0
   - diff1y_pacf5
-  - mean
+  - Values__mean
   - fft_coefficient__attr_"real"__coeff_0
-  - mean
   - sum_values
   - range_count__max_1__min_-1
   - y_pacf5
@@ -112,14 +111,15 @@ USE_LIST:
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.8__ql_0.2
   - holt_alpha
   - number_crossing_m__m_1
-  - cwt_coefficients__coeff_3__w_10__widths
+  - cwt_coefficients__coeff_3__w_10__widths_
   - agg_linear_trend__attr_"rvalue"__chunk_len_5__f_agg_"var"
-  - cwt_coefficients__coeff_3__w_5__widths
+  - mean
+  - cwt_coefficients__coeff_3__w_5__widths_
   - linear_trend__attr_"rvalue"
   - fft_coefficient__attr_"imag"__coeff_7
   - change_quantiles__f_agg_"var"__isabs_True__qh_1.0__ql_0.8
   - fft_coefficient__attr_"angle"__coeff_1
-  - cwt_coefficients__coeff_1__w_5__widths
+  - cwt_coefficients__coeff_1__w_5__widths_
   - percentage_of_reoccurring_values_to_all_values
   - FC_LocalSimple_mean1_tauresrat
   - agg_linear_trend__attr_"rvalue"__chunk_len_5__f_agg_"min"
@@ -137,29 +137,29 @@ USE_LIST:
   - time_reversal_asymmetry_statistic__lag_1
   - change_quantiles__f_agg_"mean"__isabs_False__qh_1.0__ql_0.6
   - c3__lag_2
-  - cwt_coefficients__coeff_12__w_5__widths
+  - cwt_coefficients__coeff_12__w_5__widths_
   - fft_coefficient__attr_"real"__coeff_5
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.6__ql_0.4
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.8__ql_0.0
   - fft_coefficient__attr_"real"__coeff_2
   - quantile__q_0.3
   - autocorrelation__lag_4
-  - cwt_coefficients__coeff_6__w_2__widths
+  - cwt_coefficients__coeff_6__w_2__widths_
   - fft_coefficient__attr_"real"__coeff_1
   - ratio_beyond_r_sigma__r_2
   - augmented_dickey_fuller__attr_"usedlag"__autolag_"AIC"
   - fft_coefficient__attr_"imag"__coeff_5
-  - cwt_coefficients__coeff_7__w_20__widths
+  - cwt_coefficients__coeff_7__w_20__widths_
   - lempel_ziv_complexity__bins_10
   - index_mass_quantile__q_0.2
-  - cwt_coefficients__coeff_14__w_5__widths
+  - cwt_coefficients__coeff_14__w_5__widths_
   - seas_acf1
   - diff2y_acf1
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.8__ql_0.0
   - partial_autocorrelation__lag_4
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.8__ql_0.2
   - SP_Summaries_welch_rect_centroid
-  - cwt_coefficients__coeff_11__w_20__widths
+  - cwt_coefficients__coeff_11__w_20__widths_
   - mean_abs_change
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.2__ql_0.0
   - change_quantiles__f_agg_"mean"__isabs_True__qh_1.0__ql_0.0
@@ -167,10 +167,10 @@ USE_LIST:
   - SC_FluctAnal_2_dfa_50_1_2_logi_prop_r1
   - fft_aggregated__aggtype_"kurtosis"
   - agg_linear_trend__attr_"slope"__chunk_len_10__f_agg_"max"
-  - cwt_coefficients__coeff_3__w_2__widths
+  - cwt_coefficients__coeff_3__w_2__widths_
   - ratio_beyond_r_sigma__r_6
   - change_quantiles__f_agg_"mean"__isabs_False__qh_1.0__ql_0.0
-  - cwt_coefficients__coeff_8__w_10__widths
+  - cwt_coefficients__coeff_8__w_10__widths_
   - change_quantiles__f_agg_"mean"__isabs_True__qh_0.6__ql_0.0
   - fft_coefficient__attr_"angle"__coeff_6
   - fft_aggregated__aggtype_"skew"
@@ -181,14 +181,14 @@ USE_LIST:
   - agg_autocorrelation__f_agg_"median"__maxlag_40
   - autocorrelation__lag_8
   - energy_ratio_by_chunks__num_segments_10__segment_focus_1
-  - cwt_coefficients__coeff_8__w_2__widths
+  - cwt_coefficients__coeff_8__w_2__widths_
   - energy_ratio_by_chunks__num_segments_10__segment_focus_0
   - agg_linear_trend__attr_"rvalue"__chunk_len_10__f_agg_"mean"
   - CO_HistogramAMI_even_2_5
-  - cwt_coefficients__coeff_9__w_20__widths
-  - cwt_coefficients__coeff_9__w_5__widths
+  - cwt_coefficients__coeff_9__w_20__widths_
+  - cwt_coefficients__coeff_9__w_5__widths_
   - agg_linear_trend__attr_"stderr"__chunk_len_5__f_agg_"max"
-  - cwt_coefficients__coeff_14__w_2__widths
+  - cwt_coefficients__coeff_14__w_2__widths_
   - fft_coefficient__attr_"angle"__coeff_0
   - agg_autocorrelation__f_agg_"var"__maxlag_40
   - energy_ratio_by_chunks__num_segments_10__segment_focus_3
@@ -202,18 +202,18 @@ USE_LIST:
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.6__ql_0.2
   - autocorrelation__lag_5
   - binarize_mean
-  - cwt_coefficients__coeff_5__w_2__widths
+  - cwt_coefficients__coeff_5__w_2__widths_
   - SC_FluctAnal_2_rsrangefit_50_1_logi_prop_r1
-  - cwt_coefficients__coeff_4__w_20__widths
+  - cwt_coefficients__coeff_4__w_20__widths_
   - CO_FirstMin_ac
   - count_above__t_0
   - c3__lag_1
-  - cwt_coefficients__coeff_6__w_10__widths
+  - cwt_coefficients__coeff_6__w_10__widths_
   - change_quantiles__f_agg_"mean"__isabs_False__qh_1.0__ql_0.8
   - first_location_of_minimum
   - quantile__q_0.8
   - fft_coefficient__attr_"real"__coeff_4
-  - cwt_coefficients__coeff_14__w_20__widths
+  - cwt_coefficients__coeff_14__w_20__widths_
   - index_mass_quantile__q_0.4
   - agg_linear_trend__attr_"slope"__chunk_len_5__f_agg_"var"
   - count_below__t_0
@@ -223,23 +223,23 @@ USE_LIST:
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.4__ql_0.2
   - approximate_entropy__m_2__r_0.3
   - ratio_beyond_r_sigma__r_2.5
-  - cwt_coefficients__coeff_9__w_2__widths
+  - cwt_coefficients__coeff_9__w_2__widths_
   - number_crossing_m__m_-1
   - fft_coefficient__attr_"real"__coeff_6
-  - cwt_coefficients__coeff_3__w_20__widths
+  - cwt_coefficients__coeff_3__w_20__widths_
   - energy_ratio_by_chunks__num_segments_10__segment_focus_9
   - c3__lag_3
-  - cwt_coefficients__coeff_7__w_10__widths
+  - cwt_coefficients__coeff_7__w_10__widths_
   - DN_HistogramMode_5
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.6__ql_0.0
   - large_standard_deviation__r_0.35000000000000003
   - spkt_welch_density__coeff_2
-  - cwt_coefficients__coeff_8__w_5__widths
-  - cwt_coefficients__coeff_11__w_2__widths
+  - cwt_coefficients__coeff_8__w_5__widths_
+  - cwt_coefficients__coeff_11__w_2__widths_
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.6__ql_0.0
   - change_quantiles__f_agg_"mean"__isabs_True__qh_0.8__ql_0.4
   - augmented_dickey_fuller__attr_"pvalue"__autolag_"AIC"
-  - cwt_coefficients__coeff_13__w_5__widths
+  - cwt_coefficients__coeff_13__w_5__widths_
   - fft_coefficient__attr_"abs"__coeff_5
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.8__ql_0.6
   - large_standard_deviation__r_0.30000000000000004
@@ -250,11 +250,11 @@ USE_LIST:
   - level_shift_size
   - change_quantiles__f_agg_"mean"__isabs_True__qh_0.4__ql_0.0
   - fft_coefficient__attr_"real"__coeff_7
-  - cwt_coefficients__coeff_4__w_5__widths
+  - cwt_coefficients__coeff_4__w_5__widths_
   - change_quantiles__f_agg_"mean"__isabs_True__qh_0.8__ql_0.0
-  - cwt_coefficients__coeff_1__w_2__widths
+  - cwt_coefficients__coeff_1__w_2__widths_
   - has_duplicate_min
-  - cwt_coefficients__coeff_0__w_5__widths
+  - cwt_coefficients__coeff_0__w_5__widths_
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.6__ql_0.4
   - FC_LocalSimple_mean3_stderr
   - agg_linear_trend__attr_"stderr"__chunk_len_10__f_agg_"var"
@@ -263,14 +263,14 @@ USE_LIST:
   - agg_linear_trend__attr_"intercept"__chunk_len_5__f_agg_"var"
   - quantile__q_0.6
   - change_quantiles__f_agg_"mean"__isabs_True__qh_0.8__ql_0.6
-  - cwt_coefficients__coeff_0__w_2__widths
-  - cwt_coefficients__coeff_10__w_5__widths
+  - cwt_coefficients__coeff_0__w_2__widths_
+  - cwt_coefficients__coeff_10__w_5__widths_
   - agg_linear_trend__attr_"intercept"__chunk_len_5__f_agg_"mean"
   - SB_TransitionMatrix_3ac_sumdiagcov
-  - cwt_coefficients__coeff_13__w_20__widths
+  - cwt_coefficients__coeff_13__w_20__widths_
   - energy_ratio_by_chunks__num_segments_10__segment_focus_7
   - energy_ratio_by_chunks__num_segments_10__segment_focus_4
-  - cwt_coefficients__coeff_11__w_10__widths
+  - cwt_coefficients__coeff_11__w_10__widths_
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.8__ql_0.4
   - energy_ratio_by_chunks__num_segments_10__segment_focus_5
   - energy_ratio_by_chunks__num_segments_10__segment_focus_8
@@ -309,58 +309,58 @@ USE_LIST:
   - std1st_der
   - permutation_entropy__dimension_6__tau_1
   - maximum
-  - cwt_coefficients__coeff_13__w_10__widths
+  - cwt_coefficients__coeff_13__w_10__widths_
   - permutation_entropy__dimension_7__tau_1
   - median
-  - cwt_coefficients__coeff_11__w_5__widths
+  - cwt_coefficients__coeff_11__w_5__widths_
   - change_quantiles__f_agg_"var"__isabs_False__qh_1.0__ql_0.8
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.6__ql_0.2
-  - cwt_coefficients__coeff_0__w_10__widths
-  - cwt_coefficients__coeff_2__w_2__widths
+  - cwt_coefficients__coeff_0__w_10__widths_
+  - cwt_coefficients__coeff_2__w_2__widths_
   - ratio_beyond_r_sigma__r_0.5
   - number_crossing_m__m_0
-  - cwt_coefficients__coeff_9__w_10__widths
+  - cwt_coefficients__coeff_9__w_10__widths_
   - agg_linear_trend__attr_"intercept"__chunk_len_10__f_agg_"max"
-  - cwt_coefficients__coeff_7__w_2__widths
+  - cwt_coefficients__coeff_7__w_2__widths_
   - fft_coefficient__attr_"imag"__coeff_3
   - trend_strength
   - change_quantiles__f_agg_"mean"__isabs_True__qh_0.2__ql_0.0
   - index_mass_quantile__q_0.6
-  - cwt_coefficients__coeff_1__w_10__widths
+  - cwt_coefficients__coeff_1__w_10__widths_
   - agg_linear_trend__attr_"stderr"__chunk_len_10__f_agg_"mean"
-  - cwt_coefficients__coeff_0__w_20__widths
+  - cwt_coefficients__coeff_0__w_20__widths_
   - SB_MotifThree_quantile_hh
-  - cwt_coefficients__coeff_10__w_2__widths
+  - cwt_coefficients__coeff_10__w_2__widths_
   - fft_coefficient__attr_"imag"__coeff_4
   - permutation_entropy__dimension_3__tau_1
   - change_quantiles__f_agg_"var"__isabs_False__qh_1.0__ql_0.4
-  - cwt_coefficients__coeff_2__w_10__widths
+  - cwt_coefficients__coeff_2__w_10__widths_
   - energy_ratio_by_chunks__num_segments_10__segment_focus_6
-  - cwt_coefficients__coeff_5__w_20__widths
-  - cwt_coefficients__coeff_14__w_10__widths
-  - cwt_coefficients__coeff_2__w_20__widths
-  - cwt_coefficients__coeff_10__w_10__widths
+  - cwt_coefficients__coeff_5__w_20__widths_
+  - cwt_coefficients__coeff_14__w_10__widths_
+  - cwt_coefficients__coeff_2__w_20__widths_
+  - cwt_coefficients__coeff_10__w_10__widths_
   - last_location_of_maximum
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.8__ql_0.0
   - agg_linear_trend__attr_"slope"__chunk_len_10__f_agg_"var"
   - minimum
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.2__ql_0.0
   - change_quantiles__f_agg_"var"__isabs_True__qh_1.0__ql_0.0
-  - cwt_coefficients__coeff_10__w_20__widths
-  - cwt_coefficients__coeff_2__w_5__widths
+  - cwt_coefficients__coeff_10__w_20__widths_
+  - cwt_coefficients__coeff_2__w_5__widths_
   - agg_linear_trend__attr_"stderr"__chunk_len_10__f_agg_"max"
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.8__ql_0.4
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.8__ql_0.6
   - approximate_entropy__m_2__r_0.9
   - firstmin_ac
-  - cwt_coefficients__coeff_5__w_5__widths
+  - cwt_coefficients__coeff_5__w_5__widths_
   - agg_linear_trend__attr_"stderr"__chunk_len_5__f_agg_"mean"
   - change_quantiles__f_agg_"mean"__isabs_True__qh_1.0__ql_0.8
   - partial_autocorrelation__lag_2
   - permutation_entropy__dimension_4__tau_1
-  - cwt_coefficients__coeff_12__w_10__widths
+  - cwt_coefficients__coeff_12__w_10__widths_
   - linear_trend__attr_"intercept"
-  - cwt_coefficients__coeff_6__w_20__widths
+  - cwt_coefficients__coeff_6__w_20__widths_
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.4__ql_0.2
   - agg_linear_trend__attr_"intercept"__chunk_len_5__f_agg_"min"
   - index_mass_quantile__q_0.9
@@ -368,35 +368,74 @@ USE_LIST:
   - change_quantiles__f_agg_"mean"__isabs_False__qh_0.6__ql_0.0
   - quantile__q_0.7
   - seas_pacf1
-  - cwt_coefficients__coeff_4__w_2__widths
+  - cwt_coefficients__coeff_4__w_2__widths_
   - time_reversal_asymmetry_statistic__lag_2
   - cid_ce__normalize_False
   - change_quantiles__f_agg_"var"__isabs_True__qh_1.0__ql_0.6
   - time_reversal_asymmetry_statistic__lag_3
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.4__ql_0.0
   - agg_linear_trend__attr_"slope"__chunk_len_5__f_agg_"max"
-  - cwt_coefficients__coeff_1__w_20__widths
-  - cwt_coefficients__coeff_13__w_2__widths
+  - cwt_coefficients__coeff_1__w_20__widths_
+  - cwt_coefficients__coeff_13__w_2__widths_
   - histogram_mode
   - augmented_dickey_fuller__attr_"teststat"__autolag_"AIC"
   - change_quantiles__f_agg_"var"__isabs_True__qh_0.8__ql_0.6
   - index_mass_quantile__q_0.3
   - flat_spots
-  - cwt_coefficients__coeff_12__w_2__widths
+  - cwt_coefficients__coeff_12__w_2__widths_
   - change_quantiles__f_agg_"var"__isabs_False__qh_0.4__ql_0.2
   - diff1y_acf5
-  - cwt_coefficients__coeff_12__w_20__widths
+  - cwt_coefficients__coeff_12__w_20__widths_
   - last_location_of_minimum
   - ratio_beyond_r_sigma__r_3
   - ar_coefficient__coeff_10__k_10
-  - cwt_coefficients__coeff_5__w_10__widths
+  - cwt_coefficients__coeff_5__w_10__widths_
   - skewness
-  - cwt_coefficients__coeff_4__w_10__widths
+  - cwt_coefficients__coeff_4__w_10__widths_
   - agg_linear_trend__attr_"stderr"__chunk_len_10__f_agg_"min"
-  - cwt_coefficients__coeff_7__w_5__widths
+  - cwt_coefficients__coeff_7__w_5__widths_
   - cid_ce__normalize_True
   - agg_linear_trend__attr_"intercept"__chunk_len_5__f_agg_"max"
-  - cwt_coefficients__coeff_6__w_5__widths
-  - cwt_coefficients__coeff_8__w_20__widths
+  - cwt_coefficients__coeff_6__w_5__widths_
+  - cwt_coefficients__coeff_8__w_20__widths_
   - large_standard_deviation__r_0.15000000000000002
   - has_duplicate_max
+  - variance_larger_than_standard_deviation
+  - symmetry_looking__r_0.0
+  - symmetry_looking__r_0.25
+  - symmetry_looking__r_0.30000000000000004
+  - symmetry_looking__r_0.35000000000000003
+  - symmetry_looking__r_0.4
+  - symmetry_looking__r_0.45
+  - symmetry_looking__r_0.5
+  - symmetry_looking__r_0.55
+  - symmetry_looking__r_0.6000000000000001
+  - symmetry_looking__r_0.65
+  - symmetry_looking__r_0.7000000000000001
+  - symmetry_looking__r_0.75
+  - symmetry_looking__r_0.8
+  - symmetry_looking__r_0.8500000000000001
+  - symmetry_looking__r_0.9
+  - symmetry_looking__r_0.9500000000000001
+  - large_standard_deviation__r_0.05
+  - large_standard_deviation__r_0.1
+  - large_standard_deviation__r_0.4
+  - large_standard_deviation__r_0.45
+  - large_standard_deviation__r_0.5
+  - large_standard_deviation__r_0.55
+  - large_standard_deviation__r_0.6000000000000001
+  - large_standard_deviation__r_0.65
+  - large_standard_deviation__r_0.7000000000000001
+  - large_standard_deviation__r_0.75
+  - large_standard_deviation__r_0.8
+  - large_standard_deviation__r_0.8500000000000001
+  - large_standard_deviation__r_0.9
+  - large_standard_deviation__r_0.9500000000000001
+  - autocorrelation__lag_0
+  - partial_autocorrelation__lag_0
+  - fft_coefficient__attr_"imag"__coeff_0
+  - value_count__value_0
+  - value_count__value_1
+  - value_count__value_-1
+  - range_count__max_0__min_1000000000000.0
+  - ratio_beyond_r_sigma__r_10

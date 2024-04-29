@@ -1,6 +1,6 @@
-# RecImpute: A Recommender System for Imputation Techniques in Time Series Data
+# ADARTS: A Recommender System for Imputation Techniques in Time Series Data
 
-RecImpute is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. RecImpute is able to predict the most-suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="/">TODO</a>.
+ADARTS is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. ADARTS can predict the most suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="/">TODO</a>.
 
 
 
@@ -36,7 +36,7 @@ ___
 ## Execution
 
 <!---
-The code can be excuted either by running the full system or by running sequentially the individual components.   
+The code can be executed either by running the full system or by running sequentially the individual components.   
 -->
 
 ### Train the model
@@ -131,7 +131,7 @@ ___
     - Open the Config/pipelines_steps_params.py file.
     - Add your classifier. You can also specify the range of values that should be considered for parameters.
 - To get recommendations for any new time series:
-    - Save the sequence(s) as a flat file (.csv, .txt) in the Datasets/SystemInputs/ directory. The sequence(s) should be z-normalized. Each row corresponds to one time series and values are separated by a space. The file should have no header and no index.
+    - Save the sequence(s) as a flat file (.csv, .txt) in the Datasets/SystemInputs/ directory. The sequence(s) should be z-normalized. Each row corresponds to one time series, and values are separated by a space. The file should have no header and no index.
     - See the section about using the system to find the command to run.
 
 ___
@@ -158,10 +158,10 @@ ___
 - `use`: Use a trained model to get recommendations for new time series.
     - *-id*: Identifier of the save containing the model to use. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected value: one identifier. Example: *0211_1723_53480*.
     - *-model_id*: ID of the model to load and use. The models' ID are listed in the outputs of the *train* and *eval* modes. If set to -1, the model used will always be the Voting Classifier that combines the knowledge of all the other classifiers. Expected value: one model ID. Example: *745*.
-    - *-ts*: File name of the file containing the time series for which recommendations are wanted. Expected value: one file name. Example: *timeseries.csv*.
-The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInputs/ folder. The sequence(s) should have been preemptively z-normalized. In the file, each row corresponds to one time-series and each value is separated by a space. The file should have no header and no index.
-    - *-use_prod_model* (optional): Whether or not use the model trained on ALL data. If not specified, does not use the model trained on all data (since it may not exist depending on the arguments used for training). Expected value: *True* or *False*.
-    - Note: after using ModelRace to select the most-promising classifiers, the remaining ones are combined in a Voting Classifier that uses majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
+    - *-ts*: File name containing the time series for which recommendations are wanted. Expected value: one file name. Example: *timeseries.csv*.
+The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInputs/ folder. The sequence(s) should have been preemptively z-normalized. In the file, each row corresponds to one time series, and each value is separated by a space. The file should have no header and no index.
+    - *-use_prod_model* (optional): Whether or not to use the model trained on ALL data. If not specified, does not use the model trained on all data (since it may not exist depending on the arguments used for training). Expected value: *True* or *False*.
+    - Note: after using ModelRace to select the most promising classifiers, the remaining ones are combined in a Voting Classifier that uses majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
 
 Note: The parameters and strategies can be modified in the configuration files stored in the Config/ repository.
 

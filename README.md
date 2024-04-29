@@ -1,6 +1,6 @@
 # ADARTS: A Recommender System for Imputation Techniques in Time Series Data
 
-ADARTS is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. ADARTS can predict the most suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="/">TODO</a>.
+ADARTS is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. ADARTS can predict the most suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="/">A-DARTS: Stable Model Selection for Data Repair in Time Series</a> (Under review).
 
 
 

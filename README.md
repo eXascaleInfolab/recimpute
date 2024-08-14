@@ -147,9 +147,9 @@ ___
 - `cluster`: Cluster the datasets' time series. All datasets listed in the configuration files will be clustered. This step is required for the labeling and training.
 - `label`: Assign a label to each datasets' cluster. This step is required for the training.
 - `extract_features`: Extract the features of each datasets' time series. This step is required for the training.
-    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, Kats, all).
+    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, all).
 - `train`: Select the most promising data preprocessing steps, classifiers and their hyperparameters, then train them on the previously labeled time series and their previously extracted features:
-    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, Kats, all).
+    - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, all).
     - *-train_on_all_data* (optional): Whether or not train the models on ALL data. If not specified, trains on all data. Expected value: *True* or *False*. 
     - Warning: a model trained on all data should only be used in production and shouldn't be evaluated on the test set anymore since these data samples will have been used for training.
 - `eval`: Evaluate trained models:
@@ -184,7 +184,6 @@ Note: The parameters and strategies can be modified in the configuration files s
 | TSFresh       |
 | Topological   |
 | Catch22       |
-| Kats          |
 | *all*         |
 | Kiviat        | 
 
@@ -203,7 +202,6 @@ Note: The parameters and strategies can be modified in the configuration files s
  | ImputeBench | ImputeBench | TSFresh       | True              |
  |             |             | Topological   | False             |
  |             |             | Catch22       |                   |
- |             |             | Kats          |                   |
  |             |             | *all*         |                   | 
 
  | -fes<sup> (\*)</sup> | -train_on_all_data |
@@ -211,7 +209,6 @@ Note: The parameters and strategies can be modified in the configuration files s
  | TSFresh       | True              |
  | Topological   | False             |
  | Catch22       |                   |
- | Kats          |                   |
  | *all*         |                   |
 
  <sub>arguments marked with <sup>(\*)</sup> are mandatory</sub>

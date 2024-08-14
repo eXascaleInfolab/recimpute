@@ -15,7 +15,9 @@ _logs/
 Training/tmp_pipelines*.obj
 Experiments/pid.txt
 Experiments/AutoFolio
-
+Datasets.zip
+Datasets/*
+md5sums.txt
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,venv,virtualenv,visualstudiocode,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,linux,venv,virtualenv,visualstudiocode,python

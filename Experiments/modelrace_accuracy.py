@@ -73,7 +73,7 @@ def main():
         TSFreshFeaturesExtractor.get_instance(),
         TopologicalFeaturesExtractor.get_instance(),
         Catch22FeaturesExtractor.get_instance(),
-        KatsFeaturesExtractor.get_instance()
+        # KatsFeaturesExtractor.get_instance()
     ]
     
     training_set = init_training_set(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors)

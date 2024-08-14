@@ -46,7 +46,7 @@ FEATURES_EXTRACTORS = { # maps the argument name to the actual class name
     'TSFresh': TSFreshFeaturesExtractor,
     'Topological': TopologicalFeaturesExtractor,
     'Catch22': Catch22FeaturesExtractor,
-    'Kats': KatsFeaturesExtractor,
+    # 'Kats': KatsFeaturesExtractor,
 }
 
 

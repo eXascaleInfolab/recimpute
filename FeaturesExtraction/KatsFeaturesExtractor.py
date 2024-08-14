@@ -6,8 +6,8 @@ KatsFeaturesExtractor.py
 @author: @chacungu
 """
 
-from kats.consts import TimeSeriesData
-from kats.tsfeatures.tsfeatures import TsFeatures
+# from kats.consts import TimeSeriesData
+# from kats.tsfeatures.tsfeatures import TsFeatures
 import math
 from os.path import normpath as normp
 import pandas as pd

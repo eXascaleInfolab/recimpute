@@ -204,7 +204,7 @@ class ShapeBasedClustering(AbstractClustering):
         Return:
         DataFrame containing two columns (Time Series ID and Cluster ID) sorted by ascending order of column 1.
         """
-        clusters = kshape(timeseries, nb_clusters)
+        clusters = kshape(np.expand_dims(timeseries.to_numpy(), axis=2), nb_clusters)
         clusters_assignment = pd.DataFrame(data =
                                            [(tid, cid) # time series id, assigned cluster's id
                                             for cid, (_, cluster_sequences) in enumerate(clusters)

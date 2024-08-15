@@ -14,7 +14,7 @@ import pandas as pd
 from pprint import pprint
 import re
 import scipy
-import statsmodels
+from statsmodels.stats.weightstats import ztest
 import sys
 import warnings
 
@@ -93,7 +93,7 @@ def select(training_set, MODELSTRAINER_CONF):
         'ttest_rel': scipy.stats.ttest_rel,
         'friedmanchisquare': scipy.stats.friedmanchisquare,
         'chisquare': scipy.stats.chisquare,
-        'ztest': statsmodels.stats.weightstats.ztest,
+        'ztest': ztest,
     }
 
     pipelines, all_pipelines_txt = ClfPipeline.generate(N=MODELSTRAINER_CONF['NB_PIPELINES'])

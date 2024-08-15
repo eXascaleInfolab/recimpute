@@ -9,7 +9,8 @@ ShapeBasedClustering.py
 from datetime import datetime
 from functools import partial
 import json
-from kshape.core import kshape
+from kshape.core import kshape as kshape_cpu
+from kshape.core_gpu import kshape as kshape_gpu
 import math
 from multiprocessing import Pool
 import numpy as np
@@ -17,6 +18,7 @@ import os
 from os.path import normpath as normp
 import pandas as pd
 import time
+import torch
 from tqdm import tqdm
 
 from Clustering.AbstractClustering import AbstractClustering
@@ -204,6 +206,7 @@ class ShapeBasedClustering(AbstractClustering):
         Return:
         DataFrame containing two columns (Time Series ID and Cluster ID) sorted by ascending order of column 1.
         """
+        kshape = kshape_gpu if torch.cuda.is_available() else kshape_cpu
         clusters = kshape(np.expand_dims(timeseries.to_numpy(), axis=2), nb_clusters)
         clusters_assignment = pd.DataFrame(data =
                                            [(tid, cid) # time series id, assigned cluster's id

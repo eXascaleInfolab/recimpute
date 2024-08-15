@@ -6,15 +6,18 @@ Utils.py
 @author: @chacungu
 """
 
-from collections import ChainMap
+from collections import ChainMap, Counter
 from glob import glob
 import math
 import matplotlib
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 from os.path import normpath as normp
+import pandas as pd
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix, ConfusionMatrixDisplay
+from sklearn.model_selection import train_test_split as sklearn_train_test_split
 from sklearn.utils.multiclass import unique_labels
 from time import perf_counter
 import warnings
@@ -24,6 +27,65 @@ class Utils:
     """
     Static class with utilitary methods.
     """
+
+    def custom_train_test_split(X, y=None, test_size=None, train_size=None, shuffle=True, stratify=None):
+        """
+        Split arrays or pandas DataFrame into random train and test subsets.
+        
+        TODO: deal with the extreme scenario where the number of single member classes is high enough to
+              unbalance the test_size
+        Keyword arguments:
+        X -- array of pandas DataFrame to split
+        y -- array of pandas DataFrame to split
+        test_size -- proportion or number of data to include in the test
+        train_size -- proportion or number of data to include in the train
+        shuffle -- True if data should be shuffled, False otherwise
+        stratify -- array-like, used as class labels if provided
+        
+        Return:
+        Splitted arrays (train and test)
+        """
+        if not y is None or not stratify is None:
+            labels = stratify if not stratify is None else y
+            class_counts = Counter(labels)
+            single_class_indices = [i for i, label in enumerate(labels) if class_counts[label] == 1]
+            if len(single_class_indices) > 0:
+                print('Warning: %i classe(s) contain a single member (%s). Consider adding more members or ignore this class to avoid further issues.\n' % (len(single_class_indices), pd.Series(labels).value_counts()[lambda x: x == 1].index.tolist()))
+            multi_class_indices = [i for i, label in enumerate(labels) if class_counts[label] > 1]
+
+            # identify classes with one member
+            index_arr = lambda arr, indices: arr.iloc[indices] if isinstance(arr, pd.DataFrame) or isinstance(arr, pd.Series) else arr[indices]
+            X_train = index_arr(X, single_class_indices)
+            if not y is None:
+                y_train = index_arr(y, single_class_indices)
+            
+            # split the rest using train_test_split
+            X_rest = index_arr(X, multi_class_indices)
+            if not y is None:
+                y_rest = index_arr(y, multi_class_indices)
+
+            if not stratify is None:
+                stratify_rest = index_arr(stratify, multi_class_indices)
+            else:
+                stratify_rest = None
+
+            arrays_rest = [X_rest, y_rest] if not y is None else [X_rest]
+            arrays_splitted = sklearn_train_test_split(
+                *arrays_rest, test_size=test_size, train_size=train_size, stratify=stratify_rest, shuffle=shuffle,
+            )
+            if not y is None:
+                X_train_rest, X_test, y_train_rest, y_test = arrays_splitted
+            else:
+                X_train_rest, X_test = arrays_splitted
+
+            X_train = pd.concat((X_train, X_train_rest)) if isinstance(X, pd.DataFrame) or isinstance(X, pd.Series) else np.concatenate((X_train, X_train_rest), axis=0)
+            if not y is None:
+                y_train = pd.concat((y_train, y_train_rest)) if isinstance(y, pd.DataFrame) or isinstance(y, pd.Series) else np.concatenate((y_train, y_train_rest), axis=0)
+                return X_train, X_test, y_train, y_test
+            else:
+                return X_train, X_test
+        else:
+            return sklearn_train_test_split(X, test_size=test_size, shuffle=shuffle)
 
     def read_conf_file(conf_name):
         """

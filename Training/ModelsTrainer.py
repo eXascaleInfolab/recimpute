@@ -17,7 +17,7 @@ from scipy.stats import ttest_rel
 from sklearn import pipeline
 from sklearn.base import clone
 from sklearn.ensemble import VotingClassifier
-from sklearn.model_selection import StratifiedKFold, train_test_split as sklearn_train_test_split
+from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm # .notebook
 
@@ -165,9 +165,9 @@ class ModelsTrainer:
                         assert X_train_unused.index.identical(y_train_unused.index)
 
                         try:
-                            train_index_new = sklearn_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0].index.tolist()
+                            train_index_new = Utils.custom_train_test_split(X_train_unused, stratify=y_train_unused, train_size=n)[0].index.tolist()
                         except:
-                            train_index_new = sklearn_train_test_split(X_train_unused, train_size=n)[0].index.tolist()
+                            train_index_new = Utils.custom_train_test_split(X_train_unused, train_size=n)[0].index.tolist()
                         assert all(id not in train_index for id in train_index_new)
 
                         train_index.extend(train_index_new)

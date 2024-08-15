@@ -12,7 +12,6 @@ import numpy as np
 from os.path import normpath as normp
 import pandas as pd
 import random as rdm
-from sklearn.model_selection import train_test_split as sklearn_train_test_split
 import time
 import warnings
 
@@ -548,10 +547,11 @@ class TrainingSet:
         Return:
         Reduced Pandas DataFrame. Columns: New Time Series ID (index), Data Set Name, Cluster ID, Label, Feature 1's name, Feature 2's name, ...
         """    
-        reduced_train_val_df, _, _, _ = sklearn_train_test_split(all_data_info, 
-                                                                 all_data_info['Label'], 
-                                                                 train_size=usable_data_perc, 
-                                                                 stratify=all_data_info['Label'])
+        reduced_train_val_df, _, _, _ = Utils.custom_train_test_split(all_data_info, 
+                                                                      all_data_info['Label'], 
+                                                                      train_size=usable_data_perc, 
+                                                                      shuffle=True,
+                                                                      stratify=all_data_info['Label'])
         return reduced_train_val_df
 
     def _split_train_test_sets(self, all_data_info, probability_distribution, val_size):
@@ -599,7 +599,7 @@ class TrainingSet:
             # split at cluster level: X% for training and Y% for testing
             unique_cids = all_data_info['Cluster ID'].unique()
             clusters_label = [all_data_info[all_data_info['Cluster ID'] == cid].iloc[0]['Label'] for cid in unique_cids]
-            train_cids, test_cids, _, _ = sklearn_train_test_split(
+            train_cids, test_cids, _, _ = Utils.custom_train_test_split(
                 unique_cids, 
                 clusters_label, 
                 test_size=val_size, 
@@ -615,7 +615,7 @@ class TrainingSet:
             return train_indices, test_indices, train_cids
 
         elif self.CONF['VALIDATION_SET_RESERVATION_STRAT'] == 'ts_percentage':
-            train_indices, test_indices, _, _ = sklearn_train_test_split(
+            train_indices, test_indices, _, _ = Utils.custom_train_test_split(
                 all_data_info, 
                 all_data_info['Label'], 
                 test_size=val_size, 

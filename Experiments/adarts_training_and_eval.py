@@ -5,7 +5,7 @@ from recimpute import main as recimpute_main
 
 def main():
 
-    res = recimpute_main(['recimpute.py', '-mode', 'train', '-fes', 'TSFresh,Topological,Catch22,Kats', '-train_on_all_data', 'False'])
+    res = recimpute_main(['recimpute.py', '-mode', 'train', '-fes', 'TSFresh,Topological,Catch22', '-train_on_all_data', 'False'])
     recimpute_main(['recimpute.py', '-mode', 'eval', '-id', str(res[0].id)])
 
 

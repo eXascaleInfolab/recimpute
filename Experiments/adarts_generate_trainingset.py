@@ -7,7 +7,7 @@ def main():
 
     recimpute_main(['recimpute.py', '-mode', 'cluster'])
     recimpute_main(['recimpute.py', '-mode', 'label'])
-    recimpute_main(['recimpute.py', '-mode', 'extract_features', 'TSFresh,Topological,Catch22,Kats'])
+    recimpute_main(['recimpute.py', '-mode', 'extract_features', 'TSFresh,Topological,Catch22'])
 
 
 if __name__ == '__main__':

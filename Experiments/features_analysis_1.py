@@ -7,21 +7,13 @@ from tqdm import tqdm
 def main():
 
     fes_configs = [
-        'TSFresh,Topological,Catch22,Kats',
         'TSFresh,Topological,Catch22',
-        'TSFresh,Topological,Kats',
-        'TSFresh,Catch22,Kats',
-        'Topological,Catch22,Kats',
         'TSFresh,Topological',
         'TSFresh,Catch22',
-        'TSFresh,Kats',
         'Topological,Catch22',
-        'Topological,Kats',
-        'Catch22,Kats',
         'TSFresh',
         'Topological',
         'Catch22',
-        'Kats',
     ]
 
     for fes in tqdm(fes_configs):

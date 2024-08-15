@@ -9,7 +9,24 @@ ADARTS is a recommendation system of imputation techniques for missing values in
 
 ___
 
-## Prerequisites
+## Installation
+
+### Docker
+
+```bash
+    $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
+    $ cd recimpute/
+    $ docker build -t recimpute-env .
+    $ docker run -it recimpute-env
+```
+
+Note that this Docker image does not have standard support for GPUs. Training and running ADARTS on CPUs may be slower.
+
+___
+
+### Manual setup
+
+#### Prerequisites
 - Ubuntu 18 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
 - A server with at least 64GB of RAM
 - Clone this repository.
@@ -21,10 +38,7 @@ ___
 - Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
 
 
-
-___
-
-## Build
+#### Build
 
 ```bash
     $ cd recimpute/

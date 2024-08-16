@@ -36,7 +36,7 @@ ___
 
 
 - Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section).
-- Once installed, specify the benchmark absolute path (up to the TestingFramework/bin /Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH", line 86).
+- Once installed, specify the benchmark absolute path (up to the TestingFramework/bin/Debug) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH", line 86).
 
 
 - Build the system

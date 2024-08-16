@@ -28,7 +28,7 @@ ___
     $ docker run -it recimpute-env
 ```
 
-- **Note**: The Docker image does not have standard support for GPUs. Training and running ADARTS on CPUs might be slower than the manual configuration.
+- **Note**: The Docker image does not have standard support for GPUs. Training and running ADARTS on CPUs takes longer than the manual configuration.
 
 ___
 
@@ -46,7 +46,7 @@ ___
     $ sh install_script.sh
 ```
 
-- **Note**: The manual version implements GPU support.
+- **Note**: The manual version implements GPU support for some of the primitives
 
 ___
 

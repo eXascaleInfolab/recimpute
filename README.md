@@ -1,17 +1,25 @@
-# ADARTS: A Recommender System for Imputation Techniques in Time Series Data
+# ADARTS: Stable Model Selection for Data Repair in Time Series
 
 ADARTS is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. ADARTS can predict the most suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="/">A-DARTS: Stable Model Selection for Data Repair in Time Series</a> (Under review).
 
 
 
-[**Prerequisites**](#prerequisites) | [**Build**](#build) |  [**Execution**](#execution) | [**Extension**](#new-time-series)  | [**Contributors**](#contributors) | [**Citation**](#citation)
+[**Prerequisites**](#prerequisites) | [**Installation**](#installation) |  [**Execution**](#execution) | [**Extension**](#extension)  | [**Contributors**](#contributors) | [**Citation**](#citation)
 
+___
+
+## Prerequisites
+- Ubuntu 22 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL;  128GB of RAM
+- Clone this repository
 
 ___
 
 ## Installation
 
-### Docker
+- We provide two ways to setup and configure the system: a) an easy-to-install but slower training mode and b) a manual but faster training mode.
+  Please choose one of the following modes:
+
+### A. Docker configuration
 
 ```bash
     $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
@@ -20,30 +28,25 @@ ___
     $ docker run -it recimpute-env
 ```
 
-Note that this Docker image does not have standard support for GPUs. Training and running ADARTS on CPUs may be slower.
+- **Note**:  The Docker image does not have standard support for GPUs. Training and running ADARTS on CPUs might be slower than the manual configuration.
 
 ___
 
-### Manual setup
-
-#### Prerequisites
-- Ubuntu 18 or later (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
-- A server with at least 64GB of RAM
-- Clone this repository.
-
-```bash
-    $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
-```
-
-- Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section). Once installed, specify the benchmark's path (up to the Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
+### B. Manual configuration
 
 
-#### Build
+- Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section).
+- Once installed, specify the benchmark absolute path (up to the TestingFramework/bin /Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
+
+
+- Build the system
 
 ```bash
     $ cd recimpute/
     $ sh install_script.sh
 ```
+
+- **Note**: The version implements GPU support.
 
 ___
 
@@ -68,13 +71,13 @@ The last command of the training step will output a `savefile_name` (`id`) which
 
 
 ### Use the model
-To use the model, please replace `savefile_name` in the following command with the corresponding `savefile_name` (`id`) outputted by the train command.
+- To evaluate the system, please replace `savefile_name` in the following command with the corresponding `savefile_name` (`id`) outputted by the train command.
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name
 ```
 
-Users can apply the trained model on an example time series (my_timeseries.csv) using the following command:
+- Users can apply the trained model on new time series (my_timeseries.csv) using the following command:
 
 ```bash
     $ python recimpute.py -mode use -model_id -1 -id savefile_name -ts my_timeseries.csv -use_prod_model False
@@ -127,9 +130,10 @@ To use the model on a new dataset, store the time series as a csv file in `Datas
 By setting *use_prod_model* to True the model was trained on all data. It is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file. The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
 -->
 
-### Run the experiments
+### Experiments reproducibility
 
-Python Experiments files must be executed from within the folder.
+- You can reproduce the results of specific experiments, including those of the baselines, by running the Python scripts from within the
+`Experiments` folder.
 
 ___
 
@@ -154,7 +158,7 @@ ___
 
 ___
 
-## Full documentation
+## Documentation
 
 ```bash
     $ python recimpute.py -mode [arguments]
@@ -241,7 +245,8 @@ Note: The parameters and strategies can be modified in the configuration files s
 ___
 
 ## Contributors
-Mourad Khayati (<a href="mkhayati@exascale.info">mkhayati@exascale.info</a>) and Guillaume Chacun (<a href="chacungu@gmail.com">chacungu@gmail.com</a>).
+- Mourad Khayati (<a href="mkhayati@exascale.info">mkhayati@exascale.info</a>)
+- Guillaume Chacun (<a href="chacungu@gmail.com">chacungu@gmail.com</a>)
 
 
 ___

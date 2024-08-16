@@ -61,7 +61,7 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode cluster
     $ python recimpute.py -mode label
     $ python recimpute.py -mode extract_features -fes all
-    $ python recimpute.py -mode train -fes all -train_on_all_data False
+    $ python recimpute.py -mode train -fes all -train_for_production False
 ```
 
 The last command of the training step will output a `savefile_name` (`id`) which should be used in the next part. 
@@ -108,7 +108,7 @@ To use the model on a new dataset, store the time series as a csv file in `Datas
 - Train the models selected by our ModelRace algorithm using the features extracted by *TSFresh*' and *Catch22*'.
 
 ```bash
-    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_on_all_data true
+    $ python recimpute.py -mode train -lbl KiviatRules -true_lbl ImputeBench -fes TSFresh,Catch22 -train_for_production true
 ```
 
 #### Evaluation
@@ -168,7 +168,7 @@ ___
     - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, all).
 - `train`: Select the most promising data preprocessing steps, classifiers and their hyperparameters, then train them on the previously labeled time series and their previously extracted features:
     - *-fes*: Name of the features' extractor(s) to use to create time series' feature vectors. Expected value: one or multiple values separated by commas (TSFresh, Topological, Catch22, all).
-    - *-train_on_all_data* (optional): Whether or not train the models on ALL data. If not specified, trains on all data. Expected value: *True* or *False*. 
+    - *-train_for_production* (optional): True to train the models for production, False to reserve some data for evaluation. If not specified, trains on all data (production mode). Expected value: *True* or *False*. 
     - Warning: a model trained on all data should only be used in production and shouldn't be evaluated on the test set anymore since these data samples will have been used for training.
 - `eval`: Evaluate trained models:
     - *-id*: Identifier of the save containing the models to evaluate. The saves are stored in the Training/Results/ folder. The id of a save is its file name (without its .zip extension). Expected value: one identifier. Example: *0211_1723_53480*.
@@ -214,7 +214,7 @@ Note: The parameters and strategies can be modified in the configuration files s
 
 
  <!--- 
- | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | train_on_all_data |
+ | -lbl<sup> (\*)</sup> | -truelbl | -fes<sup> (\*)</sup> | train_for_production |
  | ----------- | ----------- | ------------- | ----------------- |
  | KiviatRules | KiviatRules | Kiviat        |                   |
  | ImputeBench | ImputeBench | TSFresh       | True              |
@@ -222,7 +222,7 @@ Note: The parameters and strategies can be modified in the configuration files s
  |             |             | Catch22       |                   |
  |             |             | *all*         |                   | 
 
- | -fes<sup> (\*)</sup> | -train_on_all_data |
+ | -fes<sup> (\*)</sup> | -train_for_production |
  | ------------- | ----------------- |
  | TSFresh       | True              |
  | Topological   | False             |

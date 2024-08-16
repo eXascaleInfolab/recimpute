@@ -17,7 +17,7 @@ def main():
     ]
 
     for fes in tqdm(fes_configs):
-        res = recimpute_main(['recimpute.py', '-mode', 'train', '-fes', fes, '-train_on_all_data', 'False'])
+        res = recimpute_main(['recimpute.py', '-mode', 'train', '-fes', fes, '-train_for_production', 'False'])
         recimpute_main(['recimpute.py', '-mode', 'eval', '-id', str(res[0].id)])
 
 

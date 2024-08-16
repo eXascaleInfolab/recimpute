@@ -287,14 +287,14 @@ class ModelsTrainer:
                 raise e
         return pipelines
 
-    def train(self, models, train_on_all_data=False):
+    def train(self, models, train_for_production=False):
         """
         Trains and evaluates models given to this initialization of this trainer. Uses T-Daub for best-algorithms selection
         and cross-validation.
 
         Keyword arguments: 
         models -- list of RecommendationModel instances that should be trained and evaluated
-        train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
+        train_for_production -- True if the models should be trained on ALL data once the cross-val is done, False 
                              otherwise (default: False)
 
         Return:
@@ -314,7 +314,7 @@ class ModelsTrainer:
 
         self.models = models
 
-        train_results = self._train(models, train_on_all_data=train_on_all_data)
+        train_results = self._train(models, train_for_production=train_for_production)
         return train_results
         
     
@@ -364,13 +364,13 @@ class ModelsTrainer:
             i -= 1
         return eliminated_pipes
 
-    def _train(self, models_to_train, train_on_all_data=False, training_set_params=None, save_results=True, save_if_best=True):
+    def _train(self, models_to_train, train_for_production=False, training_set_params=None, save_results=True, save_if_best=True):
         """
         Trains and evaluates a list of models over cross-validation (and after gridsearch if it is necessary).
 
         Keyword arguments:
         models_to_train -- list of RecommendationModel instances that should be trained and evaluated
-        train_on_all_data -- True if the models should be trained on ALL data once the cross-val is done, False 
+        train_for_production -- True if the models should be trained on ALL data once the cross-val is done, False 
                              otherwise (default: False)
         training_set_params -- dict specifying the data's properties (e.g. should it be balanced, reduced, etc.) (default: None)
         save_results -- True if the results should be saved to disk, False otherwise (default: True)
@@ -409,7 +409,7 @@ class ModelsTrainer:
                     # TrainResults contain a dict grouping the results of each trained model
                     train_results.add_model_cv_split_result(split_id, model, scores, cm)
 
-            if train_on_all_data: # train the models on all data: 
+            if train_for_production: # train the models on all data: 
                 print('\nTraining models on all data.')
                 # Warning this model should not be used for any kind of evaluation but only for production use
                 _, X_all, y_all = self.training_set.get_all_data(training_set_params)

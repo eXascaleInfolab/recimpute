@@ -123,12 +123,12 @@ def select(training_set, MODELSTRAINER_CONF):
     models = list(map(lambda p: p.rm, selected_pipes))
     return models
 
-def train(models, training_set, train_on_all_data):
+def train(models, training_set, train_for_production):
     print('#########  RecImpute - training  #########')
 
     # training & cross-validation evaluation
     trainer = ModelsTrainer(training_set)
-    tr = trainer.train(models, train_on_all_data=train_on_all_data) 
+    tr = trainer.train(models, train_for_production=train_for_production) 
 
     print('\n\n=================== Cross-validation results (averaged) ===================')
     print(tr.results[tr.metrics_measured].to_markdown())
@@ -268,7 +268,7 @@ def main(args):
         # '-lbl': LABELERS.keys(),
         # '-true_lbl': LABELERS.keys(),
         '-fes': [*FEATURES_EXTRACTORS.keys(), 'all'],
-        '-train_on_all_data': ['True', 'False'],
+        '-train_for_production': ['True', 'False'],
 
         # *eval* args
         '-id': None,
@@ -387,7 +387,7 @@ def main(args):
 
         training_set = init_training_set(labeler, labeler_properties, true_labeler, true_labeler_properties, features_extractors)
         models = select(training_set, MODELSTRAINER_CONF)
-        tr, set, models = train(models, training_set, args['-train_on_all_data'] == 'True' if '-train_on_all_data' in args else True)
+        tr, set, models = train(models, training_set, args['-train_for_production'] == 'True' if '-train_for_production' in args else True)
         print('Done.')
         print(tr.id)
         return tr, set, models

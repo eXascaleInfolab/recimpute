@@ -47,9 +47,8 @@ RUN git clone https://github.com/eXascaleInfolab/bench-vldb20 imputebench
 
 # install ImputeBench
 WORKDIR /app/imputebench
-RUN chmod +x install_linux.sh install_extra.sh && \
-    sh install_linux.sh && \
-    sh install_extra.sh
+RUN chmod +x install_linux.sh && \
+    sh install_linux.sh
 
 # save ImputeBench path
 WORKDIR /app/imputebench/TestingFramework/bin/Debug

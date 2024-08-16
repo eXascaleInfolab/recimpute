@@ -127,6 +127,10 @@ To use the model on a new dataset, store the time series as a csv file in `Datas
 By setting *use_prod_model* to True the model was trained on all data. It is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file. The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
 -->
 
+### Run the experiments
+
+Python Experiments files must be executed from within the folder.
+
 ___
 
 ## Extension

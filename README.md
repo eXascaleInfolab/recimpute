@@ -36,7 +36,7 @@ ___
 
 
 - Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section).
-- Once installed, specify the benchmark absolute path (up to the TestingFramework/bin /Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH").
+- Once installed, specify the benchmark absolute path (up to the TestingFramework/bin /Debug folder) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH", line 86).
 
 
 - Build the system
@@ -67,11 +67,11 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode train -fes all -train_for_production False
 ```
 
-The last command of the training step will output a `savefile_name` (`id`) which should be used in the next part. 
+The last command of the training step will output a `savefile_name` (`id`), which should be used in the next part. 
 
 
 ### Use the model
-- To evaluate the system, please replace `savefile_name` in the following command with the corresponding `savefile_name` (`id`) outputted by the train command.
+- To evaluate the system, please replace `savefile_name` in the following command with the corresponding `savefile_name` (`id`), without the extension, outputted by the train command.
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name

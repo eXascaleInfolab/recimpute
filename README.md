@@ -27,7 +27,7 @@ ___
 ### Manual setup
 
 #### Prerequisites
-- Ubuntu 18 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
+- Ubuntu 18 or later (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL.
 - A server with at least 64GB of RAM
 - Clone this repository.
 
@@ -64,20 +64,20 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode train -fes all -train_on_all_data False
 ```
 
-The last command of the training step will output an `id` which should be used in the next part. 
+The last command of the training step will output a `savefile_name` (`id`) which should be used in the next part. 
 
 
 ### Use the model
-To use the model, please replace `id_from_the_train_command` with the corresponding `id`
+To use the model, please replace `savefile_name` in the following command with the corresponding `savefile_name` (`id`) outputted by the train command.
 
 ```bash
-    $ python recimpute.py -mode eval -model_id -1 -id id_from_the_train_command
+    $ python recimpute.py -mode eval -model_id -1 -id savefile_name
 ```
 
 Users can apply the trained model on an example time series (my_timeseries.csv) using the following command:
 
 ```bash
-    $ python recimpute.py -mode use -model_id -1 -id id_from_the_train_command -ts my_timeseries.csv -use_prod_model False
+    $ python recimpute.py -mode use -model_id -1 -id savefile_name -ts my_timeseries.csv -use_prod_model False
 ```
 
  The results of the model will be stored as `my_timeseries__recommendations.csv` under `Datasets/Recommendations/`

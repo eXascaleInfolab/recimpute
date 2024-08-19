@@ -42,6 +42,7 @@ ___
 - Build the system
 
 ```bash
+    $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
     $ cd recimpute/
     $ sh install_script.sh
 ```

@@ -22,7 +22,6 @@ ___
 ### A. Docker configuration
 
 ```bash
-    $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
     $ cd recimpute/
     $ docker build -t recimpute-env .
     $ docker run -it recimpute-env

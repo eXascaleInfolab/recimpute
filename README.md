@@ -23,8 +23,8 @@ ___
 
 ```bash
     $ cd recimpute/
-    $ docker build -t recimpute-env .
-    $ docker run -it recimpute-env
+    $ sudo docker build -t recimpute-env .
+    $ sudo docker run -it recimpute-env
 ```
 
 - **Note**: The Docker image does not have standard support for GPUs. Training and running ADARTS on CPUs takes longer than the manual configuration.

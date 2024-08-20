@@ -34,14 +34,13 @@ ___
 ### B. Manual configuration
 
 
-- Clone and setup the <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench repository</a> (follow their Prerequisites + Build section).
+- Clone and setup <a href="https://github.com/eXascaleInfolab/bench-vldb20/blob/master/README.md">ImputeBench</a> (follow its Prerequisites + Build section).
 - Once installed, specify the benchmark absolute path (up to the TestingFramework/bin/Debug) in the "Config/imputebenchlabeler_config.yaml" (variable "BENCHMARK_PATH", line 86).
 
 
 - Build the system
 
 ```bash
-    $ git clone https://github.com/eXascaleInfolab/recimpute.git recimpute
     $ cd recimpute/
     $ sh install_script.sh
 ```

@@ -12,6 +12,11 @@ ___
 - Ubuntu 22 (including Ubuntu derivatives, e.g., Xubuntu) or the same distribution under WSL;  128GB of RAM
 - Clone this repository
 
+```bash
+    $ git clone https://github.com/eXascaleInfolab/recimpute recimpute
+
+```
+
 ___
 
 ## Installation

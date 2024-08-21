@@ -150,27 +150,6 @@ ___
 
 ___
 
-## Extension
-
-- To train the model on a new dataset (it is recommended to z-normalize the time series)
-    -  The time series file can have as extension either .txt or .csv.  Each column is a time series. No headers. Delimiters is single space. 
-      - If the first column contains only date time objects, it will be used as index.
-      - If the first column cannot be used as index, the archive can either contain:
-            - an .index file containing a single column with the data set's index.
-            - an .info file containing a header ("start periods freq") and the related information (e.g."'1900-01-01 00:00:00' 24 H").
-    - The dataset must be stored as a zip file in the ./Datasets/RealWorld/ directory
-     - The archive name should have the name of the dataset (e.g. "ArrowHead.zip").
-     - Each file inside the archive must contain the datasets' name (e.g. "ArrowHead.info"). 
-     - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this setup, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of datasets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
-- To add new classifiers or pre-processing steps in the search space of ModelRace:
-    - Open the Config/pipelines_steps_params.py file.
-    - Add your classifier. You can also specify the range of values that should be considered for parameters.
-- To get recommendations for any new time series:
-    - Save the sequence(s) as a flat file (.csv, .txt) in the Datasets/SystemInputs/ directory. The sequence(s) should be z-normalized. Each row corresponds to one time series, and values are separated by a space. The file should have no header and no index.
-    - See the section about using the system to find the command to run.
-
-___
-
 ## Documentation
 
 ```bash
@@ -199,6 +178,27 @@ The sequence(s) are saved to a text (.csv, .txt) file in the Datasets/SystemInpu
     - Note: after using ModelRace to select the most promising classifiers, the remaining ones are combined in a Voting Classifier that uses majority voting. This classifier will usually outperform the individual models. Hence we recommend using this Voting Classifier which *model_id*'s -1.
 
 Note: The parameters and strategies can be modified in the configuration files stored in the Config/ repository.
+
+___
+
+## Extension
+
+- To train the model on a new dataset (it is recommended to z-normalize the time series)
+    -  The time series file can have as extension either .txt or .csv.  Each column is a time series. No headers. Delimiters is single space. 
+      - If the first column contains only date time objects, it will be used as index.
+      - If the first column cannot be used as index, the archive can either contain:
+            - an .index file containing a single column with the data set's index.
+            - an .info file containing a header ("start periods freq") and the related information (e.g."'1900-01-01 00:00:00' 24 H").
+    - The dataset must be stored as a zip file in the ./Datasets/RealWorld/ directory
+     - The archive name should have the name of the dataset (e.g. "ArrowHead.zip").
+     - Each file inside the archive must contain the datasets' name (e.g. "ArrowHead.info"). 
+     - By default, all data sets listed in the ./Datasets/RealWorld/ directory are loaded and used. To change this setup, modify the Config/datasets_config.yaml. If you only want to run the system on a subset of datasets, switch the "USE_ALL" setting to False and list the name of the data set to use in the "USE_LIST" setting.
+- To add new classifiers or pre-processing steps in the search space of ModelRace:
+    - Open the Config/pipelines_steps_params.py file.
+    - Add your classifier. You can also specify the range of values that should be considered for parameters.
+- To get recommendations for any new time series:
+    - Save the sequence(s) as a flat file (.csv, .txt) in the Datasets/SystemInputs/ directory. The sequence(s) should be z-normalized. Each row corresponds to one time series, and values are separated by a space. The file should have no header and no index.
+    - See the section about using the system to find the command to run.
 
 <!---
 | -lbl<sup> (\*)</sup> | -truelbl |

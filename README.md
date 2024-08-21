@@ -60,7 +60,7 @@ ___
 The code can be executed either by running the full system or by running sequentially the individual components.   
 -->
 
-### Train the model
+### Data labeling and feature extraction
 
 
 ```bash
@@ -68,20 +68,28 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode cluster
     $ python recimpute.py -mode label
     $ python recimpute.py -mode extract_features -fes all
-    $ python recimpute.py -mode train -fes all -train_for_production False
+```
+
+
+### Model training
+
+- To train the model, make sure that the virtual environment is still activated
+  
+```bash
+   $ python recimpute.py -mode train -fes all -train_for_production False
 ```
 
 The last command of the training step will output a `id`, which should be used in the next part. 
 
 
-### Use the model
+### Model usage
 - To evaluate the system, please replace `savefile_name` in the following command with the corresponding  `id` (without the extension), outputted by the train command.
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name
 ```
 
-- Users can apply the trained model on new time series (my_timeseries.csv) using the following command:
+- Users can apply the trained model to new time series (my_timeseries.csv) using the following command:
 
 ```bash
     $ python recimpute.py -mode use -model_id -1 -id savefile_name -ts my_timeseries.csv -use_prod_model False
@@ -134,7 +142,8 @@ To use the model on a new dataset, store the time series as a csv file in `Datas
 By setting *use_prod_model* to True the model was trained on all data. It is saved in the *0411_1456_53480*.zip results' archive file. Time series to get recommendations for are stored in the Datasets/SystemInputs/my_timeseries.csv file. The results can be found in the Datasets/Recommendations/my_timeseries__recommendations.csv file.
 -->
 
-### Experiments reproducibility
+___
+## Reproducibility
 
 - You can reproduce the results of specific experiments, including those of the baselines, by running the Python scripts from within the
 `Experiments` folder.

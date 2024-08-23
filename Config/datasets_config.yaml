@@ -123,14 +123,14 @@ USE_LIST:
 CATEGORIES:
   - ACSF1: Power consumption
   - airq: Climate
-  - bafu_1: Water discharge
-  - bafu_2: Water discharge
-  - bafu_3: Water discharge
-  - bafu_4: Water discharge
-  - bafu_5: Water discharge
-  - bafu_6: Water discharge
-  - bafu_7: Water discharge
-  - bafu_8: Water discharge
+  - bafu_1: Discharge
+  - bafu_2: Discharge
+  - bafu_3: Discharge
+  - bafu_4: Discharge
+  - bafu_5: Discharge
+  - bafu_6: Discharge
+  - bafu_7: Discharge
+  - bafu_8: Discharge
   - Beef: Other
   - BeetleFly: Image Outlines
   - BirdChicken: Image Outlines

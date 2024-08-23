@@ -87,7 +87,7 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name
 ```
 
-###  New time series recommending
+###  New time series recommendation
 
 - Users can apply the trained model to new time series (my_timeseries.csv) using the following command:
 
@@ -95,7 +95,7 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode use -model_id -1 -id savefile_name -ts my_timeseries.csv -use_prod_model False
 ```
 
- The results of the model will be stored as `my_timeseries__recommendations.csv` under `Datasets/Recommendations/`
+ - The results of the model will be stored as `my_timeseries__recommendations.csv` under `Datasets/Recommendations/`
 
 <!---
 To use the model on a new dataset, store the time series as a csv file in `Datasets/SystemInputs` folder and run the last command with the corresponding file name.

@@ -87,6 +87,9 @@ The code can be executed either by running the full system or by running sequent
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name
 ```
 
+- The evaluate command returns all the metrics over 15 sub-categories
+
+
 ###  New time series recommendation
 
 - Users can apply the trained model to new time series (my_timeseries.csv) using the following command:

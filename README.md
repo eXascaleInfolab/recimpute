@@ -146,8 +146,7 @@ ___
 ## Reproducibility
 
 - Make sure to compute the average error over multiple runs, as we did not fix the sampling seed for any of the techniques.
-- We have disabled the two datasets MixedShapesRegularTrain and MixedShapesSmallTrain (lines 78 and 79 in Config/datasets_config.yaml), as we could not upload them to Zenodo because
-of their size.
+- We have disabled the largest datasets MixedShapesRegularTrain and MixedShapesSmallTrain (lines 78 and 79 in Config/datasets_config.yaml), which could not be uploaded to Zenodo.
 - You can reproduce the results of specific experiments, including those of the baselines, by running the Python scripts from within the
 `Experiments` folder.
 

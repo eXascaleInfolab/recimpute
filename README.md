@@ -81,7 +81,7 @@ The code can be executed either by running the full system or by running sequent
 
 
 ### Model usage
-- To evaluate the system, please replace `savefile_name` in the following command with the corresponding  `id` returned by the train (previous) command.
+- To evaluate the system, please replace `savefile_name` in the following command with the corresponding  `id` returned by the previous train command.
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name

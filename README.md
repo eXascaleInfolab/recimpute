@@ -79,11 +79,9 @@ The code can be executed either by running the full system or by running sequent
    $ python recimpute.py -mode train -fes all -train_for_production False
 ```
 
-The last command of the training step will output a `id`, which should be used in the next part. 
-
 
 ### Model usage
-- To evaluate the system, please replace `savefile_name` in the following command with the corresponding  `id` (without the extension), outputted by the train command.
+- To evaluate the system, please replace `savefile_name` in the following command with the corresponding  `id` returned by the train (previous) command.
 
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name

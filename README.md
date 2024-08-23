@@ -86,8 +86,6 @@ The code can be executed either by running the full system or by running sequent
 ```bash
     $ python recimpute.py -mode eval -model_id -1 -id savefile_name
 ```
-- Note: Make sure that you compute the average over multiple runs
-
 - Users can apply the trained model to new time series (my_timeseries.csv) using the following command:
 
 ```bash
@@ -146,6 +144,9 @@ ___
 
 - You can reproduce the results of specific experiments, including those of the baselines, by running the Python scripts from within the
 `Experiments` folder.
+- Make sure that you compute the average results over multiple runs
+- We have disabled the two datasets MixedShapesRegularTrain and MixedShapesSmallTrain (lines 78 and 79 in Config/datasets_config.yaml) because we could not upload them to zenodo
+
 
 ___
 

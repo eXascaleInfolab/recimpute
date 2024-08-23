@@ -142,10 +142,12 @@ By setting *use_prod_model* to True the model was trained on all data. It is sav
 ___
 ## Reproducibility
 
+- Make sure that you compute the average results over multiple runs.
+- We have disabled the two datasets MixedShapesRegularTrain and MixedShapesSmallTrain (lines 78 and 79 in Config/datasets_config.yaml), as we could not upload them to Zenodo because
+of their size.
 - You can reproduce the results of specific experiments, including those of the baselines, by running the Python scripts from within the
 `Experiments` folder.
-- Make sure that you compute the average results over multiple runs
-- We have disabled the two datasets MixedShapesRegularTrain and MixedShapesSmallTrain (lines 78 and 79 in Config/datasets_config.yaml) because we could not upload them to zenodo
+
 
 
 ___

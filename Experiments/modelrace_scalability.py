@@ -12,12 +12,10 @@ from tqdm import tqdm
 
 class SimpleTrainingSet():
     # Class that imits the TrainingSet class but allows us to create random time series
-    def __init__(self, nb_timeseries):
+    def __init__(self, nb_timeseries, ts_len=10, nb_labels=2):
         self.properties = {
             'type': 'monolabels',
         }
-        ts_len = 10
-        nb_labels = 2
         data = np.random.rand(nb_timeseries, ts_len)
         self.data = pd.DataFrame(data)
         self.data.index.name = 'New Time Series ID'
@@ -41,12 +39,19 @@ class SimpleTrainingSet():
 def main():
 
     MODELSTRAINER_CONF = Utils.read_conf_file('modelstrainer')
-    param_nb_timeseries = [100, 1_000, 10_000, 100_000]
+    params = [ # Warning: please use enough time series to have enough time series per class even after splitting into train/val/test
+        # (nb_timeseries, length of time series)
+        (  100          ,  10 ), 
+        (  1_000        ,  10 ), 
+        (  10_000       ,  10 ), 
+        (  100_000      ,  10 )
+    ]
 
     # vary nb of time series in the training set
-    for nb_timeseries in tqdm(param_nb_timeseries):
-        print('~~ Starting selection of pipelines with %i time series ~~' % nb_timeseries)
-        training_set = SimpleTrainingSet(nb_timeseries)
+    for nb_timeseries, ts_len in tqdm(params):
+        print('~~ Starting selection of pipelines with %i time series of length %i ~~' % (nb_timeseries, ts_len))
+        training_set = SimpleTrainingSet(nb_timeseries=nb_timeseries,
+                                         ts_len=ts_len)
         with Utils.catchtime('ModelRace time', verbose=True):
             select(training_set, MODELSTRAINER_CONF)
     print('Done')

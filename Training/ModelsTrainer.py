@@ -65,10 +65,12 @@ def _parallel_training(args):
                                                     data_cols, labeler_properties, labels_set,
                                                     plot_cm=False, save_if_best=False)
             runtime = t.end - t.start
-            return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
+            if not metrics_ is None:
+                return pipe.rm.id, metrics_['F1-Score'], metrics_['Recall@3'], runtime
         except:
-            logging.exception('Error for pipe %s\n\n\n' % pipe) # TODO tmp print
-            return pipe.rm.id
+            pass
+        #logging.debug('Error for pipe %s' % pipe) # TODO tmp print
+        return pipe.rm.id
 
 
 class ModelsTrainer:
@@ -156,8 +158,8 @@ class ModelsTrainer:
                             nb_pipes_to_generate = max(max_nb_pipes_at_iter_i - len(pipelines), len(pipelines)//10)
                             new_pipes = ClfPipeline.generate_from_set(pipelines, all_pipelines_txt, nb_pipes_to_generate)
                             pipelines.extend(new_pipes)
-                            print('\nTried to generate %i new pipelines.' % nb_pipes_to_generate) # TODO tmp print
-                            print('Generated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
+                            logging.info('\nTried to generate %i new pipelines.' % nb_pipes_to_generate) # TODO tmp print
+                            logging.info('Generated %i new pipelines from the remaining candidates (max nb pipes at iter %i is %i).' % (len(new_pipes), i, max_nb_pipes_at_iter_i))
                         
                         # prepare the partial training set
                         X_train_unused = X_train.loc[~X_train.index.isin(train_index)]
@@ -171,7 +173,7 @@ class ModelsTrainer:
                         assert all(id not in train_index for id in train_index_new)
 
                         train_index.extend(train_index_new)
-                        print('\n1/3 - begining of new partial training: %i%% -> %i' % (S[i], len(train_index))) # TODO tmp print
+                        logging.info('\n1/3 - begining of new partial training: %i%% -> %i' % (S[i], len(train_index))) # TODO tmp print
                         
                         Xp_train = X_train.loc[train_index]
                         yp_train = y_train.loc[train_index]
@@ -204,7 +206,7 @@ class ModelsTrainer:
                                         #  maybe due to a problematic parameters' combination?
                                         p_id = res
                                         rmvd_pipes[p_id] = True
-                                        print('%i has been eliminated probably due to an exception being thrown' % p_id)
+                                        logging.info('%i has been eliminated probably due to an exception being thrown (likely caused by a misconfiguration)' % p_id)
                                         continue 
 
                                     # save the evaluation results
@@ -219,11 +221,11 @@ class ModelsTrainer:
                                             max_score = mean_score
                                         elif mean_score < max_score - score_margin: # eliminate prematurely if the pipe performs really poorly
                                             rmvd_pipes[p_id] = True # eliminate this pipe prematurely (do not finish its cross-validation training)
-                                            print('%i has been eliminated early: avg_score=%.2f and max_score=%.2f' % (p_id, mean_score, max_score))
+                                            logging.info('%i has been eliminated early: avg_score=%.2f and max_score=%.2f' % (p_id, mean_score, max_score))
                                 
-                        print('\n%i pipelines\' training have been stopped prematurely due to poor performances.' % len(rmvd_pipes)) # TODO tmp print
+                        logging.info('\n%i pipelines\' training have been stopped prematurely due to poor performances.' % len(rmvd_pipes)) # TODO tmp print
                         
-                        print('\n3/3 - statistic tests') # TODO tmp print
+                        logging.info('\n3/3 - statistic tests') # TODO tmp print
                         # normalize runtime between 0 and 1 & compute the score of each pipeline on each cv-split
                         metrics = {p_id: val for p_id, val in metrics.items() if p_id not in rmvd_pipes}
                         max_runtime = max([i[2] for cv_scores in metrics.values() for i in cv_scores])
@@ -250,8 +252,8 @@ class ModelsTrainer:
                         )
 
                         if len(pipelines) < 20: # TODO tmp print
-                            print([(p.id, np.mean(p.scores)) for p in pipelines]) # TODO tmp print
-                            print([
+                            logging.info([(p.id, np.mean(p.scores)) for p in pipelines]) # TODO tmp print
+                            logging.info([
                                 (test_method(a.scores, b.scores)[1], a.rm.id,b.rm.id)  # we keep the worse pipelines of the 2
                                     for a,b in itertools.combinations(pipelines, r=2) # for all pairs of pipes
                             ]) # TODO tmp print
@@ -259,14 +261,14 @@ class ModelsTrainer:
                         # remove the worse pipes
                         pipelines = [p for p in pipelines if p not in worse_pipes]
 
-                        print('\nThere remains %i pipelines. %i have been eliminated by t-test.' % (len(pipelines), len(worse_pipes)))
+                        logging.info('\nThere remains %i pipelines. %i have been eliminated by t-test.' % (len(pipelines), len(worse_pipes)))
 
                         if early_break and len(pipelines) <= selection_len:
                             break
 
                 # if we have more pipes remaining that what we wanted
                 if len(pipelines) > selection_len: 
-                    print('Too many pipelines remaining. Last attempt to eliminate "worse" candidates.')
+                    logging.info('Too many pipelines remaining. Last attempt to eliminate "worse" candidates.')
                     pipelines = sorted(pipelines, key=lambda p: np.mean(p.scores), reverse=True)
                     for i in reversed(range(len(pipelines))): # rank pipes based on their avg scores
                         p_i = pipelines[i]
@@ -274,7 +276,7 @@ class ModelsTrainer:
                         # pairwise ttest if p is worse than any other: prune p
                         for j, p_j in enumerate(pipelines):
                             if i is not j and test_method(p_i.scores, p_j.scores)[1] < p_value and np.mean(p_i.scores) < np.mean(p_j.scores):
-                                print('%i was eliminated due to significantly worse performances than another candidate.' % p_i.id)
+                                logging.info('%i was eliminated due to significantly worse performances than another candidate.' % p_i.id)
                                 del pipelines[i]
                                 break
                                 
@@ -401,6 +403,8 @@ class ModelsTrainer:
                             scores, cm = model.train_and_eval(X_train, y_train, X_val, y_val, 
                                                             all_data.columns, self.training_set.get_labeler_properties(), labels_set,
                                                             plot_cm=True, save_if_best=save_if_best)
+                            if scores is None:
+                                raise Exception('Training aborted.')
                         except Exception as e:
                             print('Encountered exception while training %s. \n %s' % (model, e))
                             scores, cm = None, None

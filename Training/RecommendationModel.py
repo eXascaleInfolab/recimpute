@@ -95,6 +95,8 @@ class RecommendationModel:
         
         # evaluate the model
         model, y_pred = self.predict(X_val, compute_proba=self.labels_info['type']=='monolabels', pipeline=trained_pipeline)
+        if y_pred is None:
+            return None, None
         scores, cm = self.eval(y_val, y_pred, model.classes_, plot_cm=plot_cm)
 
         # measure the best training score & save the trained_pipeline if this new score is the best
@@ -133,11 +135,17 @@ class RecommendationModel:
         """
         trained_pipeline = self.get_trained_pipeline(pipeline=pipeline, use_pipeline_prod=use_pipeline_prod)
 
+        y_pred = None
         if self.type == 'classifier' and compute_proba:
-            y_pred = self._custom_predict_proba(trained_pipeline)(X) # probability vector
+            try:
+                y_pred = self._custom_predict_proba(trained_pipeline)(X) # probability vector
+            except ValueError as e:
+                if "Expected n_neighbors <= n_samples" in str(e):
+                    pass # Suppressed: Expected n_neighbors <= n_samples error. Pipeline will be discarded due to misconfiguration.
+                else:
+                    raise
         else:
             y_pred = trained_pipeline.predict(X)
-
         return trained_pipeline, y_pred
 
     def get_trained_pipeline(self, pipeline=None, use_pipeline_prod=True):

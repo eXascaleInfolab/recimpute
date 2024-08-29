@@ -50,7 +50,10 @@ class Utils:
             class_counts = Counter(labels)
             single_class_indices = [i for i, label in enumerate(labels) if class_counts[label] == 1]
             if len(single_class_indices) > 0:
-                print('Warning: %i classe(s) contain a single member (%s). Consider adding more members or ignore this class to avoid further issues.\n' % (len(single_class_indices), pd.Series(labels).value_counts()[lambda x: x == 1].index.tolist()))
+                print('Warning: %i classe(s) contain a single member (%s). Consider adding more members or ignore this class to avoid further issues.\n' % (
+                    len(single_class_indices), 
+                    pd.Series(labels).value_counts()[lambda x: x == 1].index.tolist()) if len(labels) > 1 else labels.index.tolist()[0]
+                )
             multi_class_indices = [i for i, label in enumerate(labels) if class_counts[label] > 1]
 
             # identify classes with one member
@@ -70,9 +73,12 @@ class Utils:
                 stratify_rest = None
 
             arrays_rest = [X_rest, y_rest] if not y is None else [X_rest]
-            arrays_splitted = sklearn_train_test_split(
-                *arrays_rest, test_size=test_size, train_size=train_size, stratify=stratify_rest, shuffle=shuffle,
-            )
+            try:
+                arrays_splitted = sklearn_train_test_split(
+                    *arrays_rest, test_size=test_size, train_size=train_size, stratify=stratify_rest, shuffle=shuffle,
+                )
+            except Exception as e:
+                raise Exception("An exception was raised while splitting your data. This is likely because you do not have enough samples per class.")
             if not y is None:
                 X_train_rest, X_test, y_train_rest, y_test = arrays_splitted
             else:

@@ -73,7 +73,7 @@ The code can be executed either by running the full system or by running sequent
 
 ### Model training
 
-- To train the model, make sure that the virtual environment is still activated
+- To train the model, run the following command (make sure that the virtual environment is still activated)
   
 ```bash
    $ python recimpute.py -mode train -fes all -train_for_production False

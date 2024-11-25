@@ -265,7 +265,7 @@ ___
 ___
 
 ## Contributors
-- Mourad Khayati (<a href="mkhayati@exascale.info">mkhayati@exascale.info</a>)
+- Mourad Khayati (<a href="mourad.khayati@unifr.ch">mourad.khayati@unifr.ch</a>)
 - Guillaume Chacun (<a href="chacungu@gmail.com">chacungu@gmail.com</a>)
 
 

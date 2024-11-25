@@ -4,7 +4,7 @@ ADARTS is a recommendation system of imputation techniques for missing values in
 
 
 
-[**Prerequisites**](#prerequisites) | [**Installation**](#installation) |  [**Execution**](#execution) | [**Extension**](#extension)  | [**Contributors**](#contributors) | [**Citation**](#citation)
+[**Prerequisites**](#prerequisites) | [**Installation**](#installation) |  [**Execution**](#execution) | [**Reproducibility**](#reproducibility)  | [**Documentation**](#documentation)  | [**Extension**](#extension)  | [**Contributors**](#contributors) 
 
 ___
 
@@ -268,8 +268,3 @@ ___
 - Mourad Khayati (<a href="mourad.khayati@unifr.ch">mourad.khayati@unifr.ch</a>)
 - Guillaume Chacun (<a href="chacungu@gmail.com">chacungu@gmail.com</a>)
 
-
-___
-
-## Citation
-TODO

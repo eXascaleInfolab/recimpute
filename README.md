@@ -1,6 +1,6 @@
-# ADARTS: Stable Model Selection for Data Repair in Time Series
+# A-DARTS: Stable Model Selection for Data Repair in Time Series
 
-ADARTS is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. ADARTS can predict the most suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="https://exascale.info/assets/pdf/khayati2025icde.pdf">A-DARTS: Stable Model Selection for Data Repair in Time Series</a> published at ICDE 2025.
+A-DARTS is a recommendation system of imputation techniques for missing values in time series. The system can be trained on custom datasets or used as-is with no prior configuration required. A-DARTS can predict the most suitable algorithm to reconstruct missing parts of a real-world time series. Technical details can be found in our paper: <a href="https://exascale.info/assets/pdf/khayati2025icde.pdf">A-DARTS: Stable Model Selection for Data Repair in Time Series</a> published at ICDE 2025.
 
 
 
@@ -13,7 +13,7 @@ ___
 - Clone this repository
 
 ```bash
-    $ git clone https://github.com/eXascaleInfolab/recimpute recimpute
+    $ git clone https://github.com/eXascaleInfolab/recimpute
 
 ```
 
